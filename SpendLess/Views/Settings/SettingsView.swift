@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import FamilyControls
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
@@ -15,6 +16,8 @@ struct SettingsView: View {
     @Query private var profiles: [UserProfile]
     @Query private var goals: [UserGoal]
     
+    @Bindable var screenTimeManager = ScreenTimeManager.shared
+    @State private var selection = FamilyActivitySelection()
     @State private var showAppPicker = false
     @State private var showResetConfirmation = false
     @State private var showResetOnboardingConfirmation = false
@@ -48,6 +51,35 @@ struct SettingsView: View {
                         resetSavingsRow
                     } header: {
                         Text("My Goal")
+                    }
+                    
+                    // Commitment Section
+                    if profile?.commitmentDate != nil || profile?.futureLetterText != nil {
+                        Section {
+                            NavigationLink {
+                                CommitmentDetailView()
+                            } label: {
+                                Label("View My Commitment", systemImage: "signature")
+                            }
+                            
+                            NavigationLink {
+                                EditLetterView()
+                            } label: {
+                                Label("Edit My Letter", systemImage: "pencil")
+                            }
+                            
+                            if let commitmentDate = profile?.commitmentDate {
+                                Text("Signed: \(formatCommitmentDate(commitmentDate))")
+                                    .font(SpendLessFont.caption)
+                                    .foregroundStyle(Color.spendLessTextMuted)
+                                
+                                Text("\(daysSince(commitmentDate)) days since you committed")
+                                    .font(SpendLessFont.caption)
+                                    .foregroundStyle(Color.spendLessTextSecondary)
+                            }
+                        } header: {
+                            Text("MY COMMITMENT")
+                        }
                     }
                     
                     // About Section
@@ -108,8 +140,12 @@ struct SettingsView: View {
                 .scrollContentBackground(.hidden)
             }
             .navigationTitle("Settings")
-            .sheet(isPresented: $showAppPicker) {
-                MockAppPickerView()
+            .familyActivityPicker(isPresented: $showAppPicker, selection: $selection)
+            .onChange(of: selection) { oldValue, newValue in
+                screenTimeManager.handleSelection(newValue)
+            }
+            .onAppear {
+                selection = screenTimeManager.selection
             }
             .sheet(isPresented: $showEditGoal) {
                 EditGoalSheet(goal: currentGoal)
@@ -142,7 +178,7 @@ struct SettingsView: View {
             HStack {
                 Label("Blocked Apps", systemImage: "app.badge")
                 Spacer()
-                Text("\(ScreenTimeManager.shared.blockedAppCount) apps")
+                Text("\(screenTimeManager.blockedAppCount) apps")
                     .foregroundStyle(Color.spendLessTextMuted)
                 Image(systemName: "chevron.right")
                     .font(.caption)
@@ -232,6 +268,13 @@ struct SettingsView: View {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
     }
+    
+    private func formatCommitmentDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
 }
 
 // MARK: - Difficulty Mode Setting View
@@ -280,6 +323,10 @@ struct DifficultyModeSettingView: View {
         if let profile {
             profile.difficultyMode = selectedMode
             try? modelContext.save()
+            
+            // Sync to App Groups
+            let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+            sharedDefaults?.set(selectedMode.rawValue, forKey: "difficultyMode")
         }
         
         let generator = UIImpactFeedbackGenerator(style: .light)

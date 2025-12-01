@@ -34,7 +34,7 @@ struct SpendLessTextField: View {
         VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
             Text(title)
                 .font(SpendLessFont.subheadline)
-                .foregroundStyle(Color.spendLessTextSecondary)
+                .foregroundStyle(Color.spendLessTextPrimary)
             
             HStack(spacing: SpendLessSpacing.sm) {
                 if let icon {
@@ -44,6 +44,7 @@ struct SpendLessTextField: View {
                 
                 TextField(placeholder, text: $text)
                     .font(SpendLessFont.body)
+                    .foregroundStyle(Color.spendLessTextPrimary)
                     .keyboardType(keyboardType)
             }
             .padding(SpendLessSpacing.md)
@@ -65,15 +66,16 @@ struct CurrencyTextField: View {
         VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
             Text(title)
                 .font(SpendLessFont.subheadline)
-                .foregroundStyle(Color.spendLessTextSecondary)
+                .foregroundStyle(Color.spendLessTextPrimary)
             
             HStack(spacing: SpendLessSpacing.sm) {
                 Text("$")
                     .font(SpendLessFont.title3)
-                    .foregroundStyle(Color.spendLessTextMuted)
+                    .foregroundStyle(Color.spendLessTextPrimary)
                 
                 TextField("0", text: $textValue)
                     .font(SpendLessFont.title3)
+                    .foregroundStyle(Color.spendLessTextPrimary)
                     .keyboardType(.decimalPad)
                     .onChange(of: textValue) { _, newValue in
                         // Filter to only numbers and decimal

@@ -24,6 +24,7 @@ struct OnboardingCoordinatorView: View {
         case impactVisualization
         case goalSelection
         case goalDetails
+        case desiredOutcomes
         case commitment
         case permissionExplanation
         case appSelection
@@ -66,7 +67,9 @@ struct OnboardingCoordinatorView: View {
         case .goalSelection:
             OnboardingGoalSelectionView { navigateTo(.goalDetails) }
         case .goalDetails:
-            OnboardingGoalDetailsView { navigateTo(.commitment) }
+            OnboardingGoalDetailsView { navigateTo(.desiredOutcomes) }
+        case .desiredOutcomes:
+            OnboardingDesiredOutcomesView { navigateTo(.commitment) }
         case .commitment:
             OnboardingCommitmentView { navigateTo(.permissionExplanation) }
         case .permissionExplanation:
@@ -102,17 +105,40 @@ struct OnboardingProgressView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
+                // Background track
                 RoundedRectangle(cornerRadius: 2)
                     .fill(Color.spendLessBackgroundSecondary)
                     .frame(height: 4)
                 
+                // Gradient fill that warms as progress increases
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.spendLessPrimary)
+                    .fill(progressGradient)
                     .frame(width: geometry.size.width * progress, height: 4)
-                    .animation(.spring(response: 0.4), value: progress)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progress)
+                
+                // Optional: glowing leading edge
+                if progress > 0 && progress < 1 {
+                    Circle()
+                        .fill(Color.spendLessPrimary)
+                        .frame(width: 6, height: 6)
+                        .blur(radius: 2)
+                        .offset(x: geometry.size.width * progress - 3)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progress)
+                }
             }
         }
         .frame(height: 4)
+    }
+    
+    private var progressGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color.spendLessPrimary.opacity(0.7),
+                Color.spendLessPrimary
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 }
 
@@ -129,7 +155,17 @@ struct OnboardingContainer<Content: View>: View {
     
     var body: some View {
         ZStack {
-            Color.spendLessBackground.ignoresSafeArea()
+            // Layered warm gradient background
+            LinearGradient(
+                stops: [
+                    .init(color: Color.spendLessBackground, location: 0),
+                    .init(color: Color.spendLessBackground.opacity(0.97), location: 0.5),
+                    .init(color: Color.warmSand, location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 OnboardingProgressView(progress: step.progress)

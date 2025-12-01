@@ -2,21 +2,13 @@
 //  ShieldConfigurationExtension.swift
 //  ShieldConfigurationExtension
 //
-//  SETUP INSTRUCTIONS:
-//  1. In Xcode, go to File > New > Target
-//  2. Select "Shield Configuration Extension"
-//  3. Name it "ShieldConfigurationExtension"
-//  4. Add the FamilyControls entitlement to this target
-//  5. Add App Groups capability with identifier: group.com.spendless.data
-//  6. Copy this code into the generated extension file
-//
-//  NOTE: This is a template file. The actual extension must be created
-//  through Xcode and requires the com.apple.developer.family-controls entitlement.
+//  Extension that provides custom UI for the shield/blocking screen
 //
 
 import ManagedSettings
 import ManagedSettingsUI
 import UIKit
+import Foundation
 
 /// Extension that provides custom UI for the shield/blocking screen
 nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
@@ -125,4 +117,3 @@ private struct SpendLessColors {
     // Secondary - Sage
     static let secondary = UIColor(red: 0.55, green: 0.68, blue: 0.55, alpha: 1.0)
 }
-

@@ -45,8 +45,35 @@ struct SpendLessApp: App {
         WindowGroup {
             RootView()
                 .environment(appState)
+                .onOpenURL { url in
+                    handleDeepLink(url)
+                }
         }
         .modelContainer(sharedModelContainer)
+    }
+    
+    // MARK: - Deep Linking
+    
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "spendless" else { return }
+        
+        switch url.host {
+        case "addToWaitingList":
+            // Navigate to add waiting list item
+            // This will be handled by the view that needs to show the add flow
+            appState.pendingDeepLink = "addToWaitingList"
+            
+        case "breathingExercise":
+            // Show breathing exercise
+            appState.pendingDeepLink = "breathingExercise"
+            
+        case "panicButton":
+            // Show panic button flow
+            appState.pendingDeepLink = "panicButton"
+            
+        default:
+            break
+        }
     }
 }
 

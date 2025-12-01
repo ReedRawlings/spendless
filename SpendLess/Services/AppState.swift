@@ -20,9 +20,12 @@ final class AppState {
     var celebrationAmount: Decimal = 0
     var celebrationMessage: String = ""
     
-    // MARK: - Screen Time State (stub)
+    // MARK: - Screen Time State
     var isScreenTimeAuthorized: Bool = false
     var blockedAppCount: Int = 0
+    
+    // MARK: - Deep Linking
+    var pendingDeepLink: String? = nil
     
     // MARK: - Temporary Onboarding State
     var onboardingTriggers: Set<ShoppingTrigger> = []
@@ -32,8 +35,11 @@ final class AppState {
     var onboardingGoalName: String = ""
     var onboardingGoalAmount: Decimal = 0
     var onboardingGoalImageData: Data?
+    var onboardingDesiredOutcomes: Set<DesiredOutcome> = []
     var onboardingDifficultyMode: DifficultyMode = .firm
     var onboardingSignatureData: Data?
+    var onboardingFutureLetterText: String?
+    var onboardingCommitmentDate: Date?
     
     // MARK: - Initialization
     private init() {
@@ -84,8 +90,11 @@ final class AppState {
         onboardingGoalName = ""
         onboardingGoalAmount = 0
         onboardingGoalImageData = nil
+        onboardingDesiredOutcomes = []
         onboardingDifficultyMode = .firm
         onboardingSignatureData = nil
+        onboardingFutureLetterText = nil
+        onboardingCommitmentDate = nil
     }
     
     // MARK: - Celebrations
@@ -166,7 +175,10 @@ extension AppState {
         profile.estimatedSpend = onboardingSpendRange
         profile.goalType = onboardingGoalType
         profile.difficultyMode = onboardingDifficultyMode
+        profile.desiredOutcomes = onboardingDesiredOutcomes
         profile.signatureImageData = onboardingSignatureData
+        profile.futureLetterText = onboardingFutureLetterText
+        profile.commitmentDate = onboardingCommitmentDate ?? Date()
         profile.completeOnboarding()
         
         // Create goal if needed
@@ -183,10 +195,38 @@ extension AppState {
         // Create streak
         let _ = getOrCreateStreak(from: context)
         
+        // Sync futureLetterText and difficultyMode to App Groups for Shield extension
+        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        if let letterText = onboardingFutureLetterText, !letterText.isEmpty {
+            sharedDefaults?.set(letterText, forKey: "futureLetterText")
+        } else {
+            // Generate default if empty
+            let defaultText = generatePlaceholderText(triggers: onboardingTriggers)
+            sharedDefaults?.set(defaultText, forKey: "futureLetterText")
+        }
+        // Sync difficulty mode
+        sharedDefaults?.set(onboardingDifficultyMode.rawValue, forKey: "difficultyMode")
+        
+        // Sync blocked apps selection (already saved by ScreenTimeManager)
+        // The selection is saved when user picks apps in onboarding
+        
         // Save and complete
         try? context.save()
         completeOnboarding()
         clearOnboardingState()
+    }
+    
+    /// Sync streak and savings data to App Groups for shield display
+    func syncStreakAndSavingsToAppGroups(context: ModelContext) {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        
+        // Sync streak
+        let streak = getOrCreateStreak(from: context)
+        sharedDefaults?.set(streak.currentDays, forKey: "currentStreak")
+        
+        // Sync total saved
+        let totalSaved = calculateTotalSaved(from: context)
+        sharedDefaults?.set((totalSaved as NSDecimalNumber).doubleValue, forKey: "totalSaved")
     }
 }
 

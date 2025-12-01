@@ -15,11 +15,14 @@ struct DashboardView: View {
     @Query private var goals: [UserGoal]
     @Query private var graveyardItems: [GraveyardItem]
     @Query private var streaks: [Streak]
+    @Query private var profiles: [UserProfile]
     
     @State private var showPanicButton = false
     @State private var showCelebration = false
     @State private var celebrationAmount: Decimal = 0
     @State private var celebrationMessage = ""
+    @State private var showAnniversary: Bool = false
+    @State private var anniversaryMilestone: Int = 0
     
     private var currentGoal: UserGoal? {
         goals.first { $0.isActive }
@@ -27,6 +30,10 @@ struct DashboardView: View {
     
     private var currentStreak: Streak? {
         streaks.first
+    }
+    
+    private var profile: UserProfile? {
+        profiles.first
     }
     
     private var totalSaved: Decimal {
@@ -117,9 +124,20 @@ struct DashboardView: View {
                         message: celebrationMessage
                     )
                 }
+                
+                // Anniversary Overlay
+                if showAnniversary {
+                    CommitmentAnniversaryView(milestone: anniversaryMilestone) {
+                        showAnniversary = false
+                        markAnniversaryShown(anniversaryMilestone)
+                    }
+                }
             }
             .navigationTitle("SpendLess")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                checkAnniversaries()
+            }
             .sheet(isPresented: $showPanicButton) {
                 PanicButtonFlowView { amount in
                     // Handle panic button completion
@@ -147,6 +165,34 @@ struct DashboardView: View {
             return "Every dollar counts toward \(goal.name)!"
         }
         return "That's money back in your pocket!"
+    }
+    
+    private func checkAnniversaries() {
+        guard let profile = profile,
+              let _ = profile.commitmentDate,
+              let daysSince = profile.daysSinceCommitment else {
+            return
+        }
+        
+        let milestones = [7, 30, 90, 365]
+        
+        for milestone in milestones {
+            if daysSince == milestone && !hasShownAnniversary(milestone) {
+                anniversaryMilestone = milestone
+                showAnniversary = true
+                return
+            }
+        }
+    }
+    
+    private func hasShownAnniversary(_ milestone: Int) -> Bool {
+        let defaults = UserDefaults.standard
+        return defaults.bool(forKey: "anniversary_\(milestone)_shown")
+    }
+    
+    private func markAnniversaryShown(_ milestone: Int) {
+        let defaults = UserDefaults.standard
+        defaults.set(true, forKey: "anniversary_\(milestone)_shown")
     }
 }
 
@@ -199,11 +245,13 @@ struct PanicButtonFlowView: View {
     @Environment(AppState.self) private var appState
     
     @Query private var goals: [UserGoal]
+    @Query private var profiles: [UserProfile]
     
     let onComplete: (Decimal) -> Void
     
     enum Step {
         case breathing
+        case letter
         case logging
         case celebration
     }
@@ -217,6 +265,10 @@ struct PanicButtonFlowView: View {
         goals.first { $0.isActive }
     }
     
+    private var profile: UserProfile? {
+        profiles.first
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -225,6 +277,8 @@ struct PanicButtonFlowView: View {
                 switch currentStep {
                 case .breathing:
                     breathingStep
+                case .letter:
+                    letterStep
                 case .logging:
                     loggingStep
                 case .celebration:
@@ -260,20 +314,75 @@ struct PanicButtonFlowView: View {
             
             QuickBreathingExercise {
                 withAnimation {
-                    currentStep = .logging
+                    // Show letter if available, otherwise go to logging
+                    if let profile = profile, let letterText = profile.futureLetterText, !letterText.isEmpty {
+                        currentStep = .letter
+                    } else {
+                        currentStep = .logging
+                    }
                 }
             }
             
             Spacer()
             
-            TextButton("Skip to logging") {
+            TextButton("Skip") {
                 withAnimation {
-                    currentStep = .logging
+                    // Skip to letter if available, otherwise logging
+                    if let profile = profile, let letterText = profile.futureLetterText, !letterText.isEmpty {
+                        currentStep = .letter
+                    } else {
+                        currentStep = .logging
+                    }
                 }
             }
             .padding(.bottom, SpendLessSpacing.xl)
         }
         .padding()
+    }
+    
+    private var letterStep: some View {
+        VStack(spacing: SpendLessSpacing.lg) {
+            Spacer()
+            
+            VStack(spacing: SpendLessSpacing.md) {
+                Text("You wrote this to yourself:")
+                    .font(SpendLessFont.headline)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                
+                if let letterText = profile?.futureLetterText, !letterText.isEmpty {
+                    Card {
+                        Text(letterText)
+                            .font(SpendLessFont.body)
+                            .foregroundStyle(Color.spendLessTextPrimary)
+                            .multilineTextAlignment(.center)
+                            .padding(SpendLessSpacing.md)
+                    }
+                    .padding(.horizontal, SpendLessSpacing.lg)
+                }
+                
+                Text("The urge will pass.")
+                    .font(SpendLessFont.body)
+                    .foregroundStyle(Color.spendLessTextSecondary)
+                    .padding(.top, SpendLessSpacing.sm)
+                
+                Text("What brought you here?")
+                    .font(SpendLessFont.headline)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                    .padding(.top, SpendLessSpacing.xs)
+            }
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, SpendLessSpacing.lg)
+            
+            Spacer()
+            
+            PrimaryButton("Continue") {
+                withAnimation {
+                    currentStep = .logging
+                }
+            }
+            .padding(.horizontal, SpendLessSpacing.lg)
+            .padding(.bottom, SpendLessSpacing.xl)
+        }
     }
     
     private var loggingStep: some View {

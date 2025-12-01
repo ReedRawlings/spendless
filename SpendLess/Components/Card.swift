@@ -89,19 +89,24 @@ struct SelectionCard: View {
     let subtitle: String?
     let icon: String
     let isSelected: Bool
+    let padding: CGFloat
     let action: () -> Void
+    
+    @State private var checkmarkTrim: CGFloat = 0
     
     init(
         title: String,
         subtitle: String? = nil,
         icon: String,
         isSelected: Bool,
+        padding: CGFloat = SpendLessSpacing.md,
         action: @escaping () -> Void
     ) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.isSelected = isSelected
+        self.padding = padding
         self.action = action
     }
     
@@ -109,6 +114,8 @@ struct SelectionCard: View {
         Button(action: action) {
             HStack(spacing: SpendLessSpacing.md) {
                 IconView(icon, font: .title2)
+                    .scaleEffect(isSelected ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isSelected)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -124,26 +131,47 @@ struct SelectionCard: View {
                 
                 Spacer()
                 
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundStyle(isSelected ? Color.spendLessPrimary : Color.spendLessTextMuted)
+                ZStack {
+                    Circle()
+                        .stroke(Color.spendLessTextMuted, lineWidth: 1.5)
+                        .frame(width: 24, height: 24)
+                        .opacity(isSelected ? 0 : 1)
+                    
+                    if isSelected {
+                        Circle()
+                            .fill(Color.spendLessPrimary)
+                            .frame(width: 24, height: 24)
+                        
+                        CheckmarkShape()
+                            .trim(from: 0, to: checkmarkTrim)
+                            .stroke(Color.white, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                            .frame(width: 12, height: 12)
+                    }
+                }
             }
-            .padding(SpendLessSpacing.md)
+            .padding(padding)
             .background(
                 RoundedRectangle(cornerRadius: SpendLessRadius.md)
-                    .fill(Color.spendLessCardBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: SpendLessRadius.md)
-                            .strokeBorder(
-                                isSelected ? Color.spendLessPrimary : Color.clear,
-                                lineWidth: 2
-                            )
-                    )
+                    .fill(isSelected ? Color.spendLessPrimaryLight.opacity(0.15) : Color.spendLessCardBackground)
             )
-            .spendLessShadow(SpendLessShadow.subtleShadow)
+            .overlay(
+                RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                    .strokeBorder(isSelected ? Color.spendLessPrimary : Color.clear, lineWidth: 2)
+            )
+            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .animation(.spring(response: 0.35, dampingFraction: 0.6), value: isSelected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .onChange(of: isSelected) { _, newValue in
+            if newValue {
+                withAnimation(.easeOut(duration: 0.25).delay(0.1)) {
+                    checkmarkTrim = 1
+                }
+            } else {
+                checkmarkTrim = 0
+            }
+        }
     }
 }
 
@@ -235,6 +263,18 @@ struct StatsCard: View {
         .background(Color.spendLessCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
         .spendLessShadow(SpendLessShadow.subtleShadow)
+    }
+}
+
+// MARK: - Checkmark Shape
+
+struct CheckmarkShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.width * 0.15, y: rect.height * 0.5))
+        path.addLine(to: CGPoint(x: rect.width * 0.4, y: rect.height * 0.75))
+        path.addLine(to: CGPoint(x: rect.width * 0.85, y: rect.height * 0.25))
+        return path
     }
 }
 

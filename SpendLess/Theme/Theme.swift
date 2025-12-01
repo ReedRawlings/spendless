@@ -42,6 +42,9 @@ extension Color {
     
     // Special
     static let spendLessStreak = Color(red: 0.95, green: 0.55, blue: 0.30) // Fire orange
+    
+    // Warm sand for gradient backgrounds
+    static let warmSand = Color(hue: 0.08, saturation: 0.12, brightness: 0.88)
 }
 
 // MARK: - Typography

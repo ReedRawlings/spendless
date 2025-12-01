@@ -52,11 +52,8 @@ enum ShoppingTrigger: String, CaseIterable, Codable, Identifiable {
 
 enum ShoppingTiming: String, CaseIterable, Codable, Identifiable {
     case lateNight = "Late at night"
-    case workBreaks = "During work breaks"
-    case afterStress = "After a stressful day"
-    case socialMedia = "When I see ads on social media"
+    case workBreaks = "Work breaks"
     case payday = "Payday"
-    case bored = "When I'm bored"
     
     var id: String { rawValue }
     
@@ -64,10 +61,7 @@ enum ShoppingTiming: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .lateNight: return "moon.stars"
         case .workBreaks: return "cup.and.saucer"
-        case .afterStress: return "figure.walk"
-        case .socialMedia: return "iphone"
         case .payday: return "banknote"
-        case .bored: return "face.dashed"
         }
     }
 }
@@ -250,5 +244,43 @@ enum InterceptOutcome: String, Codable {
     case addedToWaitingList = "addedToWaitingList"
     case proceededAfterQuestionnaire = "proceededAfterQuestionnaire"
     case proceededImmediately = "proceededImmediately"
+}
+
+// MARK: - Desired Outcome
+
+enum DesiredOutcome: String, CaseIterable, Codable, Identifiable {
+    case lessStress = "lessStress"
+    case selfControl = "selfControl"
+    case clarity = "clarity"
+    case guiltFree = "guiltFree"
+    case moneyForWhatMatters = "moneyForWhatMatters"
+    case confidence = "confidence"
+    case breakCycle = "breakCycle"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .lessStress: return "Less financial stress"
+        case .selfControl: return "More self-control"
+        case .clarity: return "Clarity on what I actually want"
+        case .guiltFree: return "Freedom from guilt"
+        case .moneyForWhatMatters: return "Money for things that matter"
+        case .confidence: return "Confidence in my spending"
+        case .breakCycle: return "Breaking the dopamine cycle"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .lessStress: return "🧠"
+        case .selfControl: return "💪"
+        case .clarity: return "🎯"
+        case .guiltFree: return "😌"
+        case .moneyForWhatMatters: return "💰"
+        case .confidence: return "✨"
+        case .breakCycle: return "🛑"
+        }
+    }
 }
 

@@ -25,6 +25,8 @@ final class UserProfile {
     // Feature data
     var futureLetterText: String?
     var signatureImageData: Data? // Commitment signature
+    var commitmentDate: Date?
+    var desiredOutcomesRaw: [String] // DesiredOutcome raw values
     
     // State
     var onboardingCompletedAt: Date?
@@ -52,6 +54,7 @@ final class UserProfile {
         self.difficultyModeRaw = difficultyMode.rawValue
         self.isPro = isPro
         self.createdAt = createdAt
+        self.desiredOutcomesRaw = []
         self.blockedAppCount = 0
         self.hasScreenTimeAuth = false
     }
@@ -83,8 +86,18 @@ final class UserProfile {
         set { difficultyModeRaw = newValue.rawValue }
     }
     
+    var desiredOutcomes: Set<DesiredOutcome> {
+        get { Set(desiredOutcomesRaw.compactMap { DesiredOutcome(rawValue: $0) }) }
+        set { desiredOutcomesRaw = newValue.map { $0.rawValue } }
+    }
+    
     var hasCompletedOnboarding: Bool {
         return onboardingCompletedAt != nil
+    }
+    
+    var daysSinceCommitment: Int? {
+        guard let date = commitmentDate else { return nil }
+        return Calendar.current.dateComponents([.day], from: date, to: Date()).day
     }
     
     // MARK: - Methods
@@ -104,7 +117,7 @@ extension UserProfile {
     static var sampleProfile: UserProfile {
         let profile = UserProfile(
             triggers: [.bored, .sales, .afterStress],
-            timings: [.lateNight, .socialMedia],
+            timings: [.lateNight, .workBreaks],
             estimatedSpend: .high,
             goalType: .vacation,
             difficultyMode: .firm

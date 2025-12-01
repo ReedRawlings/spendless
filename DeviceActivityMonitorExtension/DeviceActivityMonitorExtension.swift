@@ -2,16 +2,8 @@
 //  DeviceActivityMonitorExtension.swift
 //  DeviceActivityMonitorExtension
 //
-//  SETUP INSTRUCTIONS:
-//  1. In Xcode, go to File > New > Target
-//  2. Select "Device Activity Monitor Extension"
-//  3. Name it "DeviceActivityMonitorExtension"
-//  4. Add the FamilyControls entitlement to this target
-//  5. Add App Groups capability with identifier: group.com.spendless.data
-//  6. Copy this code into the generated extension file
-//
-//  NOTE: This is a template file. The actual extension must be created
-//  through Xcode and requires the com.apple.developer.family-controls entitlement.
+//  Extension that responds to device activity schedule events
+//  This runs in a separate process from the main app
 //
 
 import DeviceActivity
@@ -142,4 +134,3 @@ extension DeviceActivityEvent.Name {
     /// Event for when a blocked app is opened
     static let blockedAppOpened = DeviceActivityEvent.Name("blockedAppOpened")
 }
-

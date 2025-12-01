@@ -2,12 +2,14 @@
 //  ScreenTimeManager.swift
 //  SpendLess
 //
-//  Stub implementation for Screen Time API
-//  Will be enabled when entitlements are approved
+//  Screen Time API implementation
 //
 
 import Foundation
 import SwiftUI
+import FamilyControls
+import ManagedSettings
+import DeviceActivity
 
 // MARK: - Protocol for Screen Time Management
 
@@ -21,7 +23,7 @@ protocol ScreenTimeManaging {
     func removeShields()
 }
 
-// MARK: - Screen Time Manager (Stub Implementation)
+// MARK: - Screen Time Manager
 
 @Observable
 final class ScreenTimeManager: ScreenTimeManaging {
@@ -34,8 +36,11 @@ final class ScreenTimeManager: ScreenTimeManaging {
     private(set) var blockedAppCount: Int = 0
     private(set) var isPickerPresented: Bool = false
     
-    // MARK: - Mock Data for Development
-    var mockSelectedApps: [MockAppToken] = []
+    // Real FamilyActivitySelection
+    var selection = FamilyActivitySelection()
+    
+    // DeviceActivityCenter for schedule management
+    private let deviceActivityCenter = DeviceActivityCenter()
     
     // MARK: - Initialization
     private init() {
@@ -46,103 +51,108 @@ final class ScreenTimeManager: ScreenTimeManaging {
     // MARK: - Authorization
     
     /// Request Screen Time authorization
-    /// Note: This is a stub - actual implementation requires FamilyControls entitlement
     func requestAuthorization() async throws {
-        // Simulate network delay
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-        
-        #if targetEnvironment(simulator)
-        // In simulator, always succeed for testing
-        await MainActor.run {
-            isAuthorized = true
-            saveState()
-            AppState.shared.isScreenTimeAuthorized = true
-            AppState.shared.saveToUserDefaults()
-        }
-        #else
-        // On device, this would use actual FamilyControls
-        // For now, simulate success
-        await MainActor.run {
-            isAuthorized = true
-            saveState()
-            AppState.shared.isScreenTimeAuthorized = true
-            AppState.shared.saveToUserDefaults()
-        }
-        
-        /*
-        // ACTUAL IMPLEMENTATION (when entitlements available):
-        import FamilyControls
-        
         let center = AuthorizationCenter.shared
         try await center.requestAuthorization(for: .individual)
         
         await MainActor.run {
             isAuthorized = true
             saveState()
+            AppState.shared.isScreenTimeAuthorized = true
+            AppState.shared.saveToUserDefaults()
         }
-        */
-        #endif
     }
     
     // MARK: - App Selection
     
     /// Present the app picker
-    /// Note: This is a stub - actual implementation uses FamilyActivityPicker
     func openAppPicker() {
         isPickerPresented = true
-        
-        /*
-        // ACTUAL IMPLEMENTATION (when entitlements available):
-        // The picker is presented via SwiftUI modifier:
-        //
-        // .familyActivityPicker(
-        //     isPresented: $screenTimeManager.isPickerPresented,
-        //     selection: $screenTimeManager.selection
-        // )
-        */
     }
     
     func closeAppPicker() {
         isPickerPresented = false
     }
     
-    /// Handle selection from the picker (mock implementation)
-    func handleMockSelection(_ apps: [MockAppToken]) {
-        mockSelectedApps = apps
-        blockedAppCount = apps.count
-        AppState.shared.blockedAppCount = apps.count
+    /// Handle selection from the picker
+    func handleSelection(_ selection: FamilyActivitySelection) {
+        print("[ScreenTimeManager] 📱 handleSelection called")
+        print("  - Application tokens: \(selection.applicationTokens.count)")
+        print("  - Category tokens: \(selection.categoryTokens.count)")
+        print("  - Web domain tokens: \(selection.webDomainTokens.count)")
+        
+        self.selection = selection
+        updateBlockedAppCount()
+        
+        print("[ScreenTimeManager] 📊 Updated blockedAppCount: \(blockedAppCount)")
+        
+        saveSelection()
         saveState()
+        
+        // Force UI update on main thread
+        Task { @MainActor in
+            // This ensures @Observable updates propagate
+            print("[ScreenTimeManager] ✅ Selection processed and saved")
+        }
+    }
+    
+    private func updateBlockedAppCount() {
+        let count = selection.applicationTokens.count + selection.categoryTokens.count + selection.webDomainTokens.count
+        blockedAppCount = count
+        AppState.shared.blockedAppCount = count
     }
     
     // MARK: - Shield Management
     
     /// Apply shields to selected apps
-    /// Note: This is a stub - actual implementation uses ManagedSettings
     func applyShields() {
         guard isAuthorized else { return }
-        
-        /*
-        // ACTUAL IMPLEMENTATION (when entitlements available):
-        import ManagedSettings
         
         let store = ManagedSettingsStore()
         store.shield.applications = selection.applicationTokens
         store.shield.applicationCategories = .specific(selection.categoryTokens)
         store.shield.webDomains = selection.webDomainTokens
-        */
         
-        print("[ScreenTimeManager] Shields applied to \(blockedAppCount) apps (stub)")
+        // Start monitoring schedule
+        startMonitoring()
+        
+        print("[ScreenTimeManager] Shields applied to \(blockedAppCount) apps")
     }
     
     /// Remove all shields
     func removeShields() {
-        /*
-        // ACTUAL IMPLEMENTATION:
         let store = ManagedSettingsStore()
         store.clearAllSettings()
-        */
         
-        print("[ScreenTimeManager] Shields removed (stub)")
+        // Stop monitoring
+        stopMonitoring()
+        
+        print("[ScreenTimeManager] Shields removed")
+    }
+    
+    // MARK: - DeviceActivity Schedule
+    
+    private func startMonitoring() {
+        // Create a 24/7 schedule
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 0, minute: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59),
+            repeats: true
+        )
+        
+        do {
+            let activityName = DeviceActivityName("mainSchedule")
+            try deviceActivityCenter.startMonitoring(activityName, during: schedule)
+            print("[ScreenTimeManager] Started monitoring schedule")
+        } catch {
+            print("[ScreenTimeManager] Failed to start monitoring: \(error)")
+        }
+    }
+    
+    private func stopMonitoring() {
+        let activityName = DeviceActivityName("mainSchedule")
+        deviceActivityCenter.stopMonitoring([activityName])
+        print("[ScreenTimeManager] Stopped monitoring schedule")
     }
     
     // MARK: - Persistence
@@ -151,11 +161,6 @@ final class ScreenTimeManager: ScreenTimeManaging {
         let defaults = UserDefaults.standard
         defaults.set(isAuthorized, forKey: "screenTime.isAuthorized")
         defaults.set(blockedAppCount, forKey: "screenTime.blockedAppCount")
-        
-        // Save mock app tokens
-        if let encoded = try? JSONEncoder().encode(mockSelectedApps) {
-            defaults.set(encoded, forKey: "screenTime.mockSelectedApps")
-        }
     }
     
     private func loadState() {
@@ -163,11 +168,62 @@ final class ScreenTimeManager: ScreenTimeManaging {
         isAuthorized = defaults.bool(forKey: "screenTime.isAuthorized")
         blockedAppCount = defaults.integer(forKey: "screenTime.blockedAppCount")
         
-        // Load mock app tokens
-        if let data = defaults.data(forKey: "screenTime.mockSelectedApps"),
-           let apps = try? JSONDecoder().decode([MockAppToken].self, from: data) {
-            mockSelectedApps = apps
+        // Load selection from App Groups
+        loadSelection()
+    }
+    
+    /// Save selection to App Groups for extensions
+    func saveSelection() {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        
+        // Use PropertyListEncoder for UserDefaults compatibility
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        
+        do {
+            let encoded = try encoder.encode(selection)
+            sharedDefaults?.set(encoded, forKey: "blockedApps")
+            print("[ScreenTimeManager] ✅ Successfully saved selection: \(blockedAppCount) items")
+        } catch {
+            print("[ScreenTimeManager] ❌ Failed to encode selection with PropertyListEncoder: \(error)")
+            // Fallback: Try JSONEncoder as backup
+            do {
+                let jsonData = try JSONEncoder().encode(selection)
+                sharedDefaults?.set(jsonData, forKey: "blockedApps")
+                print("[ScreenTimeManager] ⚠️ Saved using JSONEncoder fallback")
+            } catch {
+                print("[ScreenTimeManager] ❌ Failed to encode selection with JSONEncoder: \(error)")
+            }
         }
+    }
+    
+    /// Load selection from App Groups
+    private func loadSelection() {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        guard let data = sharedDefaults?.data(forKey: "blockedApps") else {
+            print("[ScreenTimeManager] No saved selection found")
+            return
+        }
+        
+        // Try PropertyListDecoder first
+        let plistDecoder = PropertyListDecoder()
+        if let decoded = try? plistDecoder.decode(FamilyActivitySelection.self, from: data) {
+            selection = decoded
+            updateBlockedAppCount()
+            print("[ScreenTimeManager] ✅ Loaded selection: \(blockedAppCount) items")
+            return
+        }
+        
+        // Fallback: Try JSONDecoder
+        let jsonDecoder = JSONDecoder()
+        if let decoded = try? jsonDecoder.decode(FamilyActivitySelection.self, from: data) {
+            selection = decoded
+            updateBlockedAppCount()
+            print("[ScreenTimeManager] ✅ Loaded selection using JSONDecoder: \(blockedAppCount) items")
+            return
+        }
+        
+        print("[ScreenTimeManager] ❌ Failed to decode selection from both encoders")
     }
     
     // MARK: - Reset (for testing)
@@ -175,12 +231,16 @@ final class ScreenTimeManager: ScreenTimeManaging {
     func reset() {
         isAuthorized = false
         blockedAppCount = 0
-        mockSelectedApps = []
+        selection = FamilyActivitySelection()
+        
+        removeShields()
         
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: "screenTime.isAuthorized")
         defaults.removeObject(forKey: "screenTime.blockedAppCount")
-        defaults.removeObject(forKey: "screenTime.mockSelectedApps")
+        
+        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        sharedDefaults?.removeObject(forKey: "blockedApps")
         
         AppState.shared.isScreenTimeAuthorized = false
         AppState.shared.blockedAppCount = 0
@@ -188,140 +248,4 @@ final class ScreenTimeManager: ScreenTimeManaging {
     }
 }
 
-// MARK: - Mock App Token (for development/testing)
-
-struct MockAppToken: Identifiable, Codable, Hashable {
-    let id: UUID
-    let name: String
-    let bundleIdentifier: String
-    let category: String
-    
-    init(name: String, bundleIdentifier: String, category: String = "Shopping") {
-        self.id = UUID()
-        self.name = name
-        self.bundleIdentifier = bundleIdentifier
-        self.category = category
-    }
-}
-
-// MARK: - Common Shopping Apps (for mock picker)
-
-extension MockAppToken {
-    static let commonShoppingApps: [MockAppToken] = [
-        MockAppToken(name: "Amazon", bundleIdentifier: "com.amazon.Amazon", category: "Shopping"),
-        MockAppToken(name: "Shein", bundleIdentifier: "com.shein.shein", category: "Shopping"),
-        MockAppToken(name: "Temu", bundleIdentifier: "com.einnovation.temu", category: "Shopping"),
-        MockAppToken(name: "Target", bundleIdentifier: "com.target.targetapp", category: "Shopping"),
-        MockAppToken(name: "Walmart", bundleIdentifier: "com.walmart.electronics", category: "Shopping"),
-        MockAppToken(name: "TikTok Shop", bundleIdentifier: "com.zhiliaoapp.musically", category: "Social"),
-        MockAppToken(name: "Instagram", bundleIdentifier: "com.burbn.instagram", category: "Social"),
-        MockAppToken(name: "Etsy", bundleIdentifier: "com.etsy.etsy", category: "Shopping"),
-        MockAppToken(name: "ASOS", bundleIdentifier: "com.asos.asos", category: "Shopping"),
-        MockAppToken(name: "Sephora", bundleIdentifier: "com.sephora.sephora", category: "Shopping"),
-        MockAppToken(name: "Zara", bundleIdentifier: "com.inditex.zara", category: "Shopping"),
-        MockAppToken(name: "H&M", bundleIdentifier: "com.hm.goe", category: "Shopping"),
-        MockAppToken(name: "Nike", bundleIdentifier: "com.nike.onenikecommerce", category: "Shopping"),
-        MockAppToken(name: "eBay", bundleIdentifier: "com.ebay.iphone", category: "Shopping"),
-        MockAppToken(name: "Wish", bundleIdentifier: "com.contextlogic.Wish", category: "Shopping"),
-    ]
-}
-
-// MARK: - Mock App Picker View (for development)
-
-struct MockAppPickerView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Bindable var screenTimeManager = ScreenTimeManager.shared
-    @State private var selectedApps: Set<MockAppToken> = []
-    
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    ForEach(MockAppToken.commonShoppingApps) { app in
-                        Button {
-                            if selectedApps.contains(app) {
-                                selectedApps.remove(app)
-                            } else {
-                                selectedApps.insert(app)
-                            }
-                        } label: {
-                            HStack {
-                                IconView(appIcon(for: app.name), font: .title2)
-                                
-                                VStack(alignment: .leading) {
-                                    Text(app.name)
-                                        .font(SpendLessFont.body)
-                                        .foregroundStyle(Color.spendLessTextPrimary)
-                                    Text(app.category)
-                                        .font(SpendLessFont.caption)
-                                        .foregroundStyle(Color.spendLessTextMuted)
-                                }
-                                
-                                Spacer()
-                                
-                                if selectedApps.contains(app) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(Color.spendLessPrimary)
-                                } else {
-                                    Image(systemName: "circle")
-                                        .foregroundStyle(Color.spendLessTextMuted)
-                                }
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Shopping Apps")
-                } footer: {
-                    Text("This is a mock picker for development. The real FamilyActivityPicker will be used when Screen Time entitlements are available.")
-                        .font(SpendLessFont.caption)
-                }
-            }
-            .navigationTitle("Select Apps to Block")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        screenTimeManager.handleMockSelection(Array(selectedApps))
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-        }
-        .onAppear {
-            selectedApps = Set(screenTimeManager.mockSelectedApps)
-        }
-    }
-    
-    private func appIcon(for name: String) -> String {
-        switch name {
-        case "Amazon": return "🛒"
-        case "Shein": return "👗"
-        case "Temu": return "📦"
-        case "Target": return "🎯"
-        case "Walmart": return "🛒"
-        case "TikTok Shop": return "🎵"
-        case "Instagram": return "📸"
-        case "Etsy": return "🏠"
-        case "ASOS": return "👠"
-        case "Sephora": return "💄"
-        case "Zara": return "👔"
-        case "H&M": return "👕"
-        case "Nike": return "👟"
-        case "eBay": return "🏷️"
-        case "Wish": return "⭐"
-        default: return "📱"
-        }
-    }
-}
-
-#Preview {
-    MockAppPickerView()
-}
 
