@@ -53,7 +53,8 @@ func exportSignature(from canvas: PKCanvasView, scale: CGFloat = 2.0) -> Data? {
         context.cgContext.concatenate(translateTransform)
         
         // Draw the signature
-        drawing.image(from: bounds, scale: scale)
+        let signatureImage = drawing.image(from: bounds, scale: scale)
+        signatureImage.draw(at: .zero)
     }
     
     // Convert to PNG data

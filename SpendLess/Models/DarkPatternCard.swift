@@ -83,13 +83,47 @@ extension DarkPatternCard {
         reframe: "Would I want this if there was no timer?"
     )
     
+    /// Dopamine Menu Framework
+    static let dopamineMenu = DarkPatternCard(
+        sortOrder: 2,
+        icon: "📋",
+        name: "Dopamine Menu",
+        tactic: "\"I'll just browse for a minute...\"",
+        explanation: """
+        Shopping gives you a quick dopamine hit, but it's not the only way to feel good. The Dopamine Menu is a pre-made list of non-shopping activities that give you that same satisfying feeling.
+
+        When you feel the urge to shop, you must try at least one thing from your menu first. This creates a pause between the impulse and the action, giving your rational brain time to catch up.
+
+        The key is having your menu ready before you need it. Write it down, keep it accessible. When the shopping urge hits, you're not trying to think of alternatives—you're choosing from options you've already curated.
+        """,
+        reframe: "What's on my dopamine menu today? (Walk with a podcast, bake something, play music, dance, snuggle a pet, sit in the sun...)"
+    )
+    
+    /// Frictionless vs Effortful Dopamine
+    static let frictionlessDopamine = DarkPatternCard(
+        sortOrder: 3,
+        icon: "⚡",
+        name: "Frictionless vs Effortful Dopamine",
+        tactic: "\"One-click purchase\"",
+        explanation: """
+        Dopamine is the "do it again" chemical, not happiness. There's a crucial difference between frictionless dopamine (one-click shopping, endless scrolling) and effortful dopamine (activities that require work).
+
+        Frictionless dopamine is like a potato chip—easy, addictive, but ultimately unsatisfying. Effortful dopamine is like a loaded baked potato—it takes more work, but it's deeply satisfying and doesn't leave you wanting more.
+
+        Retailers remove all friction to make shopping effortless. But you can add friction back: force yourself to drive to the store, try it on, pay cash. By the time you've done all that, the desire often passes. The effort itself becomes the filter.
+        """,
+        reframe: "Can I add friction to this purchase? Or choose an effortful dopamine activity instead?"
+    )
+    
     // MARK: - All Cards
     // NOTE: For V1, we're only implementing one example card.
     // Future: Add more cards here, and later migrate to SwiftData for persistence.
     // Future: Cards will be grouped by category (urgency tactics, social proof, pricing tricks, etc.)
     
     static let allCards: [DarkPatternCard] = [
-        fakeUrgency
+        fakeUrgency,
+        dopamineMenu,
+        frictionlessDopamine
         // Future cards to add:
         // - Fake Scarcity ("Only 3 left!")
         // - Social Proof Pressure ("47 people viewing this")

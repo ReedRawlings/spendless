@@ -150,7 +150,7 @@ final class InterventionManager {
     func completeHALTCheck(selectedState: HALTState?) {
         self.selectedHALTState = selectedState
         
-        if let state = selectedState {
+        if selectedState != nil {
             // Show redirect screen for the selected state
             withAnimation(.easeInOut(duration: 0.3)) {
                 currentStep = .haltRedirect
@@ -299,6 +299,10 @@ final class InterventionManager {
     
     // MARK: - Data Access
     
+    var resistCount: Int {
+        sharedDefaults?.integer(forKey: "resistCount") ?? 0
+    }
+    
     var savedAmount: Double {
         sharedDefaults?.double(forKey: "savedAmount") ?? 0
     }
@@ -326,7 +330,7 @@ final class InterventionManager {
         // Store in UserDefaults for analytics/insights later
         let encoder = JSONEncoder()
         if let data = try? encoder.encode(result),
-           let jsonString = String(data: data, encoding: .utf8) {
+           let _ = String(data: data, encoding: .utf8) {
             // Store as array of results (append to existing)
             var results = loadHALTCheckResults()
             results.append(result)

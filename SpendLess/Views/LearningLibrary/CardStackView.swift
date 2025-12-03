@@ -169,22 +169,6 @@ struct CardStackView: View {
     private func cardBack(_ card: DarkPatternCard) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: SpendLessSpacing.lg) {
-                // Header with back button and lesson name
-                HStack(alignment: .center, spacing: SpendLessSpacing.md) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Color.spendLessPrimary)
-                    }
-                    
-                    Text(card.name)
-                        .font(SpendLessFont.title2)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                }
-                .padding(.bottom, SpendLessSpacing.xs)
-                
                 // Why It Works Section
                 VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
                     Text("WHY IT WORKS")

@@ -11,6 +11,7 @@ import SwiftData
 struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
+    @Environment(InterventionManager.self) private var interventionManager
     
     @Query private var goals: [UserGoal]
     @Query private var graveyardItems: [GraveyardItem]
@@ -48,7 +49,9 @@ struct DashboardView: View {
     }
     
     private var impulsesResisted: Int {
-        graveyardItems.count
+        let graveyardCount = graveyardItems.count
+        let interventionCount = interventionManager.resistCount
+        return graveyardCount + interventionCount
     }
     
     var body: some View {

@@ -91,8 +91,24 @@ struct LessonsListView: View {
                 .zIndex(0)
             }
         }
-        .navigationTitle("Lessons")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle(showCardStack ? (selectedCard?.name ?? "") : "Lessons")
+        .navigationBarTitleDisplayMode(showCardStack ? .inline : .large)
+        .navigationBarBackButtonHidden(showCardStack)
+        .toolbar {
+            if showCardStack {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showCardStack = false
+                        }
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.spendLessPrimary)
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - Header
