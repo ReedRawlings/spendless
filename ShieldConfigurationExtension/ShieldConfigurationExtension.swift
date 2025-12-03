@@ -23,13 +23,11 @@ nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         // Load user's streak and savings from shared defaults
         let currentStreak = sharedDefaults?.integer(forKey: "currentStreak") ?? 0
         let totalSaved = sharedDefaults?.double(forKey: "totalSaved") ?? 0
-        let difficultyMode = sharedDefaults?.string(forKey: "difficultyMode") ?? "firm"
         let futureLetterText = sharedDefaults?.string(forKey: "futureLetterText")
         
-        // Create subtitle - use letter text in Gentle mode, otherwise use streak/savings
+        // Create subtitle - prefer future letter text if available, otherwise show streak/savings
         let subtitleText: String
-        if difficultyMode == "gentle", let letterText = futureLetterText, !letterText.isEmpty {
-            // Use future letter text in Gentle mode
+        if let letterText = futureLetterText, !letterText.isEmpty {
             subtitleText = letterText
         } else if currentStreak > 0 && totalSaved > 0 {
             subtitleText = "You've been shopping-free for \(currentStreak) days.\nYou've saved $\(Int(totalSaved)) so far."
@@ -103,17 +101,54 @@ nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 // MARK: - SpendLess Colors for Extensions
 
 /// Color palette for use in extensions (UIColor since extensions can't use SwiftUI Color)
+/// Colors adapt to light and dark mode
 private struct SpendLessColors {
     // Primary - Warm terracotta
-    static let primary = UIColor(red: 0.89, green: 0.45, blue: 0.36, alpha: 1.0)
+    static let primary = UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+            return UIColor(red: 0.95, green: 0.65, blue: 0.58, alpha: 1.0)
+        default:
+            return UIColor(red: 0.89, green: 0.45, blue: 0.36, alpha: 1.0)
+        }
+    }
     
     // Background
-    static let background = UIColor(red: 0.99, green: 0.97, blue: 0.94, alpha: 1.0)
+    static let background = UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+            return UIColor(red: 0.12, green: 0.10, blue: 0.09, alpha: 1.0)
+        default:
+            return UIColor(red: 0.99, green: 0.97, blue: 0.94, alpha: 1.0)
+        }
+    }
     
     // Text
-    static let textPrimary = UIColor(red: 0.20, green: 0.18, blue: 0.16, alpha: 1.0)
-    static let textSecondary = UIColor(red: 0.45, green: 0.42, blue: 0.38, alpha: 1.0)
+    static let textPrimary = UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+            return UIColor(red: 0.95, green: 0.93, blue: 0.90, alpha: 1.0)
+        default:
+            return UIColor(red: 0.20, green: 0.18, blue: 0.16, alpha: 1.0)
+        }
+    }
+    
+    static let textSecondary = UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+            return UIColor(red: 0.75, green: 0.72, blue: 0.68, alpha: 1.0)
+        default:
+            return UIColor(red: 0.45, green: 0.42, blue: 0.38, alpha: 1.0)
+        }
+    }
     
     // Secondary - Sage
-    static let secondary = UIColor(red: 0.55, green: 0.68, blue: 0.55, alpha: 1.0)
+    static let secondary = UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+            return UIColor(red: 0.65, green: 0.78, blue: 0.65, alpha: 1.0)
+        default:
+            return UIColor(red: 0.55, green: 0.68, blue: 0.55, alpha: 1.0)
+        }
+    }
 }

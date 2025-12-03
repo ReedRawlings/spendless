@@ -25,7 +25,8 @@ SpendLess is an iOS app that helps users overcome compulsive shopping and impuls
 | Dashboard View | ✅ Complete | `Views/Dashboard/DashboardView.swift` |
 | Panic Button Flow | ✅ Complete | `Views/Dashboard/DashboardView.swift` |
 | Waiting List View | ✅ Complete | `Views/WaitingList/WaitingListView.swift` |
-| Graveyard View | ✅ Complete | `Views/Graveyard/GraveyardView.swift` |
+| Graveyard View | ✅ Complete | `Views/Graveyard/GraveyardView.swift` (moved to Settings) |
+| Learning Library | ✅ Complete | `Views/LearningLibrary/*.swift` |
 | Settings View | ✅ Complete | `Views/Settings/SettingsView.swift` |
 | Onboarding (15 screens) | ✅ Complete | `Views/Onboarding/*.swift` |
 | Extension Templates | ✅ Complete | `Extensions/*.swift` |
@@ -94,8 +95,9 @@ SpendLess is an iOS app that helps users overcome compulsive shopping and impuls
 TabBar
 ├── Home (Dashboard)    → DashboardView.swift
 ├── Waiting List        → WaitingListView.swift
-├── Graveyard          → GraveyardView.swift
+├── Learn              → LearningLibraryView.swift
 └── Settings           → SettingsView.swift
+                          └── Cart Graveyard → GraveyardView.swift
 ```
 
 ### File Structure (Current)
@@ -109,6 +111,7 @@ SpendLess/
 │   ├── UserGoal.swift
 │   ├── WaitingListItem.swift
 │   ├── GraveyardItem.swift
+│   ├── DarkPatternCard.swift
 │   ├── Streak.swift
 │   └── UserProfile.swift
 ├── Views/
@@ -119,6 +122,9 @@ SpendLess/
 │   │   └── WaitingListView.swift
 │   ├── Graveyard/
 │   │   └── GraveyardView.swift
+│   ├── LearningLibrary/
+│   │   ├── LearningLibraryView.swift
+│   │   └── CardStackView.swift
 │   ├── Settings/
 │   │   └── SettingsView.swift
 │   └── Onboarding/
@@ -129,6 +135,7 @@ SpendLess/
 │   ├── PrimaryButton.swift
 │   ├── SecondaryButton.swift
 │   ├── Card.swift
+│   ├── FlipCard.swift
 │   ├── ProgressBar.swift
 │   ├── GoalProgressView.swift
 │   ├── CelebrationOverlay.swift
@@ -140,7 +147,8 @@ SpendLess/
 │   └── AccessibilityModifiers.swift
 ├── Services/
 │   ├── AppState.swift
-│   └── ScreenTimeManager.swift
+│   ├── ScreenTimeManager.swift
+│   └── LearningCardService.swift
 ├── Theme/
 │   └── Theme.swift
 └── Extensions/
@@ -170,6 +178,77 @@ All models use SwiftData `@Model` macro for persistence:
 - `DifficultyMode` — gentle, firm, lockdown
 - `GraveyardSource` — waitingList, panicButton, blockIntercept, returned
 - `SpendRange` — Monthly spend estimates
+
+---
+
+## Learning Library (Dark Pattern Education)
+
+### Overview
+
+The Learning Library replaces the Graveyard tab with educational content about shopping manipulation tactics. The Graveyard functionality is preserved and accessible from Settings.
+
+### Features
+
+- **Flip Card Mechanic** — Users see a tactic name, tap to reveal the psychology, then confirm understanding
+- **Progress Tracking** — Cards can be marked as learned, with progress persisted to UserDefaults
+- **Completed Card Styling** — Learned cards appear with 60% opacity
+- **Review Mode** — Users can review all cards after completing the library
+
+### Data Model
+
+`DarkPatternCard` (struct, not SwiftData for V1):
+- `id: UUID`
+- `sortOrder: Int` — Display sequence
+- `icon: String` — Emoji
+- `name: String` — Pattern name (e.g., "Fake Urgency")
+- `tactic: String` — Example quote (e.g., "Sale ends in 2 hours!")
+- `explanation: String` — Psychology explanation
+- `reframe: String` — Actionable tip for next time
+- `learnedAt: Date?` — nil = not yet learned
+- `cooldownDuration: Int` — Days before resurfacing (default: 14)
+
+### Views
+
+| View | Purpose |
+|------|---------|
+| `LearningLibraryView` | Main tab view with progress, card previews, and Coming Soon section |
+| `CardStackView` | Full-screen card learning experience with flip animations |
+
+### Components
+
+| Component | Purpose |
+|-----------|---------|
+| `FlipCard` | Reusable 3D flip card with Y-axis rotation animation |
+
+### Services
+
+| Service | Purpose |
+|---------|---------|
+| `LearningCardService` | Observable service for card data, progress tracking, UserDefaults persistence |
+
+### Animation Specs
+
+- **Card Flip**: 0.4s spring animation, scale dips to 0.95x at midpoint
+- **Card Transition**: 0.3s slide-out/slide-in between cards
+- **Haptics**: `HapticFeedback.celebration()` on card completion
+- Respects `UIAccessibility.isReduceMotionEnabled`
+
+### Current Cards (V1)
+
+One example card implemented: **Fake Urgency**
+- Icon: ⏰
+- Tactic: "Sale ends in 2 hours!"
+- Explanation: Psychology of loss aversion and timer manipulation
+- Reframe: "Would I want this if there was no timer?"
+
+### Future Enhancements
+
+- Add remaining 11 cards (Fake Scarcity, Social Proof, Confirm Shaming, etc.)
+- Migrate to SwiftData for persistence
+- Card grouping by category
+- Cooldown visibility UI
+- New content notifications
+- Podcasts & Articles section
 - `GoalType` — vacation, debtFree, bigPurchase, etc.
 - `SpendingCategory` — clothing, electronics, home, etc.
 
@@ -186,7 +265,8 @@ All models use SwiftData `@Model` macro for persistence:
 5. **Monthly Spend** — Estimate selection ($50-100 to $500+)
 6. **Impact Visualization** — Animated yearly/decade cost calculation
 7. **Goal Selection** — What they'd rather have (includes "Just want to stop wasting")
-8. **Goal Details** — Name, amount (if goal type requires details). Shows selected goal type at top with contextual placeholders. **Future: Apple Intelligence integration opportunity** — Use AI to help craft personalized goal descriptions, suggest realistic target amounts based on user's monthly spend, and generate motivational copy.
+8. **Goal Details** — Name, amount (if goal type requires details). Shows selected goal type at top with contextual placeholders. 
+    **Future: Apple Intelligence integration opportunity** — Use AI to help craft personalized goal descriptions, suggest realistic target amounts based on user's monthly spend, and generate motivational copy.
 9. **Commitment** — Tap to commit "I'm done buying things I don't need"
 10. **Permission Explanation** — Screen Time access explanation
 11. **App Selection** — FamilyActivityPicker (currently stubbed with mock picker)
@@ -1182,6 +1262,8 @@ After 2 weeks of data:
 - Widgets (streak, goal progress)
 
 ### Apple Intelligence Integration Opportunities
+
+## Some are located here others in the AppleIntelligenceFeatures.md
 
 **Goal Details Screen (Onboarding Screen 8):**
 - Use AI to help craft personalized goal descriptions based on selected goal type

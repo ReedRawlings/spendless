@@ -53,11 +53,13 @@ struct CommitmentAnniversaryView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(height: 100)
+                            .frame(maxWidth: .infinity)
                         
                         Text(formatCommitmentDate(commitmentDate))
                             .font(SpendLessFont.caption)
                             .foregroundStyle(Color.spendLessTextMuted)
                     }
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .padding(SpendLessSpacing.md)
                     .background(Color.spendLessCardBackground)
                     .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))

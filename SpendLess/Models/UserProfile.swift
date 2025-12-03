@@ -19,7 +19,6 @@ final class UserProfile {
     var goalTypeRaw: String? // GoalType raw value
     
     // Settings
-    var difficultyModeRaw: String // DifficultyMode raw value
     var isPro: Bool
     
     // Feature data
@@ -42,7 +41,6 @@ final class UserProfile {
         timings: [ShoppingTiming] = [],
         estimatedSpend: SpendRange = .medium,
         goalType: GoalType? = nil,
-        difficultyMode: DifficultyMode = .firm,
         isPro: Bool = false,
         createdAt: Date = Date()
     ) {
@@ -51,7 +49,6 @@ final class UserProfile {
         self.timingsRaw = timings.map { $0.rawValue }
         self.estimatedSpendRaw = estimatedSpend.rawValue
         self.goalTypeRaw = goalType?.rawValue
-        self.difficultyModeRaw = difficultyMode.rawValue
         self.isPro = isPro
         self.createdAt = createdAt
         self.desiredOutcomesRaw = []
@@ -79,11 +76,6 @@ final class UserProfile {
     var goalType: GoalType? {
         get { goalTypeRaw.flatMap { GoalType(rawValue: $0) } }
         set { goalTypeRaw = newValue?.rawValue }
-    }
-    
-    var difficultyMode: DifficultyMode {
-        get { DifficultyMode(rawValue: difficultyModeRaw) ?? .firm }
-        set { difficultyModeRaw = newValue.rawValue }
     }
     
     var desiredOutcomes: Set<DesiredOutcome> {
@@ -119,8 +111,7 @@ extension UserProfile {
             triggers: [.bored, .sales, .afterStress],
             timings: [.lateNight, .workBreaks],
             estimatedSpend: .high,
-            goalType: .vacation,
-            difficultyMode: .firm
+            goalType: .vacation
         )
         profile.onboardingCompletedAt = Calendar.current.date(byAdding: .day, value: -30, to: Date())
         profile.blockedAppCount = 8

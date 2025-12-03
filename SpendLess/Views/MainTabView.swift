@@ -16,14 +16,14 @@ struct MainTabView: View {
     enum Tab: String, CaseIterable {
         case home = "Home"
         case waitingList = "Waiting"
-        case graveyard = "Graveyard"
+        case learn = "Learn"
         case settings = "Settings"
         
         var icon: String {
             switch self {
             case .home: return "house.fill"
             case .waitingList: return "clock.fill"
-            case .graveyard: return "leaf.fill"
+            case .learn: return "book.fill"
             case .settings: return "gearshape.fill"
             }
         }
@@ -43,11 +43,11 @@ struct MainTabView: View {
                 }
                 .tag(Tab.waitingList)
             
-            GraveyardView()
+            LearningLibraryView()
                 .tabItem {
-                    Label(Tab.graveyard.rawValue, systemImage: Tab.graveyard.icon)
+                    Label(Tab.learn.rawValue, systemImage: Tab.learn.icon)
                 }
-                .tag(Tab.graveyard)
+                .tag(Tab.learn)
             
             SettingsView()
                 .tabItem {

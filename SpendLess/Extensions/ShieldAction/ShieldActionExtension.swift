@@ -41,7 +41,7 @@ nonisolated class ShieldActionExtension: ShieldActionDelegate {
             handleSomethingSpecific(completionHandler: completionHandler)
             
         case .secondaryButtonPressed:
-            // User was "just browsing" - handle based on difficulty mode
+            // User was "just browsing" - log and block
             handleJustBrowsing(completionHandler: completionHandler)
             
         @unknown default:
@@ -99,36 +99,11 @@ nonisolated class ShieldActionExtension: ShieldActionDelegate {
     }
     
     private func handleJustBrowsing(completionHandler: @escaping (ShieldActionResponse) -> Void) {
-        // Get user's difficulty mode
-        let difficultyModeRaw = sharedDefaults?.string(forKey: "difficultyMode") ?? "firm"
+        // Log the intercept event
+        logIntercept(outcome: "justBrowsing")
         
-        switch difficultyModeRaw {
-        case "gentle":
-            // Gentle mode: Show reminder but can proceed
-            // Log a small savings amount ($1)
-            addToSavings(1)
-            logIntercept(outcome: "justBrowsing_gentle")
-            
-            // Allow brief access (will re-shield after)
-            completionHandler(.defer)
-            
-        case "firm":
-            // Firm mode: Require breathing exercise first
-            // Deep link to breathing exercise
-            if let url = URL(string: "spendless://breathingExercise") {
-                sharedDefaults?.set(url.absoluteString, forKey: "pendingDeepLink")
-            }
-            logIntercept(outcome: "justBrowsing_firm")
-            completionHandler(.close)
-            
-        case "lockdown":
-            // Lockdown mode: No access allowed
-            logIntercept(outcome: "justBrowsing_lockdown")
-            completionHandler(.close)
-            
-        default:
-            completionHandler(.close)
-        }
+        // Block access (shield extensions cannot open parent app or defer without parent intervention)
+        completionHandler(.close)
     }
     
     // MARK: - Helpers

@@ -51,17 +51,6 @@ struct WaitingListView: View {
                 }
             }
             .navigationTitle("Waiting List")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showAddSheet = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(Color.spendLessPrimary)
-                    }
-                }
-            }
             .sheet(isPresented: $showAddSheet) {
                 AddToWaitingListSheet()
             }

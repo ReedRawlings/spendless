@@ -36,7 +36,6 @@ final class AppState {
     var onboardingGoalAmount: Decimal = 0
     var onboardingGoalImageData: Data?
     var onboardingDesiredOutcomes: Set<DesiredOutcome> = []
-    var onboardingDifficultyMode: DifficultyMode = .firm
     var onboardingSignatureData: Data?
     var onboardingFutureLetterText: String?
     var onboardingCommitmentDate: Date?
@@ -91,7 +90,6 @@ final class AppState {
         onboardingGoalAmount = 0
         onboardingGoalImageData = nil
         onboardingDesiredOutcomes = []
-        onboardingDifficultyMode = .firm
         onboardingSignatureData = nil
         onboardingFutureLetterText = nil
         onboardingCommitmentDate = nil
@@ -174,7 +172,6 @@ extension AppState {
         profile.timings = Array(onboardingTimings)
         profile.estimatedSpend = onboardingSpendRange
         profile.goalType = onboardingGoalType
-        profile.difficultyMode = onboardingDifficultyMode
         profile.desiredOutcomes = onboardingDesiredOutcomes
         profile.signatureImageData = onboardingSignatureData
         profile.futureLetterText = onboardingFutureLetterText
@@ -195,7 +192,7 @@ extension AppState {
         // Create streak
         let _ = getOrCreateStreak(from: context)
         
-        // Sync futureLetterText and difficultyMode to App Groups for Shield extension
+        // Sync futureLetterText to App Groups for Shield extension
         let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
         if let letterText = onboardingFutureLetterText, !letterText.isEmpty {
             sharedDefaults?.set(letterText, forKey: "futureLetterText")
@@ -204,14 +201,16 @@ extension AppState {
             let defaultText = generatePlaceholderText(triggers: onboardingTriggers)
             sharedDefaults?.set(defaultText, forKey: "futureLetterText")
         }
-        // Sync difficulty mode
-        sharedDefaults?.set(onboardingDifficultyMode.rawValue, forKey: "difficultyMode")
         
         // Sync blocked apps selection (already saved by ScreenTimeManager)
         // The selection is saved when user picks apps in onboarding
         
         // Save and complete
         try? context.save()
+        
+        // Sync widget data
+        syncWidgetData(context: context)
+        
         completeOnboarding()
         clearOnboardingState()
     }
@@ -227,6 +226,24 @@ extension AppState {
         // Sync total saved
         let totalSaved = calculateTotalSaved(from: context)
         sharedDefaults?.set((totalSaved as NSDecimalNumber).doubleValue, forKey: "totalSaved")
+        
+        // Also sync widget data
+        syncWidgetData(context: context)
+    }
+    
+    /// Sync all data to widgets
+    func syncWidgetData(context: ModelContext) {
+        let profile = try? context.fetch(FetchDescriptor<UserProfile>()).first
+        let goal = getCurrentGoal(from: context)
+        let streak = try? context.fetch(FetchDescriptor<Streak>()).first
+        let totalSaved = calculateTotalSaved(from: context)
+        
+        WidgetDataService.shared.syncAllData(
+            profile: profile,
+            goal: goal,
+            streak: streak,
+            totalSaved: totalSaved
+        )
     }
 }
 

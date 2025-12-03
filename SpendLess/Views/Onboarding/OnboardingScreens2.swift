@@ -23,6 +23,12 @@ struct OnboardingCommitmentView: View {
     @State private var showGlow = false
     @State private var triggerConfetti = false
     
+    // Animation states for confrontation page
+    @State private var showFirstCard = false
+    @State private var showSecondCard = false
+    @State private var showButton = false
+    @State private var secondCardIconPop = false
+    
     private let totalPages = 3
     
     var body: some View {
@@ -123,28 +129,117 @@ struct OnboardingCommitmentView: View {
                         label: "Where it's going now",
                         isHighlighted: false
                     )
+                    .opacity(showFirstCard ? 1 : 0)
+                    .offset(x: showFirstCard ? 0 : -30)
+                    .animation(.easeOut(duration: 0.4), value: showFirstCard)
                     
-                    // Positive path (highlighted)
-                    pathCard(
-                        icon: "💵",
-                        destination: goalDestination,
-                        amount: goalName,
-                        label: "Where it could go",
-                        isHighlighted: true
+                    // Positive path (highlighted) - inline to support icon pop animation
+                    HStack(spacing: SpendLessSpacing.md) {
+                        Text("💵")
+                            .font(.title)
+                        
+                        HStack(spacing: SpendLessSpacing.xs) {
+                            Text("→")
+                                .foregroundStyle(Color.spendLessPrimary)
+                            Text("→")
+                                .foregroundStyle(Color.spendLessPrimary)
+                            Text("→")
+                                .foregroundStyle(Color.spendLessPrimary)
+                        }
+                        
+                        Text(positivePathIcon)
+                            .font(.title2)
+                            .scaleEffect(secondCardIconPop ? 1 : 0.5)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.6), value: secondCardIconPop)
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: SpendLessSpacing.xxs) {
+                            Text(positivePathText)
+                                .font(SpendLessFont.headline)
+                                .foregroundStyle(Color.spendLessPrimary)
+                            
+                            Text("Where it could go")
+                                .font(SpendLessFont.caption)
+                                .foregroundStyle(Color.spendLessTextSecondary)
+                        }
+                    }
+                    .padding(SpendLessSpacing.md)
+                    .background(
+                        RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                            .fill(Color.spendLessPrimary.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                                    .strokeBorder(Color.spendLessPrimary, lineWidth: 2)
+                            )
                     )
+                    .opacity(showSecondCard ? 1 : 0)
+                    .offset(y: showSecondCard ? 0 : 20)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: showSecondCard)
                 }
             }
             .padding(.horizontal, SpendLessSpacing.lg)
             
             Spacer()
             
-            PrimaryButton("I want the second one") {
+            PrimaryButton(ctaText) {
                 withAnimation {
                     currentPage = 1
                 }
             }
             .padding(.horizontal, SpendLessSpacing.lg)
             .padding(.bottom, SpendLessSpacing.xl)
+            .opacity(showButton ? 1 : 0)
+            .scaleEffect(showButton ? 1 : 0.95)
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showButton)
+        }
+        .onAppear {
+            // Only animate if we're on the confrontation page
+            guard currentPage == 0 else { return }
+            
+            // Reset animation states when view appears
+            showFirstCard = false
+            showSecondCard = false
+            showButton = false
+            secondCardIconPop = false
+            
+            // Sequence the card reveals
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                guard currentPage == 0 else { return }
+                withAnimation(.easeOut(duration: 0.4)) {
+                    showFirstCard = true
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                guard currentPage == 0 else { return }
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    showSecondCard = true
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.3) {
+                guard currentPage == 0 else { return }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    secondCardIconPop = true
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
+                guard currentPage == 0 else { return }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    showButton = true
+                }
+            }
+        }
+        .onChange(of: currentPage) { oldValue, newValue in
+            // Reset animations when navigating away from confrontation page
+            if newValue != 0 {
+                showFirstCard = false
+                showSecondCard = false
+                showButton = false
+                secondCardIconPop = false
+            }
         }
     }
     
@@ -163,6 +258,73 @@ struct OnboardingCommitmentView: View {
             case .justStop: return "Your wallet"
             default: return "Your goal"
             }
+        }
+    }
+    
+    // MARK: - Dynamic CTA Text
+    
+    private var ctaText: String {
+        switch appState.onboardingGoalType {
+        case .emergency:
+            return "I choose security"
+        case .vacation:
+            if appState.onboardingGoalName.isEmpty {
+                return "I choose adventure"
+            } else {
+                return "I choose \(appState.onboardingGoalName)"
+            }
+        case .debtFree:
+            return "I choose freedom"
+        case .retirement:
+            return "I choose my future"
+        case .downPayment:
+            return "I choose my home"
+        case .car:
+            return "I choose the car"
+        case .bigPurchase:
+            if appState.onboardingGoalName.isEmpty {
+                return "I'm taking this back"
+            } else {
+                return "I choose \(appState.onboardingGoalName)"
+            }
+        case .justStop:
+            return "That money stays mine"
+        }
+    }
+    
+    // MARK: - Dynamic Positive Path Content
+    
+    private var positivePathText: String {
+        switch appState.onboardingGoalType {
+        case .emergency:
+            return "Real security. Real peace."
+        case .vacation:
+            return appState.onboardingGoalName.isEmpty ? "Actual adventures" : "Your \(appState.onboardingGoalName) trip"
+        case .debtFree:
+            return "Freedom from debt"
+        case .retirement:
+            return "Your future self, set"
+        case .downPayment:
+            return "Keys to your place"
+        case .car:
+            return "Your new car"
+        case .bigPurchase:
+            return appState.onboardingGoalName.isEmpty ? "What you actually want" : appState.onboardingGoalName
+        case .justStop:
+            return "More time enjoying life"
+        }
+    }
+    
+    private var positivePathIcon: String {
+        switch appState.onboardingGoalType {
+        case .emergency: return "🛡️"
+        case .vacation: return "✈️"
+        case .debtFree: return "⛓️‍💥"
+        case .retirement: return "🌅"
+        case .downPayment: return "🏠"
+        case .car: return "🚗"
+        case .bigPurchase: return "🎁"
+        case .justStop: return "🏝️"
         }
     }
     
@@ -479,7 +641,7 @@ struct OnboardingCommitmentView: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(height: 100)
-                                    .padding()
+                                    .frame(maxWidth: .infinity)
                             }
                             
                             Text("Signed on \(formatCommitmentDate(date))")
@@ -498,7 +660,7 @@ struct OnboardingCommitmentView: View {
                             .frame(height: 100)
                         }
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .padding(SpendLessSpacing.xl)
                     .background(
                         RoundedRectangle(cornerRadius: SpendLessRadius.lg)
@@ -543,19 +705,20 @@ struct OnboardingCommitmentView: View {
     }
 }
 
-// MARK: - Signature Sheet View
+// MARK: - Signature Sheet View (FIXED)
 
 struct SignatureSheetView: View {
     @Environment(\.dismiss) private var dismiss
     
     let onSave: (Data, Date) -> Void
     
+    @State private var canvasView = PKCanvasView()
     @State private var drawing = PKDrawing()
     
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.spendLessBackground.ignoresSafeArea()
+                Color.white.ignoresSafeArea()  // White background for signature
                 
                 VStack(spacing: SpendLessSpacing.lg) {
                     Text("Sign with your finger")
@@ -563,15 +726,27 @@ struct SignatureSheetView: View {
                         .foregroundStyle(Color.spendLessTextPrimary)
                         .padding(.top, SpendLessSpacing.lg)
                     
-                    SignatureCanvasView(drawing: $drawing)
-                        .frame(height: 300)
-                        .padding(SpendLessSpacing.md)
+                    // Signature canvas
+                    SignatureCanvasRepresentable(
+                        canvasView: $canvasView,
+                        drawing: $drawing
+                    )
+                    .frame(height: 300)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                            .strokeBorder(Color.spendLessTextMuted, lineWidth: 1)
+                    )
+                    .padding(.horizontal, SpendLessSpacing.md)
                     
                     Button("Clear") {
                         drawing = PKDrawing()
+                        canvasView.drawing = PKDrawing()
                     }
                     .foregroundStyle(Color.spendLessError)
-                    .padding(.bottom, SpendLessSpacing.lg)
+                    
+                    Spacer()
                 }
             }
             .navigationTitle("Sign Your Commitment")
@@ -585,41 +760,67 @@ struct SignatureSheetView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        let canvas = PKCanvasView()
-                        canvas.drawing = drawing
-                        if let signatureData = exportSignature(from: canvas) {
-                            onSave(signatureData, Date())
-                        }
+                        saveSignature()
                     }
                     .disabled(drawing.strokes.isEmpty)
                 }
             }
         }
     }
+    
+    private func saveSignature() {
+        // Export signature to image data
+        let bounds = drawing.bounds
+        
+        guard !bounds.isEmpty else {
+            return
+        }
+        
+        // Add padding around signature
+        let padding: CGFloat = 20
+        let imageSize = CGSize(
+            width: bounds.width + padding * 2,
+            height: bounds.height + padding * 2
+        )
+        
+        let renderer = UIGraphicsImageRenderer(size: imageSize)
+        let image = renderer.image { context in
+            // Transparent background
+            UIColor.clear.setFill()
+            context.fill(CGRect(origin: .zero, size: imageSize))
+            
+            // Center the drawing
+            context.cgContext.translateBy(x: padding - bounds.minX, y: padding - bounds.minY)
+            
+            // Draw signature
+            drawing.image(from: bounds, scale: UIScreen.main.scale).draw(at: .zero)
+        }
+        
+        if let imageData = image.pngData() {
+            onSave(imageData, Date())
+        }
+    }
 }
 
-// MARK: - Signature Canvas View
+// MARK: - Signature Canvas Representable (NEW)
 
-struct SignatureCanvasView: UIViewRepresentable {
+struct SignatureCanvasRepresentable: UIViewRepresentable {
+    @Binding var canvasView: PKCanvasView
     @Binding var drawing: PKDrawing
     
     func makeUIView(context: Context) -> PKCanvasView {
-        let canvas = PKCanvasView()
-        canvas.drawingPolicy = .anyInput
-        canvas.tool = PKInkingTool(.pen, color: .black, width: 3)
-        canvas.backgroundColor = .white
-        canvas.drawing = drawing
+        canvasView.drawingPolicy = .anyInput
+        canvasView.tool = PKInkingTool(.pen, color: .black, width: 3)
+        canvasView.backgroundColor = .clear
+        canvasView.isOpaque = false
+        canvasView.drawing = drawing
+        canvasView.delegate = context.coordinator
         
-        // Add observer for drawing changes
-        canvas.delegate = context.coordinator
-        
-        return canvas
+        return canvasView
     }
     
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
-        if uiView.drawing != drawing {
-            uiView.drawing = drawing
-        }
+        uiView.drawing = drawing
     }
     
     func makeCoordinator() -> Coordinator {
@@ -627,9 +828,9 @@ struct SignatureCanvasView: UIViewRepresentable {
     }
     
     class Coordinator: NSObject, PKCanvasViewDelegate {
-        var parent: SignatureCanvasView
+        var parent: SignatureCanvasRepresentable
         
-        init(_ parent: SignatureCanvasView) {
+        init(_ parent: SignatureCanvasRepresentable) {
             self.parent = parent
         }
         
@@ -645,6 +846,7 @@ struct OnboardingPermissionView: View {
     let onContinue: () -> Void
     
     @State private var isRequestingAuth = false
+    @State private var showAuthError = false
     
     var body: some View {
         OnboardingContainer(step: .permissionExplanation) {
@@ -673,6 +875,12 @@ struct OnboardingPermissionView: View {
                         .foregroundStyle(Color.spendLessTextMuted)
                         .multilineTextAlignment(.center)
                         .padding(.top, SpendLessSpacing.sm)
+                    
+                    Text("When you tap \"Grant Access\", iOS will show a permission prompt. If it doesn't appear, you may need to enable it in Settings > Screen Time > SpendLess.")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextMuted)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, SpendLessSpacing.xs)
                 }
                 .padding(.horizontal, SpendLessSpacing.lg)
                 
@@ -684,6 +892,23 @@ struct OnboardingPermissionView: View {
                 .padding(.horizontal, SpendLessSpacing.lg)
                 .padding(.bottom, SpendLessSpacing.xl)
             }
+        }
+        .onAppear {
+            // Check if already authorized
+            checkAuthorizationStatus()
+        }
+        .alert("Screen Time Access Required", isPresented: $showAuthError) {
+            Button("Open Settings") {
+                // Open Settings app (can't deep link to Screen Time directly)
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Continue Anyway", role: .cancel) {
+                onContinue()
+            }
+        } message: {
+            Text("To enable Screen Time access:\n\n1. Open Settings\n2. Tap Screen Time\n3. Tap SpendLess\n4. Toggle on \"Allow Family Controls\"\n\nThen return here to continue.")
         }
     }
     
@@ -697,11 +922,45 @@ struct OnboardingPermissionView: View {
         }
     }
     
+    private func checkAuthorizationStatus() {
+        let authStatus = AuthorizationCenter.shared.authorizationStatus
+        
+        switch authStatus {
+        case .approved:
+            // Already authorized - skip this screen
+            onContinue()
+        case .denied:
+            // User previously denied - show error
+            showAuthError = true
+        case .notDetermined:
+            // Need to request - button will handle it
+            break
+        @unknown default:
+            break
+        }
+    }
+    
     private func requestAuthorization() {
+        let authStatus = AuthorizationCenter.shared.authorizationStatus
+        
+        // If already approved, just continue
+        if authStatus == .approved {
+            onContinue()
+            return
+        }
+        
+        // If denied, show error
+        if authStatus == .denied {
+            showAuthError = true
+            return
+        }
+        
+        // Request authorization
         isRequestingAuth = true
         
         Task {
             do {
+                // This shows the REAL iOS Screen Time authorization prompt
                 try await ScreenTimeManager.shared.requestAuthorization()
                 await MainActor.run {
                     isRequestingAuth = false
@@ -710,8 +969,13 @@ struct OnboardingPermissionView: View {
             } catch {
                 await MainActor.run {
                     isRequestingAuth = false
-                    // Still continue even if authorization fails
-                    onContinue()
+                    // Check if it was denied
+                    if AuthorizationCenter.shared.authorizationStatus == .denied {
+                        showAuthError = true
+                    } else {
+                        // Other error - still continue
+                        onContinue()
+                    }
                 }
             }
         }
@@ -726,6 +990,7 @@ struct OnboardingAppSelectionView: View {
     @Bindable var screenTimeManager = ScreenTimeManager.shared
     @State private var selection = FamilyActivitySelection()
     @State private var showPicker = false
+    @State private var showAuthError = false
     
     var body: some View {
         OnboardingContainer(step: .appSelection) {
@@ -756,37 +1021,30 @@ struct OnboardingAppSelectionView: View {
                         }
                     }
                     .padding(.horizontal, SpendLessSpacing.lg)
+                    .transition(.scale.combined(with: .opacity))
                 }
                 
                 Spacer()
                 
                 VStack(spacing: SpendLessSpacing.md) {
                     PrimaryButton("Select Apps", icon: "apps.iphone") {
-                        showPicker = true
+                        openPicker()
                     }
-                    
-                    #if DEBUG
-                    VStack(spacing: SpendLessSpacing.xs) {
-                        Text("Debug Info")
-                            .font(SpendLessFont.caption)
-                            .foregroundStyle(Color.spendLessTextMuted)
-                        
-                        Text("Apps: \(selection.applicationTokens.count)")
-                            .font(SpendLessFont.caption)
-                        Text("Categories: \(selection.categoryTokens.count)")
-                            .font(SpendLessFont.caption)
-                        Text("Domains: \(selection.webDomainTokens.count)")
-                            .font(SpendLessFont.caption)
-                        Text("Total: \(screenTimeManager.blockedAppCount)")
-                            .font(SpendLessFont.caption)
-                    }
-                    .padding(.top, SpendLessSpacing.sm)
-                    #endif
                     
                     if screenTimeManager.blockedAppCount > 0 {
                         SecondaryButton("Continue") {
                             onContinue()
                         }
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                    
+                    // Skip button
+                    if screenTimeManager.blockedAppCount == 0 {
+                        Button("Skip for now") {
+                            onContinue()
+                        }
+                        .font(SpendLessFont.body)
+                        .foregroundStyle(Color.spendLessTextMuted)
                     }
                 }
                 .padding(.horizontal, SpendLessSpacing.lg)
@@ -795,31 +1053,81 @@ struct OnboardingAppSelectionView: View {
         }
         .familyActivityPicker(isPresented: $showPicker, selection: $selection)
         .onChange(of: selection) { oldValue, newValue in
-            print("[OnboardingAppSelectionView] 🔄 Selection changed")
-            print("  - Old count: \(oldValue.applicationTokens.count + oldValue.categoryTokens.count + oldValue.webDomainTokens.count)")
-            print("  - New count: \(newValue.applicationTokens.count + newValue.categoryTokens.count + newValue.webDomainTokens.count)")
+            let newCount = newValue.applicationTokens.count + 
+                          newValue.categoryTokens.count + 
+                          newValue.webDomainTokens.count
             
-            // Update immediately
-            screenTimeManager.handleSelection(newValue)
+            if newCount > 0 {
+                withAnimation {
+                    screenTimeManager.handleSelection(newValue)
+                }
+            }
         }
         .onChange(of: showPicker) { oldValue, newValue in
-            if !newValue {
-                // Picker just dismissed - ensure we process the selection
-                print("[OnboardingAppSelectionView] 📱 Picker dismissed")
-                print("  - Final selection count: \(selection.applicationTokens.count + selection.categoryTokens.count + selection.webDomainTokens.count)")
+            if !newValue {  // Picker just closed
+                // Process final selection
+                let totalSelected = selection.applicationTokens.count + 
+                                  selection.categoryTokens.count + 
+                                  selection.webDomainTokens.count
                 
-                // Double-check the selection was processed
-                if selection.applicationTokens.count > 0 || selection.categoryTokens.count > 0 || selection.webDomainTokens.count > 0 {
+                if totalSelected > 0 {
                     screenTimeManager.handleSelection(selection)
                 }
-            } else {
-                print("[OnboardingAppSelectionView] 📱 Picker opened")
             }
         }
         .onAppear {
-            // Load existing selection
             selection = screenTimeManager.selection
-            print("[OnboardingAppSelectionView] 📋 Loaded existing selection: \(screenTimeManager.blockedAppCount) items")
+        }
+        .alert("Screen Time Access Required", isPresented: $showAuthError) {
+            Button("Open Settings") {
+                // Open Settings app (can't deep link to Screen Time directly)
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Try Again") {
+                openPicker()
+            }
+            Button("Skip", role: .cancel) {
+                onContinue()
+            }
+        } message: {
+            Text("To enable Screen Time access:\n\n1. Open Settings\n2. Tap Screen Time\n3. Tap SpendLess\n4. Toggle on \"Allow Family Controls\"\n\nThen return here and tap \"Try Again\".")
+        }
+    }
+    
+    private func openPicker() {
+        // Check authorization status first
+        let authStatus = AuthorizationCenter.shared.authorizationStatus
+        
+        switch authStatus {
+        case .notDetermined:
+            // Should have been authorized in previous screen, but just in case:
+            // Request authorization first
+            Task {
+                do {
+                    try await ScreenTimeManager.shared.requestAuthorization()
+                    await MainActor.run {
+                        showPicker = true
+                    }
+                } catch {
+                    await MainActor.run {
+                        showAuthError = true
+                    }
+                }
+            }
+            
+        case .approved:
+            // Already authorized - just show the picker
+            showPicker = true
+            
+        case .denied:
+            // User denied authorization - show error
+            showAuthError = true
+            
+        @unknown default:
+            // Unknown status - try to show picker anyway
+            showPicker = true
         }
     }
 }
@@ -993,52 +1301,6 @@ struct OnboardingHowItWorksView: View {
     }
 }
 
-// MARK: - Screen 15: Difficulty Mode
-
-struct OnboardingDifficultyModeView: View {
-    @Environment(AppState.self) private var appState
-    let onComplete: () -> Void
-    
-    var body: some View {
-        OnboardingContainer(step: .difficultyMode) {
-            VStack(spacing: SpendLessSpacing.lg) {
-                VStack(spacing: SpendLessSpacing.sm) {
-                    Text("How strict should we be?")
-                        .font(SpendLessFont.title2)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                    
-                    Text("You can change this anytime in Settings")
-                        .font(SpendLessFont.body)
-                        .foregroundStyle(Color.spendLessTextSecondary)
-                }
-                .padding(.top, SpendLessSpacing.xl)
-                
-                ScrollView {
-                    VStack(spacing: SpendLessSpacing.md) {
-                        ForEach(DifficultyMode.allCases) { mode in
-                            DifficultyModeCard(
-                                mode: mode,
-                                isSelected: appState.onboardingDifficultyMode == mode
-                            ) {
-                                appState.onboardingDifficultyMode = mode
-                                let generator = UIImpactFeedbackGenerator(style: .light)
-                                generator.impactOccurred()
-                            }
-                        }
-                    }
-                    .padding(.horizontal, SpendLessSpacing.md)
-                }
-                
-                PrimaryButton("Start my journey", icon: "sparkles") {
-                    onComplete()
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                .padding(.bottom, SpendLessSpacing.xl)
-            }
-        }
-    }
-}
-
 // MARK: - Previews
 
 #Preview("Commitment") {
@@ -1058,11 +1320,6 @@ struct OnboardingDifficultyModeView: View {
 
 #Preview("How It Works") {
     OnboardingHowItWorksView {}
-        .environment(AppState.shared)
-}
-
-#Preview("Difficulty Mode") {
-    OnboardingDifficultyModeView {}
         .environment(AppState.shared)
 }
 

@@ -80,14 +80,12 @@ final class UserGoal {
     
     /// Translates savings into meaningful equivalents based on goal
     func savingsTranslation(for amount: Decimal) -> String? {
-        guard !name.isEmpty else { return nil }
-        
         // Calculate what percentage this amount represents
         guard targetAmount > 0 else { return nil }
         let percentage = (amount as NSDecimalNumber).doubleValue / (targetAmount as NSDecimalNumber).doubleValue * 100
         
         if percentage >= 1 {
-            return String(format: "+%.0f%% closer to \(name)", percentage)
+            return String(format: "+%.0f%% closer to \(type.rawValue)", percentage)
         }
         return nil
     }

@@ -12,6 +12,7 @@ import FamilyControls
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
+    @Environment(\.scenePhase) private var scenePhase
     
     @Query private var profiles: [UserProfile]
     @Query private var goals: [UserGoal]
@@ -22,6 +23,7 @@ struct SettingsView: View {
     @State private var showResetConfirmation = false
     @State private var showResetOnboardingConfirmation = false
     @State private var showEditGoal = false
+    @State private var currentInterventionStyleText: String = "Full"
     
     private var profile: UserProfile? {
         profiles.first
@@ -40,7 +42,7 @@ struct SettingsView: View {
                     // Blocking Section
                     Section {
                         blockedAppsRow
-                        difficultyModeRow
+                        interventionStyleRow
                     } header: {
                         Text("Blocking")
                     }
@@ -51,6 +53,17 @@ struct SettingsView: View {
                         resetSavingsRow
                     } header: {
                         Text("My Goal")
+                    }
+                    
+                    // Graveyard Section
+                    Section {
+                        NavigationLink {
+                            GraveyardView()
+                        } label: {
+                            Label("Cart Graveyard", systemImage: "leaf.fill")
+                        }
+                    } header: {
+                        Text("Savings")
                     }
                     
                     // Commitment Section
@@ -146,6 +159,15 @@ struct SettingsView: View {
             }
             .onAppear {
                 selection = screenTimeManager.selection
+                updateInterventionStyle()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("InterventionStyleDidChange"))) { _ in
+                updateInterventionStyle()
+            }
+            .onChange(of: scenePhase) { oldPhase, newPhase in
+                if newPhase == .active {
+                    updateInterventionStyle()
+                }
             }
             .sheet(isPresented: $showEditGoal) {
                 EditGoalSheet(goal: currentGoal)
@@ -188,16 +210,29 @@ struct SettingsView: View {
         .foregroundStyle(Color.spendLessTextPrimary)
     }
     
-    private var difficultyModeRow: some View {
+    private var interventionStyleRow: some View {
         NavigationLink {
-            DifficultyModeSettingView()
+            InterventionStyleSettingView()
         } label: {
             HStack {
-                Label("Difficulty Mode", systemImage: "slider.horizontal.3")
+                Label("Intervention Style", systemImage: "sparkles")
                 Spacer()
-                Text(profile?.difficultyMode.displayName ?? "Firm")
+                Text(currentInterventionStyleText)
                     .foregroundStyle(Color.spendLessTextMuted)
             }
+        }
+    }
+    
+    private func updateInterventionStyle() {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let styleString = sharedDefaults?.string(forKey: "preferredInterventionStyle") ?? "full"
+        
+        switch styleString {
+        case "breathing": currentInterventionStyleText = "Breathing"
+        case "halt": currentInterventionStyleText = "HALT Check"
+        case "goal": currentInterventionStyleText = "Goal Reminder"
+        case "quick": currentInterventionStyleText = "Quick Pause"
+        default: currentInterventionStyleText = "Full"
         }
     }
     
@@ -274,63 +309,6 @@ struct SettingsView: View {
         formatter.dateStyle = .long
         formatter.timeStyle = .none
         return formatter.string(from: date)
-    }
-}
-
-// MARK: - Difficulty Mode Setting View
-
-struct DifficultyModeSettingView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    
-    @Query private var profiles: [UserProfile]
-    
-    @State private var selectedMode: DifficultyMode = .firm
-    
-    private var profile: UserProfile? {
-        profiles.first
-    }
-    
-    var body: some View {
-        ZStack {
-            Color.spendLessBackground.ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: SpendLessSpacing.md) {
-                    Text("How strict should we be?")
-                        .font(SpendLessFont.title2)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                        .padding(.top, SpendLessSpacing.lg)
-                    
-                    ForEach(DifficultyMode.allCases) { mode in
-                        DifficultyModeCard(mode: mode, isSelected: selectedMode == mode) {
-                            selectedMode = mode
-                            saveSelection()
-                        }
-                    }
-                }
-                .padding(SpendLessSpacing.md)
-            }
-        }
-        .navigationTitle("Difficulty Mode")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            selectedMode = profile?.difficultyMode ?? .firm
-        }
-    }
-    
-    private func saveSelection() {
-        if let profile {
-            profile.difficultyMode = selectedMode
-            try? modelContext.save()
-            
-            // Sync to App Groups
-            let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
-            sharedDefaults?.set(selectedMode.rawValue, forKey: "difficultyMode")
-        }
-        
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
     }
 }
 

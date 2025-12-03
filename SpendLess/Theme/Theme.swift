@@ -11,40 +11,61 @@ import SwiftUI
 
 extension Color {
     // Primary - Warm terracotta/coral
-    static let spendLessPrimary = Color(red: 0.89, green: 0.45, blue: 0.36)
-    static let spendLessPrimaryDark = Color(red: 0.76, green: 0.35, blue: 0.27)
-    static let spendLessPrimaryLight = Color(red: 0.95, green: 0.65, blue: 0.58)
+    static let spendLessPrimary = Color(light: (0.89, 0.45, 0.36), dark: (0.95, 0.65, 0.58))
+    static let spendLessPrimaryDark = Color(light: (0.76, 0.35, 0.27), dark: (0.89, 0.45, 0.36))
+    static let spendLessPrimaryLight = Color(light: (0.95, 0.65, 0.58), dark: (0.85, 0.55, 0.48))
     
     // Secondary - Sage green
-    static let spendLessSecondary = Color(red: 0.55, green: 0.68, blue: 0.55)
-    static let spendLessSecondaryDark = Color(red: 0.42, green: 0.55, blue: 0.42)
-    static let spendLessSecondaryLight = Color(red: 0.75, green: 0.85, blue: 0.75)
+    static let spendLessSecondary = Color(light: (0.55, 0.68, 0.55), dark: (0.65, 0.78, 0.65))
+    static let spendLessSecondaryDark = Color(light: (0.42, 0.55, 0.42), dark: (0.55, 0.68, 0.55))
+    static let spendLessSecondaryLight = Color(light: (0.75, 0.85, 0.75), dark: (0.65, 0.75, 0.65))
     
     // Accent - Warm gold for celebrations
-    static let spendLessGold = Color(red: 0.91, green: 0.76, blue: 0.42)
-    static let spendLessGoldDark = Color(red: 0.80, green: 0.62, blue: 0.25)
-    static let spendLessGoldLight = Color(red: 0.96, green: 0.88, blue: 0.68)
+    static let spendLessGold = Color(light: (0.91, 0.76, 0.42), dark: (0.96, 0.88, 0.68))
+    static let spendLessGoldDark = Color(light: (0.80, 0.62, 0.25), dark: (0.91, 0.76, 0.42))
+    static let spendLessGoldLight = Color(light: (0.96, 0.88, 0.68), dark: (0.90, 0.82, 0.60))
     
-    // Backgrounds - Warm cream tones
-    static let spendLessBackground = Color(red: 0.99, green: 0.97, blue: 0.94)
-    static let spendLessBackgroundSecondary = Color(red: 0.96, green: 0.93, blue: 0.88)
-    static let spendLessCardBackground = Color.white
+    // Backgrounds - Warm cream tones for light, warm dark tones for dark mode
+    static let spendLessBackground = Color(light: (0.99, 0.97, 0.94), dark: (0.12, 0.10, 0.09))
+    static let spendLessBackgroundSecondary = Color(light: (0.96, 0.93, 0.88), dark: (0.16, 0.14, 0.12))
+    static let spendLessCardBackground = Color(light: (1.0, 1.0, 1.0), dark: (0.18, 0.16, 0.14))
     
-    // Text colors
-    static let spendLessTextPrimary = Color(red: 0.20, green: 0.18, blue: 0.16)
-    static let spendLessTextSecondary = Color(red: 0.45, green: 0.42, blue: 0.38)
-    static let spendLessTextMuted = Color(red: 0.65, green: 0.62, blue: 0.58)
+    // Text colors - dark in light mode, light in dark mode
+    static let spendLessTextPrimary = Color(light: (0.20, 0.18, 0.16), dark: (0.95, 0.93, 0.90))
+    static let spendLessTextSecondary = Color(light: (0.45, 0.42, 0.38), dark: (0.75, 0.72, 0.68))
+    static let spendLessTextMuted = Color(light: (0.65, 0.62, 0.58), dark: (0.55, 0.52, 0.48))
     
-    // Semantic colors
-    static let spendLessSuccess = Color(red: 0.55, green: 0.68, blue: 0.55)
-    static let spendLessWarning = Color(red: 0.91, green: 0.76, blue: 0.42)
-    static let spendLessError = Color(red: 0.85, green: 0.40, blue: 0.40)
+    // Semantic colors - adjusted for dark mode
+    static let spendLessSuccess = Color(light: (0.55, 0.68, 0.55), dark: (0.65, 0.78, 0.65))
+    static let spendLessWarning = Color(light: (0.91, 0.76, 0.42), dark: (0.96, 0.88, 0.68))
+    static let spendLessError = Color(light: (0.85, 0.40, 0.40), dark: (0.95, 0.50, 0.50))
     
     // Special
-    static let spendLessStreak = Color(red: 0.95, green: 0.55, blue: 0.30) // Fire orange
+    static let spendLessStreak = Color(light: (0.95, 0.55, 0.30), dark: (1.0, 0.65, 0.40))
     
-    // Warm sand for gradient backgrounds
-    static let warmSand = Color(hue: 0.08, saturation: 0.12, brightness: 0.88)
+    // Warm sand for gradient backgrounds (converted from HSB to RGB)
+    static let warmSand = Color(
+        light: (0.96, 0.94, 0.88),  // Light warm sand
+        dark: (0.25, 0.22, 0.20)    // Dark warm sand
+    )
+}
+
+// MARK: - Adaptive Color Helper
+
+extension Color {
+    /// Creates a color that adapts to light and dark mode using RGB tuples
+    init(light: (Double, Double, Double), dark: (Double, Double, Double)) {
+        self.init(uiColor: UIColor { traitCollection in
+            let rgb: (Double, Double, Double)
+            switch traitCollection.userInterfaceStyle {
+            case .dark:
+                rgb = dark
+            default:
+                rgb = light
+            }
+            return UIColor(red: rgb.0, green: rgb.1, blue: rgb.2, alpha: 1.0)
+        })
+    }
 }
 
 // MARK: - Typography

@@ -66,54 +66,6 @@ enum ShoppingTiming: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-// MARK: - Difficulty Mode
-
-enum DifficultyMode: String, CaseIterable, Codable, Identifiable {
-    case gentle = "gentle"
-    case firm = "firm"
-    case lockdown = "lockdown"
-    
-    var id: String { rawValue }
-    
-    var displayName: String {
-        switch self {
-        case .gentle: return "Gentle"
-        case .firm: return "Firm"
-        case .lockdown: return "Lockdown"
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .gentle: return "🌱"
-        case .firm: return "💪"
-        case .lockdown: return "🔒"
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .gentle:
-            return "Remind me, but let me through"
-        case .firm:
-            return "Make me wait"
-        case .lockdown:
-            return "Don't let me in"
-        }
-    }
-    
-    var detailedDescription: String {
-        switch self {
-        case .gentle:
-            return "A pause and a question before you can open blocked apps."
-        case .firm:
-            return "5-minute breathing exercise before you can access apps."
-        case .lockdown:
-            return "Apps are blocked. Period. (Can only be changed from Settings)"
-        }
-    }
-}
-
 // MARK: - Graveyard Source
 
 enum GraveyardSource: String, Codable, Identifiable {
@@ -281,6 +233,94 @@ enum DesiredOutcome: String, CaseIterable, Codable, Identifiable {
         case .confidence: return "✨"
         case .breakCycle: return "🛑"
         }
+    }
+}
+
+// MARK: - HALT State
+
+enum HALTState: String, CaseIterable, Codable, Identifiable {
+    case hungry = "hungry"
+    case angry = "angry"
+    case lonely = "lonely"
+    case tired = "tired"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .hungry: return "Hungry"
+        case .angry: return "Angry / Stressed"
+        case .lonely: return "Lonely"
+        case .tired: return "Tired"
+        }
+    }
+    
+    var emoji: String {
+        switch self {
+        case .hungry: return "🍽️"
+        case .angry: return "😤"
+        case .lonely: return "😔"
+        case .tired: return "😴"
+        }
+    }
+    
+    var title: String {
+        switch self {
+        case .hungry: return "You're hungry, not bored."
+        case .angry: return "Stress shopping doesn't solve what's bothering you."
+        case .lonely: return "Packages aren't company."
+        case .tired: return "Tired brains make bad decisions."
+        }
+    }
+    
+    var suggestions: [String] {
+        switch self {
+        case .hungry:
+            return [
+                "Grab a snack",
+                "Drink some water",
+                "Step away for 10 minutes"
+            ]
+        case .angry:
+            return [
+                "Take 5 deep breaths",
+                "Go for a quick walk",
+                "Text someone about it"
+            ]
+        case .lonely:
+            return [
+                "Text a friend",
+                "Call someone you miss",
+                "Go somewhere with people"
+            ]
+        case .tired:
+            return [
+                "Take a 20-minute nap",
+                "Go to bed early tonight",
+                "Rest first, decide later"
+            ]
+        }
+    }
+}
+
+// MARK: - HALT Check Result
+
+struct HALTCheckResult: Codable {
+    let timestamp: Date
+    let triggerApp: String?
+    let selectedState: HALTState?
+    let didRedirect: Bool
+    
+    init(
+        timestamp: Date = Date(),
+        triggerApp: String? = nil,
+        selectedState: HALTState? = nil,
+        didRedirect: Bool = false
+    ) {
+        self.timestamp = timestamp
+        self.triggerApp = triggerApp
+        self.selectedState = selectedState
+        self.didRedirect = didRedirect
     }
 }
 

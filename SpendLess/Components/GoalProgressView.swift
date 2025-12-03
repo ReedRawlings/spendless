@@ -50,11 +50,20 @@ private struct GoalWithTargetView: View {
                 GoalIconView(goalType: goal.type, size: showFullView ? 100 : 60)
             }
             
-            // Goal name
-            Text(goal.name.isEmpty ? "Your Goal" : goal.name)
+            // Goal type (main title)
+            Text(goal.type.rawValue)
                 .font(showFullView ? SpendLessFont.title2 : SpendLessFont.headline)
                 .foregroundStyle(Color.spendLessTextPrimary)
                 .multilineTextAlignment(.center)
+            
+            // Goal "why" (subtitle) - only show if it exists and is different from the goal type
+            if !goal.name.isEmpty && goal.name != goal.type.rawValue {
+                Text(goal.name)
+                    .font(showFullView ? SpendLessFont.body : SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, SpendLessSpacing.xxs)
+            }
             
             if showFullView {
                 // Progress bar
@@ -102,13 +111,13 @@ private struct GoalWithTargetView: View {
         } else if percentage >= 75 {
             return "Almost there! Keep going!"
         } else if percentage >= 50 {
-            return "Halfway to \(goal.name)!"
+            return "Halfway to \(goal.type.rawValue)!"
         } else if percentage >= 25 {
             return "Great progress! Every dollar counts."
         } else if percentage > 0 {
             return "You're on your way!"
         } else {
-            return "Your journey to \(goal.name) starts now."
+            return "Your journey to \(goal.type.rawValue) starts now."
         }
     }
     

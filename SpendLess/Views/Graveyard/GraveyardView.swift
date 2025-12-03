@@ -349,7 +349,7 @@ struct LogReturnSheet: View {
                 .foregroundStyle(Color.spendLessGold)
             
             if let goal = currentGoal {
-                Text("Going toward \(goal.name)!")
+                Text("Going toward \(goal.type.rawValue)!")
                     .font(SpendLessFont.body)
                     .foregroundStyle(Color.spendLessTextSecondary)
             }

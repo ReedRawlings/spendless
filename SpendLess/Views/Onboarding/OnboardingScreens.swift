@@ -672,6 +672,7 @@ struct OnboardingGoalDetailsView: View {
             .padding(.horizontal, SpendLessSpacing.lg)
             .padding(.bottom, SpendLessSpacing.xl)
         }
+        .hideKeyboardOnTap()
         .onAppear {
             animatePhrases()
         }

@@ -51,6 +51,7 @@ struct CommitmentDetailView: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(height: 120)
+                                    .frame(maxWidth: .infinity)
                                     .padding(.top, SpendLessSpacing.sm)
                             }
                             
@@ -151,7 +152,7 @@ struct RenewCommitmentView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(height: 100)
-                            .padding()
+                            .frame(maxWidth: .infinity)
                     } else {
                         VStack(spacing: SpendLessSpacing.sm) {
                             Image(systemName: "pencil.tip")
@@ -166,7 +167,7 @@ struct RenewCommitmentView: View {
                         .frame(height: 150)
                     }
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(SpendLessSpacing.xl)
                 .background(
                     RoundedRectangle(cornerRadius: SpendLessRadius.lg)

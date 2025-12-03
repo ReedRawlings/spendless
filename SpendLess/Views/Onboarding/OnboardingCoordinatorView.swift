@@ -2,7 +2,7 @@
 //  OnboardingCoordinatorView.swift
 //  SpendLess
 //
-//  Onboarding flow coordinator - 14 screens
+//  Onboarding flow coordinator - 23 screens (includes 5 Why Change screens)
 //
 
 import SwiftUI
@@ -20,6 +20,13 @@ struct OnboardingCoordinatorView: View {
         case behaviors
         case timing
         case problemApps
+        // Why Change screens (emotional journey: pain → hope)
+        case whyChange1
+        case whyChange2
+        case whyChange3
+        case whyChange4
+        case whyChange5
+        // Continue flow
         case monthlySpend
         case impactVisualization
         case goalSelection
@@ -31,7 +38,8 @@ struct OnboardingCoordinatorView: View {
         case websiteBlocking
         case selectionConfirmation
         case howItWorks
-        case difficultyMode
+        case interventionStyleSelection
+        case shortcutsSetup
         
         var progress: Double {
             Double(rawValue + 1) / Double(Self.allCases.count)
@@ -59,7 +67,18 @@ struct OnboardingCoordinatorView: View {
         case .timing:
             OnboardingTimingView { navigateTo(.problemApps) }
         case .problemApps:
-            OnboardingProblemAppsView { navigateTo(.monthlySpend) }
+            OnboardingProblemAppsView { navigateTo(.whyChange1) }
+        // Why Change screens
+        case .whyChange1:
+            WhyChange1View { navigateTo(.whyChange2) }
+        case .whyChange2:
+            WhyChange2View { navigateTo(.whyChange3) }
+        case .whyChange3:
+            WhyChange3View { navigateTo(.whyChange4) }
+        case .whyChange4:
+            WhyChange4View { navigateTo(.whyChange5) }
+        case .whyChange5:
+            WhyChange5View { navigateTo(.monthlySpend) }
         case .monthlySpend:
             OnboardingMonthlySpendView { navigateTo(.impactVisualization) }
         case .impactVisualization:
@@ -81,9 +100,14 @@ struct OnboardingCoordinatorView: View {
         case .selectionConfirmation:
             OnboardingConfirmationView { navigateTo(.howItWorks) }
         case .howItWorks:
-            OnboardingHowItWorksView { navigateTo(.difficultyMode) }
-        case .difficultyMode:
-            OnboardingDifficultyModeView { completeOnboarding() }
+            OnboardingHowItWorksView { navigateTo(.interventionStyleSelection) }
+        case .interventionStyleSelection:
+            InterventionStyleSelectionView { navigateTo(.shortcutsSetup) }
+        case .shortcutsSetup:
+            ShortcutsSetupView(
+                onComplete: { completeOnboarding() },
+                onSkip: { completeOnboarding() }
+            )
         }
     }
     
@@ -176,6 +200,7 @@ struct OnboardingContainer<Content: View>: View {
             }
         }
         .navigationBarBackButtonHidden(false)
+        .hideKeyboardOnTap()
     }
 }
 

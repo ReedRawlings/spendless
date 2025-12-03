@@ -175,60 +175,6 @@ struct SelectionCard: View {
     }
 }
 
-// MARK: - Difficulty Mode Card
-
-struct DifficultyModeCard: View {
-    let mode: DifficultyMode
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                HStack {
-                    IconView(mode.icon, font: .title)
-                    
-                    Text(mode.displayName.uppercased())
-                        .font(SpendLessFont.headline)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                    
-                    Spacer()
-                    
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(Color.spendLessPrimary)
-                    }
-                }
-                
-                Text(mode.description)
-                    .font(SpendLessFont.bodyBold)
-                    .foregroundStyle(Color.spendLessPrimary)
-                
-                Text(mode.detailedDescription)
-                    .font(SpendLessFont.caption)
-                    .foregroundStyle(Color.spendLessTextSecondary)
-                    .multilineTextAlignment(.leading)
-            }
-            .padding(SpendLessSpacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: SpendLessRadius.lg)
-                    .fill(Color.spendLessCardBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: SpendLessRadius.lg)
-                            .strokeBorder(
-                                isSelected ? Color.spendLessPrimary : Color.clear,
-                                lineWidth: 2
-                            )
-                    )
-            )
-            .spendLessShadow(SpendLessShadow.cardShadow)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 // MARK: - Stats Card
 
 struct StatsCard: View {
@@ -305,9 +251,6 @@ struct CheckmarkShape: Shape {
                 icon: "🏷️",
                 isSelected: false
             ) {}
-            
-            DifficultyModeCard(mode: .gentle, isSelected: false) {}
-            DifficultyModeCard(mode: .firm, isSelected: true) {}
             
             HStack(spacing: SpendLessSpacing.md) {
                 StatsCard(icon: "flame.fill", value: "18", label: "Day Streak", iconColor: .spendLessStreak)

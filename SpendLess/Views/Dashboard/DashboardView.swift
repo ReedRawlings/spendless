@@ -158,11 +158,11 @@ struct DashboardView: View {
     }
     
     private func generateCelebrationMessage(for amount: Decimal) -> String {
-        if let goal = currentGoal, !goal.name.isEmpty {
+        if let goal = currentGoal {
             if let translation = goal.savingsTranslation(for: amount) {
                 return translation
             }
-            return "Every dollar counts toward \(goal.name)!"
+            return "Every dollar counts toward \(goal.type.rawValue)!"
         }
         return "That's money back in your pocket!"
     }
@@ -437,7 +437,7 @@ struct PanicButtonFlowView: View {
                 .foregroundStyle(Color.spendLessPrimary)
             
             if let goal = currentGoal {
-                Text("That's going toward \(goal.name)!")
+                Text("That's going toward \(goal.type.rawValue)!")
                     .font(SpendLessFont.body)
                     .foregroundStyle(Color.spendLessTextPrimary)
             }
@@ -470,6 +470,9 @@ struct PanicButtonFlowView: View {
         }
         
         try? modelContext.save()
+        
+        // Sync widget data
+        appState.syncWidgetData(context: modelContext)
         
         // Trigger celebration
         showMoneyAnimation = true

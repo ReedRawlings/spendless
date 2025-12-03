@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import AppIntents
 
 @main
 struct SpendLessApp: App {
@@ -39,12 +40,17 @@ struct SpendLessApp: App {
     
     @State private var appState = AppState.shared
     
+    // MARK: - Intervention Manager
+    
+    @State private var interventionManager = InterventionManager.shared
+    
     // MARK: - Body
     
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(appState)
+                .environment(interventionManager)
                 .onOpenURL { url in
                     handleDeepLink(url)
                 }
@@ -67,9 +73,20 @@ struct SpendLessApp: App {
             // Show breathing exercise
             appState.pendingDeepLink = "breathingExercise"
             
-        case "panicButton":
-            // Show panic button flow
+        case "panicButton", "panic":
+            // Show panic button flow (from widget or shortcut)
             appState.pendingDeepLink = "panicButton"
+            
+        case "intervention":
+            // Handle intervention deep link: spendless://intervention?type=breathing
+            let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            let typeString = components?.queryItems?.first(where: { $0.name == "type" })?.value ?? "full"
+            let appName = components?.queryItems?.first(where: { $0.name == "app" })?.value
+            
+            if let type = InterventionManager.InterventionTypeValue(rawValue: typeString) {
+                interventionManager.triggeringApp = appName
+                interventionManager.triggerIntervention(type: type)
+            }
             
         default:
             break
@@ -81,16 +98,64 @@ struct SpendLessApp: App {
 
 struct RootView: View {
     @Environment(AppState.self) private var appState
+    @Environment(InterventionManager.self) private var interventionManager
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
-        Group {
-            if appState.hasCompletedOnboarding {
-                MainTabView()
-            } else {
-                OnboardingCoordinatorView()
+        ZStack {
+            Group {
+                if appState.hasCompletedOnboarding {
+                    MainTabView()
+                } else {
+                    OnboardingCoordinatorView()
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: appState.hasCompletedOnboarding)
+            
+            // Intervention overlay
+            if interventionManager.isShowingIntervention {
+                InterventionFlowView(manager: interventionManager)
+                    .transition(.opacity)
+                    .zIndex(100)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: appState.hasCompletedOnboarding)
+        .animation(.easeInOut(duration: 0.3), value: interventionManager.isShowingIntervention)
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .active {
+                // Check for pending interventions when app becomes active
+                interventionManager.checkForPendingIntervention()
+                
+                // Check for pending Control Widget action (panic button from Control Center)
+                checkForPendingControlWidgetAction()
+                
+                // Sync widget data when app becomes active
+                if appState.hasCompletedOnboarding {
+                    appState.syncWidgetData(context: modelContext)
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .checkForIntervention)) { _ in
+            interventionManager.checkForPendingIntervention()
+        }
+    }
+    
+    // MARK: - Control Widget Action Check
+    
+    private func checkForPendingControlWidgetAction() {
+        let suiteName = "group.com.spendless.data"
+        let pendingPanicKey = "pendingPanicAction"
+        
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        
+        if defaults.bool(forKey: pendingPanicKey) {
+            // Clear the flag
+            defaults.set(false, forKey: pendingPanicKey)
+            defaults.synchronize()
+            
+            // Trigger the panic button flow
+            appState.pendingDeepLink = "panicButton"
+        }
     }
 }
 
