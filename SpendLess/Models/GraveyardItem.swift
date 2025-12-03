@@ -18,6 +18,14 @@ final class GraveyardItem {
     var sourceRaw: String // GraveyardSource raw value
     var category: String? // SpendingCategory raw value
     
+    // New fields for removal reason capture
+    var removalReasonRaw: String? // RemovalReason raw value
+    var removalReasonNote: String? // Custom note when "Other" is selected
+    
+    // Track original waiting list data for analytics
+    var originalAddedAt: Date? // When item was originally added to waiting list
+    var daysWaitedBeforeBurial: Int? // How many days the item waited
+    
     init(
         id: UUID = UUID(),
         name: String,
@@ -25,7 +33,10 @@ final class GraveyardItem {
         buriedAt: Date = Date(),
         originalReason: String? = nil,
         source: GraveyardSource,
-        category: SpendingCategory? = nil
+        category: SpendingCategory? = nil,
+        removalReason: RemovalReason? = nil,
+        removalReasonNote: String? = nil,
+        originalAddedAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -34,6 +45,18 @@ final class GraveyardItem {
         self.originalReason = originalReason
         self.sourceRaw = source.rawValue
         self.category = category?.rawValue
+        self.removalReasonRaw = removalReason?.rawValue
+        self.removalReasonNote = removalReasonNote
+        self.originalAddedAt = originalAddedAt
+        
+        // Calculate days waited if we have the original add date
+        if let originalAddedAt {
+            let calendar = Calendar.current
+            let components = calendar.dateComponents([.day], from: originalAddedAt, to: buriedAt)
+            self.daysWaitedBeforeBurial = components.day
+        } else {
+            self.daysWaitedBeforeBurial = nil
+        }
     }
     
     // MARK: - Computed Properties
@@ -45,6 +68,22 @@ final class GraveyardItem {
     var spendingCategory: SpendingCategory? {
         guard let category else { return nil }
         return SpendingCategory(rawValue: category)
+    }
+    
+    var removalReason: RemovalReason? {
+        guard let removalReasonRaw else { return nil }
+        return RemovalReason(rawValue: removalReasonRaw)
+    }
+    
+    /// Display text for the removal reason
+    var removalReasonDisplayText: String? {
+        if let removalReason {
+            if removalReason == .other, let note = removalReasonNote, !note.isEmpty {
+                return note
+            }
+            return removalReason.displayName
+        }
+        return nil
     }
     
     var isReturn: Bool {
@@ -103,13 +142,21 @@ final class GraveyardItem {
 // MARK: - Convenience Initializer from WaitingListItem
 
 extension GraveyardItem {
-    convenience init(from waitingListItem: WaitingListItem, source: GraveyardSource = .waitingList) {
+    convenience init(
+        from waitingListItem: WaitingListItem,
+        source: GraveyardSource = .waitingList,
+        removalReason: RemovalReason? = nil,
+        removalReasonNote: String? = nil
+    ) {
         self.init(
             name: waitingListItem.name,
             amount: waitingListItem.amount,
-            originalReason: waitingListItem.reason,
+            originalReason: waitingListItem.reasonDisplayText,
             source: source,
-            category: waitingListItem.spendingCategory
+            category: waitingListItem.spendingCategory,
+            removalReason: removalReason,
+            removalReasonNote: removalReasonNote,
+            originalAddedAt: waitingListItem.addedAt
         )
     }
 }

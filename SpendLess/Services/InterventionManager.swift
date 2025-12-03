@@ -46,6 +46,7 @@ final class InterventionManager {
         case goalReminder     // Show goal + commitment
         case quickPause       // Simple countdown
         case reflection       // "What brought you here?"
+        case dopamineMenu     // Show dopamine menu when "Just Browsing"
         case logItem          // Add to waiting list
         case celebration      // Success!
         case complete
@@ -228,10 +229,36 @@ final class InterventionManager {
     
     /// Called when user selects "Just Browsing"
     func handleJustBrowsing() {
+        // Check if dopamine menu is setup
+        if hasDopamineMenuSetup {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentStep = .dopamineMenu
+            }
+        } else {
+            incrementResistCount()
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentStep = .celebration
+            }
+        }
+    }
+    
+    /// Called when user completes dopamine menu (selects an activity or skips)
+    func completeDopamineMenu() {
         incrementResistCount()
         withAnimation(.easeInOut(duration: 0.3)) {
             currentStep = .celebration
         }
+    }
+    
+    /// Check if dopamine menu is configured
+    var hasDopamineMenuSetup: Bool {
+        guard let data = sharedDefaults?.array(forKey: "dopamineMenuSelectedDefaults") as? [String],
+              !data.isEmpty else {
+            // Also check custom activities
+            let custom = sharedDefaults?.stringArray(forKey: "dopamineMenuCustomActivities") ?? []
+            return !custom.isEmpty
+        }
+        return true
     }
     
     /// Called when user wants to log a specific item

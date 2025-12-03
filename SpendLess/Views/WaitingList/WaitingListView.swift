@@ -14,10 +14,16 @@ struct WaitingListView: View {
     
     @Query(sort: \WaitingListItem.expiresAt) private var items: [WaitingListItem]
     @Query private var goals: [UserGoal]
+    @Query(filter: #Predicate<GraveyardItem> { $0.sourceRaw == "waitingList" })
+    private var buriedFromWaitingList: [GraveyardItem]
     
     @State private var showAddSheet = false
     @State private var showCelebration = false
     @State private var celebrationAmount: Decimal = 0
+    
+    // Sheet state for bury/buy flows
+    @State private var itemToBury: WaitingListItem?
+    @State private var itemToBuy: WaitingListItem?
     
     private var currentGoal: UserGoal? {
         goals.first { $0.isActive }
@@ -29,6 +35,14 @@ struct WaitingListView: View {
     
     private var expiredItems: [WaitingListItem] {
         items.filter { $0.isExpired }
+    }
+    
+    private var waitingListStats: WaitingListStats {
+        calculateWaitingListStats(
+            waitingItems: items,
+            graveyardItems: buriedFromWaitingList,
+            purchasedItems: PurchasedItemsStore.shared.items
+        )
     }
     
     var body: some View {
@@ -53,6 +67,16 @@ struct WaitingListView: View {
             .navigationTitle("Waiting List")
             .sheet(isPresented: $showAddSheet) {
                 AddToWaitingListSheet()
+            }
+            .sheet(item: $itemToBury) { item in
+                RemovalReasonSheet(item: item) { reason, note in
+                    completeBuryItem(item, reason: reason, note: note)
+                }
+            }
+            .sheet(item: $itemToBuy) { item in
+                PurchaseReflectionSheet(item: item) { feeling in
+                    completeBuyItem(item, feeling: feeling)
+                }
             }
         }
     }
@@ -95,12 +119,16 @@ struct WaitingListView: View {
     private var itemsList: some View {
         ScrollView {
             LazyVStack(spacing: SpendLessSpacing.md) {
+                // Stats header (collapsible)
+                WaitingListStatsCard(stats: waitingListStats)
+                
                 // Ready to decide section
                 if !expiredItems.isEmpty {
                     Section {
                         ForEach(expiredItems) { item in
                             WaitingListItemRow(
                                 item: item,
+                                goal: currentGoal,
                                 onBury: { buryItem(item) },
                                 onBuy: { buyItem(item) },
                                 onStillWantIt: { stillWantItem(item) }
@@ -117,6 +145,7 @@ struct WaitingListView: View {
                         ForEach(activeItems) { item in
                             WaitingListItemRow(
                                 item: item,
+                                goal: currentGoal,
                                 onBury: { buryItem(item) },
                                 onBuy: nil,
                                 onStillWantIt: { stillWantItem(item) }
@@ -153,8 +182,18 @@ struct WaitingListView: View {
     // MARK: - Actions
     
     private func buryItem(_ item: WaitingListItem) {
-        // Create graveyard item
-        let graveyardItem = GraveyardItem(from: item, source: .waitingList)
+        // Show removal reason sheet
+        itemToBury = item
+    }
+    
+    private func completeBuryItem(_ item: WaitingListItem, reason: RemovalReason, note: String?) {
+        // Create graveyard item with removal reason
+        let graveyardItem = GraveyardItem(
+            from: item,
+            source: .waitingList,
+            removalReason: reason,
+            removalReasonNote: note
+        )
         modelContext.insert(graveyardItem)
         
         // Update goal
@@ -177,7 +216,16 @@ struct WaitingListView: View {
     }
     
     private func buyItem(_ item: WaitingListItem) {
-        // Just remove from list - no judgment
+        // Show purchase reflection sheet
+        itemToBuy = item
+    }
+    
+    private func completeBuyItem(_ item: WaitingListItem, feeling: PurchaseFeeling?) {
+        // Track the purchase for analytics
+        let purchasedItem = PurchasedWaitingListItem(from: item, reflection: feeling)
+        PurchasedItemsStore.shared.add(purchasedItem)
+        
+        // Remove from waiting list - no judgment
         modelContext.delete(item)
         try? modelContext.save()
         
@@ -226,23 +274,61 @@ struct SectionHeader: View {
 
 struct WaitingListItemRow: View {
     let item: WaitingListItem
+    let goal: UserGoal?
     let onBury: () -> Void
     let onBuy: (() -> Void)?
     let onStillWantIt: () -> Void
     
+    private var goalPercentage: Double? {
+        guard let goal, goal.targetAmount > 0 else { return nil }
+        let percentage = (item.amount as NSDecimalNumber).doubleValue / (goal.targetAmount as NSDecimalNumber).doubleValue * 100
+        return percentage
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
             // Item info
-            HStack {
-                Text(item.name)
-                    .font(SpendLessFont.headline)
-                    .foregroundStyle(Color.spendLessTextPrimary)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: SpendLessSpacing.xxs) {
+                    Text(item.name)
+                        .font(SpendLessFont.headline)
+                        .foregroundStyle(Color.spendLessTextPrimary)
+                    
+                    // Reason wanted display
+                    if let reasonText = item.reasonDisplayText {
+                        HStack(spacing: SpendLessSpacing.xxs) {
+                            if let reason = item.reasonWanted {
+                                Text(reason.icon)
+                                    .font(.caption)
+                            }
+                            Text(reasonText)
+                                .font(SpendLessFont.caption)
+                                .foregroundStyle(Color.spendLessTextMuted)
+                        }
+                    }
+                }
                 
                 Spacer()
                 
-                Text(formatCurrency(item.amount))
-                    .font(SpendLessFont.headline)
-                    .foregroundStyle(Color.spendLessPrimary)
+                VStack(alignment: .trailing, spacing: SpendLessSpacing.xxs) {
+                    HStack(spacing: SpendLessSpacing.xs) {
+                        Text(formatCurrency(item.amount))
+                            .font(SpendLessFont.headline)
+                            .foregroundStyle(Color.spendLessPrimary)
+                        
+                        // Goal percentage (if goal exists)
+                        if let percentage = goalPercentage {
+                            Text("(\(formatPercentage(percentage))%)")
+                                .font(SpendLessFont.caption)
+                                .foregroundStyle(Color.spendLessTextMuted)
+                        }
+                    }
+                    
+                    // Real-life equivalent
+                    Text("= \(realLifeEquivalent(for: item.amount))")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextMuted)
+                }
             }
             
             // Progress bar
@@ -250,14 +336,6 @@ struct WaitingListItemRow: View {
                 progress: item.progress,
                 daysRemaining: item.daysRemaining
             )
-            
-            // Reason if provided
-            if let reason = item.reason, !reason.isEmpty {
-                Text("\"\(reason)\"")
-                    .font(SpendLessFont.caption)
-                    .foregroundStyle(Color.spendLessTextMuted)
-                    .italic()
-            }
             
             // Action buttons
             HStack(spacing: SpendLessSpacing.sm) {
@@ -289,6 +367,14 @@ struct WaitingListItemRow: View {
         formatter.maximumFractionDigits = 0
         return formatter.string(from: amount as NSDecimalNumber) ?? "$0"
     }
+    
+    private func formatPercentage(_ percentage: Double) -> String {
+        if percentage >= 1 {
+            return String(format: "%.0f", percentage)
+        } else {
+            return String(format: "%.1f", percentage)
+        }
+    }
 }
 
 // MARK: - Add to Waiting List Sheet
@@ -299,45 +385,89 @@ struct AddToWaitingListSheet: View {
     
     @State private var itemName = ""
     @State private var itemAmount: Decimal = 0
-    @State private var reason = ""
+    @State private var selectedReason: ReasonWanted?
+    @State private var otherReasonNote = ""
+    @State private var showReasonPicker = false
     
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.spendLessBackground.ignoresSafeArea()
                 
-                VStack(spacing: SpendLessSpacing.lg) {
-                    VStack(spacing: SpendLessSpacing.xs) {
-                        Text("What did you resist?")
-                            .font(SpendLessFont.title2)
-                            .foregroundStyle(Color.spendLessTextPrimary)
+                ScrollView {
+                    VStack(spacing: SpendLessSpacing.lg) {
+                        VStack(spacing: SpendLessSpacing.xs) {
+                            Text("What did you resist?")
+                                .font(SpendLessFont.title2)
+                                .foregroundStyle(Color.spendLessTextPrimary)
+                            
+                            Text("Add it to your 7-day waiting list")
+                                .font(SpendLessFont.body)
+                                .foregroundStyle(Color.spendLessTextSecondary)
+                        }
+                        .padding(.top, SpendLessSpacing.lg)
                         
-                        Text("Add it to your 7-day waiting list")
-                            .font(SpendLessFont.body)
-                            .foregroundStyle(Color.spendLessTextSecondary)
+                        VStack(spacing: SpendLessSpacing.md) {
+                            SpendLessTextField(
+                                "What is it?",
+                                text: $itemName,
+                                placeholder: "e.g., Wireless earbuds"
+                            )
+                            
+                            CurrencyTextField(
+                                title: "How much?",
+                                amount: $itemAmount
+                            )
+                            
+                            // Why do you want this? picker
+                            VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                                Text("Why do you want it? (optional)")
+                                    .font(SpendLessFont.caption)
+                                    .foregroundStyle(Color.spendLessTextMuted)
+                                
+                                Button {
+                                    showReasonPicker = true
+                                } label: {
+                                    HStack {
+                                        if let reason = selectedReason {
+                                            Text(reason.icon)
+                                            Text(reason.displayName)
+                                                .foregroundStyle(Color.spendLessTextPrimary)
+                                        } else {
+                                            Text("Select a reason...")
+                                                .foregroundStyle(Color.spendLessTextMuted)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.down")
+                                            .foregroundStyle(Color.spendLessTextMuted)
+                                    }
+                                    .font(SpendLessFont.body)
+                                    .padding(SpendLessSpacing.md)
+                                    .background(Color.spendLessCardBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
+                            // Other reason note (if "Other" selected)
+                            if selectedReason == .other {
+                                SpendLessTextField(
+                                    "Tell us more",
+                                    text: $otherReasonNote,
+                                    placeholder: "What's the reason?"
+                                )
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
+                        }
+                        .padding(.horizontal, SpendLessSpacing.md)
+                        
+                        Spacer(minLength: SpendLessSpacing.xl)
                     }
-                    .padding(.top, SpendLessSpacing.lg)
-                    
-                    VStack(spacing: SpendLessSpacing.md) {
-                        SpendLessTextField(
-                            "What is it?",
-                            text: $itemName,
-                            placeholder: "e.g., Wireless earbuds"
-                        )
-                        
-                        CurrencyTextField(
-                            title: "How much?",
-                            amount: $itemAmount
-                        )
-                        
-                        SpendLessTextField(
-                            "Why do you want it? (optional)",
-                            text: $reason,
-                            placeholder: "e.g., My old ones broke"
-                        )
-                    }
-                    .padding(.horizontal, SpendLessSpacing.md)
-                    
+                }
+                .scrollDismissesKeyboard(.interactively)
+                
+                // Bottom action area
+                VStack {
                     Spacer()
                     
                     VStack(spacing: SpendLessSpacing.sm) {
@@ -353,6 +483,11 @@ struct AddToWaitingListSheet: View {
                     }
                     .padding(.horizontal, SpendLessSpacing.md)
                     .padding(.bottom, SpendLessSpacing.xl)
+                    .padding(.top, SpendLessSpacing.sm)
+                    .background(
+                        Color.spendLessBackground
+                            .shadow(color: .black.opacity(0.05), radius: 10, y: -5)
+                    )
                 }
             }
             .navigationTitle("Add Item")
@@ -364,6 +499,10 @@ struct AddToWaitingListSheet: View {
                     }
                 }
             }
+            .sheet(isPresented: $showReasonPicker) {
+                ReasonWantedPicker(selectedReason: $selectedReason)
+                    .presentationDetents([.medium])
+            }
         }
     }
     
@@ -371,7 +510,8 @@ struct AddToWaitingListSheet: View {
         let item = WaitingListItem(
             name: itemName,
             amount: itemAmount,
-            reason: reason.isEmpty ? nil : reason
+            reasonWanted: selectedReason,
+            reasonWantedNote: selectedReason == .other ? otherReasonNote : nil
         )
         modelContext.insert(item)
         try? modelContext.save()
@@ -380,6 +520,68 @@ struct AddToWaitingListSheet: View {
         generator.notificationOccurred(.success)
         
         dismiss()
+    }
+}
+
+// MARK: - Reason Wanted Picker
+
+struct ReasonWantedPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedReason: ReasonWanted?
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.spendLessBackground.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: SpendLessSpacing.sm) {
+                        ForEach(ReasonWanted.allCases) { reason in
+                            Button {
+                                selectedReason = reason
+                                dismiss()
+                            } label: {
+                                HStack(spacing: SpendLessSpacing.md) {
+                                    Text(reason.icon)
+                                        .font(.title2)
+                                    
+                                    Text(reason.displayName)
+                                        .font(SpendLessFont.body)
+                                        .foregroundStyle(Color.spendLessTextPrimary)
+                                    
+                                    Spacer()
+                                    
+                                    if selectedReason == reason {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(Color.spendLessPrimary)
+                                            .fontWeight(.semibold)
+                                    }
+                                }
+                                .padding(SpendLessSpacing.md)
+                                .background(
+                                    RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                                        .fill(selectedReason == reason 
+                                            ? Color.spendLessPrimaryLight.opacity(0.15) 
+                                            : Color.spendLessCardBackground)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(SpendLessSpacing.md)
+                }
+            }
+            .navigationTitle("Why do you want it?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Skip") {
+                        selectedReason = nil
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

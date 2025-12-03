@@ -10,6 +10,7 @@ import SwiftUI
 struct LearningLibraryView: View {
     @State private var cardService = LearningCardService.shared
     @State private var showLessonsList = false
+    @State private var showToolsList = false
     
     var body: some View {
         NavigationStack {
@@ -55,12 +56,15 @@ struct LearningLibraryView: View {
                             isEnabled: false
                         ) {}
                         
-                        // Tools - Coming Soon
+                        // Tools - Active
                         EducationSquareCard(
                             title: "Tools",
                             animationName: "tool",
-                            isEnabled: false
-                        ) {}
+                            isEnabled: true
+                        ) {
+                            HapticFeedback.buttonTap()
+                            showToolsList = true
+                        }
                     }
                     .padding(.horizontal, SpendLessSpacing.lg)
                     
@@ -70,6 +74,9 @@ struct LearningLibraryView: View {
             .navigationBarHidden(true)
             .navigationDestination(isPresented: $showLessonsList) {
                 LessonsListView()
+            }
+            .navigationDestination(isPresented: $showToolsList) {
+                ToolsListView()
             }
         }
     }

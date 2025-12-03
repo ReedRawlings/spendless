@@ -13,12 +13,21 @@ final class WaitingListItem {
     var id: UUID
     var name: String
     var amount: Decimal
-    var reason: String?
+    var reason: String? // Legacy freeform reason field (kept for backward compatibility)
     var addedAt: Date
     var expiresAt: Date
     var lastCheckinAt: Date?
     var checkinCount: Int
     var category: String? // SpendingCategory raw value
+    
+    // New fields for enhanced waiting list
+    var reasonWantedRaw: String? // ReasonWanted raw value
+    var reasonWantedNote: String? // Custom note when "Other" is selected
+    var purchasedAt: Date? // Timestamp when item was bought (for analytics)
+    var purchaseReflectionRaw: String? // PurchaseFeeling raw value
+    
+    // Tools integration
+    var pricePerWearEstimate: Int? // Estimated uses from Price Per Wear calculator
     
     /// Duration in days for the waiting period
     static let waitingPeriodDays: Int = 7
@@ -29,7 +38,9 @@ final class WaitingListItem {
         amount: Decimal,
         reason: String? = nil,
         addedAt: Date = Date(),
-        category: SpendingCategory? = nil
+        category: SpendingCategory? = nil,
+        reasonWanted: ReasonWanted? = nil,
+        reasonWantedNote: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -43,6 +54,11 @@ final class WaitingListItem {
         ) ?? addedAt.addingTimeInterval(TimeInterval(Self.waitingPeriodDays * 24 * 60 * 60))
         self.checkinCount = 0
         self.category = category?.rawValue
+        self.reasonWantedRaw = reasonWanted?.rawValue
+        self.reasonWantedNote = reasonWantedNote
+        self.purchasedAt = nil
+        self.purchaseReflectionRaw = nil
+        self.pricePerWearEstimate = nil
     }
     
     // MARK: - Computed Properties
@@ -78,10 +94,37 @@ final class WaitingListItem {
         return SpendingCategory(rawValue: category)
     }
     
+    var reasonWanted: ReasonWanted? {
+        guard let reasonWantedRaw else { return nil }
+        return ReasonWanted(rawValue: reasonWantedRaw)
+    }
+    
+    var purchaseReflection: PurchaseFeeling? {
+        guard let purchaseReflectionRaw else { return nil }
+        return PurchaseFeeling(rawValue: purchaseReflectionRaw)
+    }
+    
+    /// Display text for the reason wanted (prioritizes new enum over legacy reason)
+    var reasonDisplayText: String? {
+        if let reasonWanted {
+            if reasonWanted == .other, let note = reasonWantedNote, !note.isEmpty {
+                return note
+            }
+            return reasonWanted.displayName
+        }
+        return reason
+    }
+    
     var daysWaited: Int {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.day], from: addedAt, to: Date())
         return max(components.day ?? 0, 0)
+    }
+    
+    /// Calculated cost per use from Price Per Wear estimate
+    var calculatedCostPerUse: Decimal? {
+        guard let uses = pricePerWearEstimate, uses > 0 else { return nil }
+        return amount / Decimal(uses)
     }
     
     /// Formatted time remaining string

@@ -66,6 +66,45 @@ struct SettingsView: View {
                         Text("Savings")
                     }
                     
+                    // Tools Section
+                    Section {
+                        NavigationLink {
+                            DopamineMenuSettingsView()
+                        } label: {
+                            HStack {
+                                Label("Dopamine Menu", systemImage: "list.bullet.circle")
+                                Spacer()
+                                if profile?.hasDopamineMenuSetup == true {
+                                    Text("Configured")
+                                        .foregroundStyle(Color.spendLessTextMuted)
+                                } else {
+                                    Text("Not Set Up")
+                                        .foregroundStyle(Color.spendLessTextMuted)
+                                }
+                            }
+                        }
+                        
+                        NavigationLink {
+                            BirthYearSettingsView()
+                        } label: {
+                            HStack {
+                                Label("Birth Year", systemImage: "calendar")
+                                Spacer()
+                                if let birthYear = profile?.birthYear {
+                                    Text("\(birthYear)")
+                                        .foregroundStyle(Color.spendLessTextMuted)
+                                } else {
+                                    Text("Not Set")
+                                        .foregroundStyle(Color.spendLessTextMuted)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Tools")
+                    } footer: {
+                        Text("Used for Opportunity Cost Calculator and intervention alternatives")
+                    }
+                    
                     // Commitment Section
                     if profile?.commitmentDate != nil || profile?.futureLetterText != nil {
                         Section {

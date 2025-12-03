@@ -32,7 +32,32 @@ struct SpendLessApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // During development, if migration fails, reset the store
+            // This is safe since we don't have active users yet
+            print("⚠️ ModelContainer creation failed: \(error)")
+            print("Resetting store for development...")
+            
+            // Get the store URL from the App Group container
+            let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.spendless.data")
+            let storeURL = containerURL?.appendingPathComponent("Library/Application Support/default.store")
+            
+            if let storeURL = storeURL, FileManager.default.fileExists(atPath: storeURL.path) {
+                do {
+                    // Delete the store and its related files
+                    try FileManager.default.removeItem(at: storeURL)
+                    let walURL = storeURL.appendingPathExtension("wal")
+                    let shmURL = storeURL.appendingPathExtension("shm")
+                    try? FileManager.default.removeItem(at: walURL)
+                    try? FileManager.default.removeItem(at: shmURL)
+                    
+                    print("✅ Store reset. Recreating ModelContainer...")
+                    return try ModelContainer(for: schema, configurations: [modelConfiguration])
+                } catch {
+                    fatalError("Could not reset store: \(error)")
+                }
+            } else {
+                fatalError("Could not create ModelContainer: \(error)")
+            }
         }
     }()
     

@@ -324,3 +324,102 @@ struct HALTCheckResult: Codable {
     }
 }
 
+// MARK: - Reason Wanted (Why do you want this?)
+
+enum ReasonWanted: String, CaseIterable, Codable, Identifiable {
+    case onSale = "onSale"
+    case socialMedia = "socialMedia"
+    case replacement = "replacement"
+    case wantedForAWhile = "wantedForAWhile"
+    case treatMyself = "treatMyself"
+    case notSure = "notSure"
+    case other = "other"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .onSale: return "It's on sale / good deal"
+        case .socialMedia: return "Saw it on social media"
+        case .replacement: return "Replaces something I have"
+        case .wantedForAWhile: return "Been wanting this for a while"
+        case .treatMyself: return "Treat myself / bad day"
+        case .notSure: return "Not sure, just want it"
+        case .other: return "Other"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .onSale: return "🏷️"
+        case .socialMedia: return "📱"
+        case .replacement: return "🔄"
+        case .wantedForAWhile: return "⏳"
+        case .treatMyself: return "🎁"
+        case .notSure: return "🤷"
+        case .other: return "✏️"
+        }
+    }
+}
+
+// MARK: - Removal Reason (Why are you burying this?)
+
+enum RemovalReason: String, CaseIterable, Codable, Identifiable {
+    case dontWantAnymore = "dontWantAnymore"
+    case foundCheaper = "foundCheaper"
+    case alreadyHaveSimilar = "alreadyHaveSimilar"
+    case cantAfford = "cantAfford"
+    case urgePassed = "urgePassed"
+    case other = "other"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .dontWantAnymore: return "Don't want it anymore"
+        case .foundCheaper: return "Found a cheaper alternative"
+        case .alreadyHaveSimilar: return "Already have something similar"
+        case .cantAfford: return "Can't actually afford it"
+        case .urgePassed: return "The \"need\" passed"
+        case .other: return "Other"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .dontWantAnymore: return "🚫"
+        case .foundCheaper: return "💰"
+        case .alreadyHaveSimilar: return "📦"
+        case .cantAfford: return "💸"
+        case .urgePassed: return "💨"
+        case .other: return "✏️"
+        }
+    }
+}
+
+// MARK: - Purchase Feeling (Post-purchase reflection)
+
+enum PurchaseFeeling: String, CaseIterable, Codable, Identifiable {
+    case genuineNeed = "genuineNeed"
+    case stillImpulsive = "stillImpulsive"
+    case inBetween = "inBetween"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .genuineNeed: return "Genuine need"
+        case .stillImpulsive: return "Still kind of impulsive"
+        case .inBetween: return "Somewhere in between"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .genuineNeed: return "✅"
+        case .stillImpulsive: return "🤔"
+        case .inBetween: return "🤷"
+        }
+    }
+}
+

@@ -254,6 +254,7 @@ struct PanicButtonFlowView: View {
     
     enum Step {
         case breathing
+        case dopamineMenu
         case letter
         case logging
         case celebration
@@ -263,6 +264,8 @@ struct PanicButtonFlowView: View {
     @State private var itemName = ""
     @State private var itemAmount: Decimal = 0
     @State private var showMoneyAnimation = false
+    @State private var showDopamineConfirmation = false
+    @State private var selectedDopamineActivity: String = ""
     
     private var currentGoal: UserGoal? {
         goals.first { $0.isActive }
@@ -270,6 +273,10 @@ struct PanicButtonFlowView: View {
     
     private var profile: UserProfile? {
         profiles.first
+    }
+    
+    private var hasDopamineMenuSetup: Bool {
+        profile?.hasDopamineMenuSetup ?? false
     }
     
     var body: some View {
@@ -280,6 +287,8 @@ struct PanicButtonFlowView: View {
                 switch currentStep {
                 case .breathing:
                     breathingStep
+                case .dopamineMenu:
+                    dopamineMenuStep
                 case .letter:
                     letterStep
                 case .logging:
@@ -317,12 +326,7 @@ struct PanicButtonFlowView: View {
             
             QuickBreathingExercise {
                 withAnimation {
-                    // Show letter if available, otherwise go to logging
-                    if let profile = profile, let letterText = profile.futureLetterText, !letterText.isEmpty {
-                        currentStep = .letter
-                    } else {
-                        currentStep = .logging
-                    }
+                    navigateAfterBreathing()
                 }
             }
             
@@ -330,17 +334,135 @@ struct PanicButtonFlowView: View {
             
             TextButton("Skip") {
                 withAnimation {
-                    // Skip to letter if available, otherwise logging
-                    if let profile = profile, let letterText = profile.futureLetterText, !letterText.isEmpty {
-                        currentStep = .letter
-                    } else {
-                        currentStep = .logging
-                    }
+                    navigateAfterBreathing()
                 }
             }
             .padding(.bottom, SpendLessSpacing.xl)
         }
         .padding()
+    }
+    
+    private func navigateAfterBreathing() {
+        // Show dopamine menu if configured, otherwise continue to letter/logging
+        if hasDopamineMenuSetup {
+            currentStep = .dopamineMenu
+        } else if let profile = profile, let letterText = profile.futureLetterText, !letterText.isEmpty {
+            currentStep = .letter
+        } else {
+            currentStep = .logging
+        }
+    }
+    
+    private var dopamineMenuStep: some View {
+        ZStack {
+            ScrollView {
+                VStack(spacing: SpendLessSpacing.lg) {
+                    // Header
+                    VStack(spacing: SpendLessSpacing.sm) {
+                        Text("🎯")
+                            .font(.system(size: 50))
+                        
+                        Text("Instead of shopping, try:")
+                            .font(SpendLessFont.title3)
+                            .foregroundStyle(Color.spendLessTextPrimary)
+                    }
+                    .padding(.top, SpendLessSpacing.lg)
+                    
+                    // Activities List
+                    if let profile {
+                        VStack(spacing: SpendLessSpacing.sm) {
+                            ForEach(Array(profile.dopamineMenuSelectedDefaults), id: \.self) { activity in
+                                DopamineActivityButton(
+                                    emoji: activity.emoji,
+                                    text: activity.rawValue,
+                                    onTap: {
+                                        selectDopamineActivity(activity.rawValue)
+                                    }
+                                )
+                            }
+                            
+                            ForEach(profile.dopamineMenuCustomActivities ?? [], id: \.self) { activity in
+                                DopamineActivityButton(
+                                    emoji: "✨",
+                                    text: activity,
+                                    onTap: {
+                                        selectDopamineActivity(activity)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Skip to logging
+                    Button {
+                        withAnimation {
+                            navigateAfterDopamineMenu()
+                        }
+                    } label: {
+                        Text("I still want to log something")
+                            .font(SpendLessFont.body)
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                    }
+                    .padding(.top, SpendLessSpacing.md)
+                }
+                .padding(SpendLessSpacing.md)
+            }
+            
+            // Confirmation overlay
+            if showDopamineConfirmation {
+                dopamineConfirmationOverlay
+            }
+        }
+    }
+    
+    private var dopamineConfirmationOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+            
+            VStack(spacing: SpendLessSpacing.lg) {
+                Text("💪")
+                    .font(.system(size: 60))
+                
+                Text("Good choice.")
+                    .font(SpendLessFont.title2)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                
+                Text("You've got this.")
+                    .font(SpendLessFont.body)
+                    .foregroundStyle(Color.spendLessTextSecondary)
+            }
+            .padding(SpendLessSpacing.xl)
+            .background(Color.spendLessCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.xl))
+            .spendLessShadow(SpendLessShadow.cardShadow)
+            .transition(.scale.combined(with: .opacity))
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showDopamineConfirmation)
+    }
+    
+    private func selectDopamineActivity(_ activity: String) {
+        HapticFeedback.mediumSuccess()
+        selectedDopamineActivity = activity
+        withAnimation {
+            showDopamineConfirmation = true
+        }
+        
+        // Dismiss after 2 seconds and close the panic flow
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showDopamineConfirmation = false
+            }
+            dismiss()
+        }
+    }
+    
+    private func navigateAfterDopamineMenu() {
+        if let profile = profile, let letterText = profile.futureLetterText, !letterText.isEmpty {
+            currentStep = .letter
+        } else {
+            currentStep = .logging
+        }
     }
     
     private var letterStep: some View {
@@ -497,6 +619,39 @@ struct PanicButtonFlowView: View {
         formatter.currencyCode = "USD"
         formatter.maximumFractionDigits = 0
         return formatter.string(from: amount as NSDecimalNumber) ?? "$0"
+    }
+}
+
+// MARK: - Dopamine Activity Button
+
+struct DopamineActivityButton: View {
+    let emoji: String
+    let text: String
+    let onTap: () -> Void
+    
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: SpendLessSpacing.md) {
+                Text(emoji)
+                    .font(.system(size: 28))
+                    .frame(width: 44)
+                
+                Text(text)
+                    .font(SpendLessFont.body)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                
+                Spacer()
+            }
+            .padding(SpendLessSpacing.md)
+            .background(Color.spendLessCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+            .spendLessShadow(SpendLessShadow.subtleShadow)
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+        }
+        .buttonStyle(PressableButtonStyle(isPressed: $isPressed))
     }
 }
 

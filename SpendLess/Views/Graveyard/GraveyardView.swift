@@ -211,7 +211,20 @@ struct GraveyardItemRow: View {
                     .font(SpendLessFont.caption)
                     .foregroundStyle(Color.spendLessTextMuted)
                 
-                if let reason = item.originalReason, !reason.isEmpty {
+                // Display removal reason (new feature)
+                if let removalReasonText = item.removalReasonDisplayText {
+                    HStack(spacing: SpendLessSpacing.xxs) {
+                        if let reason = item.removalReason {
+                            Text(reason.icon)
+                                .font(.caption2)
+                        }
+                        Text(removalReasonText)
+                            .font(SpendLessFont.caption)
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                            .lineLimit(1)
+                    }
+                } else if let reason = item.originalReason, !reason.isEmpty {
+                    // Fallback to original reason for backward compatibility
                     Text("\"\(reason)\"")
                         .font(SpendLessFont.caption)
                         .foregroundStyle(Color.spendLessTextSecondary)

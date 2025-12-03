@@ -35,6 +35,13 @@ final class UserProfile {
     var blockedAppCount: Int
     var hasScreenTimeAuth: Bool
     
+    // Tools - Dopamine Menu
+    var dopamineMenuSelectedDefaultsRaw: [String] // DopamineActivity raw values
+    var dopamineMenuCustomActivities: [String]? // Custom activities (optional feature)
+    
+    // Tools - Opportunity Cost
+    var birthYear: Int? // For opportunity cost calculator
+    
     init(
         id: UUID = UUID(),
         triggers: [ShoppingTrigger] = [],
@@ -54,6 +61,9 @@ final class UserProfile {
         self.desiredOutcomesRaw = []
         self.blockedAppCount = 0
         self.hasScreenTimeAuth = false
+        self.dopamineMenuSelectedDefaultsRaw = []
+        self.dopamineMenuCustomActivities = nil
+        self.birthYear = nil
     }
     
     // MARK: - Computed Properties
@@ -90,6 +100,31 @@ final class UserProfile {
     var daysSinceCommitment: Int? {
         guard let date = commitmentDate else { return nil }
         return Calendar.current.dateComponents([.day], from: date, to: Date()).day
+    }
+    
+    // MARK: - Dopamine Menu
+    
+    var dopamineMenuSelectedDefaults: Set<DopamineActivity> {
+        get { Set(dopamineMenuSelectedDefaultsRaw.compactMap { DopamineActivity(rawValue: $0) }) }
+        set { dopamineMenuSelectedDefaultsRaw = newValue.map { $0.rawValue } }
+    }
+    
+    /// Combined list of all dopamine menu activities (defaults + custom)
+    var dopamineMenuActivities: [String] {
+        let defaults = dopamineMenuSelectedDefaults.map { $0.rawValue }
+        let custom = dopamineMenuCustomActivities ?? []
+        return defaults + custom
+    }
+    
+    var hasDopamineMenuSetup: Bool {
+        return !dopamineMenuSelectedDefaultsRaw.isEmpty || !(dopamineMenuCustomActivities?.isEmpty ?? true)
+    }
+    
+    // MARK: - Age Helpers
+    
+    var currentAge: Int {
+        guard let birthYear else { return 30 } // Default to 30 if not set
+        return ToolCalculationService.ageFromBirthYear(birthYear)
     }
     
     // MARK: - Methods

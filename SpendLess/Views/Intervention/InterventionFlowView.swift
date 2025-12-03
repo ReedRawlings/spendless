@@ -90,6 +90,13 @@ struct InterventionFlowView: View {
                         removal: .opacity.combined(with: .move(edge: .leading))
                     ))
                     
+                case .dopamineMenu:
+                    InterventionDopamineMenuView(onComplete: manager.completeDopamineMenu)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .trailing)),
+                            removal: .opacity.combined(with: .move(edge: .leading))
+                        ))
+                    
                 case .logItem:
                     InterventionLogItemView(onItemLogged: manager.handleItemLogged)
                         .transition(.asymmetric(
