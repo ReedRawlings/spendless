@@ -14,11 +14,6 @@ struct ToolsListView: View {
     @Query private var profiles: [UserProfile]
     
     @State private var selectedTool: ToolType?
-    @State private var showDopamineMenu = false
-    @State private var showOpportunityCost = false
-    @State private var showPricePerWear = false
-    @State private var showThirtyXRule = false
-    @State private var showSpendingAudit = false
     
     private var profile: UserProfile? {
         profiles.first
@@ -41,20 +36,19 @@ struct ToolsListView: View {
         }
         .navigationTitle("Tools")
         .navigationBarTitleDisplayMode(.large)
-        .navigationDestination(isPresented: $showDopamineMenu) {
-            DopamineMenuView()
-        }
-        .navigationDestination(isPresented: $showOpportunityCost) {
-            OpportunityCostView()
-        }
-        .navigationDestination(isPresented: $showPricePerWear) {
-            PricePerWearView()
-        }
-        .navigationDestination(isPresented: $showThirtyXRule) {
-            ThirtyXRuleView()
-        }
-        .navigationDestination(isPresented: $showSpendingAudit) {
-            SpendingAuditView()
+        .navigationDestination(item: $selectedTool) { tool in
+            switch tool {
+            case .dopamineMenu:
+                DopamineMenuView()
+            case .opportunityCost:
+                OpportunityCostView()
+            case .pricePerWear:
+                PricePerWearView()
+            case .thirtyXRule:
+                ThirtyXRuleView()
+            case .spendingAudit:
+                SpendingAuditView()
+            }
         }
     }
     
@@ -93,19 +87,7 @@ struct ToolsListView: View {
     private func navigateToTool(_ tool: ToolType) {
         guard tool.isV1 else { return }
         HapticFeedback.buttonTap()
-        
-        switch tool {
-        case .dopamineMenu:
-            showDopamineMenu = true
-        case .opportunityCost:
-            showOpportunityCost = true
-        case .pricePerWear:
-            showPricePerWear = true
-        case .thirtyXRule:
-            showThirtyXRule = true
-        case .spendingAudit:
-            showSpendingAudit = true
-        }
+        selectedTool = tool
     }
 }
 
