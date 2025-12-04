@@ -13,20 +13,21 @@ struct DashboardView: View {
     @Environment(AppState.self) private var appState
     @Environment(InterventionManager.self) private var interventionManager
     
-    @Query private var goals: [UserGoal]
+    // Query only active goals to avoid loading all goals into memory
+    @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
     @Query private var graveyardItems: [GraveyardItem]
     @Query private var streaks: [Streak]
     @Query private var profiles: [UserProfile]
-    
+
     @State private var showPanicButton = false
     @State private var showCelebration = false
     @State private var celebrationAmount: Decimal = 0
     @State private var celebrationMessage = ""
     @State private var showAnniversary: Bool = false
     @State private var anniversaryMilestone: Int = 0
-    
+
     private var currentGoal: UserGoal? {
-        goals.first { $0.isActive }
+        activeGoals.first
     }
     
     private var currentStreak: Streak? {
@@ -152,14 +153,6 @@ struct DashboardView: View {
         }
     }
     
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: amount as NSDecimalNumber) ?? "$0"
-    }
-    
     private func generateCelebrationMessage(for amount: Decimal) -> String {
         if let goal = currentGoal {
             if let translation = goal.savingsTranslation(for: amount) {
@@ -246,12 +239,13 @@ struct PanicButtonFlowView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
-    
-    @Query private var goals: [UserGoal]
+
+    // Query only active goals to avoid loading all goals into memory
+    @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
     @Query private var profiles: [UserProfile]
-    
+
     let onComplete: (Decimal) -> Void
-    
+
     enum Step {
         case breathing
         case dopamineMenu
@@ -259,16 +253,17 @@ struct PanicButtonFlowView: View {
         case logging
         case celebration
     }
-    
+
     @State private var currentStep: Step = .breathing
     @State private var itemName = ""
     @State private var itemAmount: Decimal = 0
     @State private var showMoneyAnimation = false
     @State private var showDopamineConfirmation = false
     @State private var selectedDopamineActivity: String = ""
-    
+    @State private var delayedTask: Task<Void, Never>?
+
     private var currentGoal: UserGoal? {
-        goals.first { $0.isActive }
+        activeGoals.first
     }
     
     private var profile: UserProfile? {
@@ -311,9 +306,13 @@ struct PanicButtonFlowView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
+                        delayedTask?.cancel()
                         dismiss()
                     }
                 }
+            }
+            .onDisappear {
+                delayedTask?.cancel()
             }
         }
     }
@@ -449,7 +448,10 @@ struct PanicButtonFlowView: View {
         }
         
         // Dismiss after 2 seconds and close the panic flow
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        delayedTask?.cancel()
+        delayedTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
             withAnimation {
                 showDopamineConfirmation = false
             }
@@ -601,24 +603,19 @@ struct PanicButtonFlowView: View {
         
         // Trigger celebration
         showMoneyAnimation = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+
+        delayedTask?.cancel()
+        delayedTask = Task {
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled else { return }
             withAnimation {
                 currentStep = .celebration
             }
         }
-        
+
         // Haptic feedback
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
-    }
-    
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: amount as NSDecimalNumber) ?? "$0"
     }
 }
 

@@ -80,7 +80,7 @@ struct InterventionStyleSettingView: View {
     }
     
     private func loadCurrentStyle() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         if let styleString = sharedDefaults?.string(forKey: "preferredInterventionStyle"),
            let style = InterventionStyleOption(rawValue: styleString) {
             selectedStyle = style
@@ -93,7 +93,7 @@ struct InterventionStyleSettingView: View {
         }
         
         // Save to UserDefaults
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(style.rawValue, forKey: "preferredInterventionStyle")
         sharedDefaults?.synchronize()
         

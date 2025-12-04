@@ -177,7 +177,7 @@ struct ShortcutsSetupView: View {
     }
     
     private func markShortcutsSetupComplete() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(true, forKey: "shortcutsSetupComplete")
     }
 }

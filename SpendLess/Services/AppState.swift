@@ -193,7 +193,7 @@ extension AppState {
         let _ = getOrCreateStreak(from: context)
         
         // Sync futureLetterText to App Groups for Shield extension
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         if let letterText = onboardingFutureLetterText, !letterText.isEmpty {
             sharedDefaults?.set(letterText, forKey: "futureLetterText")
         } else {
@@ -217,7 +217,7 @@ extension AppState {
     
     /// Sync streak and savings data to App Groups for shield display
     func syncStreakAndSavingsToAppGroups(context: ModelContext) {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         
         // Sync streak
         let streak = getOrCreateStreak(from: context)

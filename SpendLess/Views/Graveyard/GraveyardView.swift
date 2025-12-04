@@ -261,15 +261,16 @@ struct LogReturnSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     
-    @Query private var goals: [UserGoal]
-    
+    // Query only active goals to avoid loading all goals into memory
+    @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
+
     @State private var itemName = ""
     @State private var itemAmount: Decimal = 0
     @State private var reason = ""
     @State private var showSuccess = false
-    
+
     private var currentGoal: UserGoal? {
-        goals.first { $0.isActive }
+        activeGoals.first
     }
     
     var body: some View {

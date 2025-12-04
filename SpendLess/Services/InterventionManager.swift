@@ -71,7 +71,7 @@ final class InterventionManager {
         }
     }
     
-    private let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+    private let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
     
     // MARK: - Initialization
     

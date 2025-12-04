@@ -25,7 +25,7 @@ struct BreathingInterventionIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult & OpensIntent {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(true, forKey: "interventionTriggered")
         sharedDefaults?.set(InterventionType.breathing.rawValue, forKey: "interventionType")
         sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "interventionTimestamp")
@@ -50,7 +50,7 @@ struct HALTCheckIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult & OpensIntent {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(true, forKey: "interventionTriggered")
         sharedDefaults?.set(InterventionType.haltCheck.rawValue, forKey: "interventionType")
         sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "interventionTimestamp")
@@ -75,7 +75,7 @@ struct GoalReminderIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult & OpensIntent {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(true, forKey: "interventionTriggered")
         sharedDefaults?.set(InterventionType.goalReminder.rawValue, forKey: "interventionType")
         sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "interventionTimestamp")
@@ -100,7 +100,7 @@ struct QuickPauseIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult & OpensIntent {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(true, forKey: "interventionTriggered")
         sharedDefaults?.set(InterventionType.quickPause.rawValue, forKey: "interventionType")
         sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "interventionTimestamp")
@@ -125,7 +125,7 @@ struct FullInterventionIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult & OpensIntent {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(true, forKey: "interventionTriggered")
         sharedDefaults?.set(InterventionType.fullFlow.rawValue, forKey: "interventionType")
         sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "interventionTimestamp")
@@ -157,7 +157,7 @@ struct ConfigurableInterventionIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult & OpensIntent {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(true, forKey: "interventionTriggered")
         sharedDefaults?.set(style.rawValue, forKey: "interventionType")
         sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "interventionTimestamp")
@@ -182,7 +182,7 @@ struct PreferredInterventionIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult & OpensIntent {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         
         // Read user's preferred style
         let preferredStyle = sharedDefaults?.string(forKey: "preferredInterventionStyle") ?? "full"

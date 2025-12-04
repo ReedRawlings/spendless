@@ -71,7 +71,7 @@ struct LearningLibraryView: View {
                     Spacer()
                 }
             }
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showLessonsList) {
                 LessonsListView()
             }

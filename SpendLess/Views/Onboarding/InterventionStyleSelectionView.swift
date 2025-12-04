@@ -77,7 +77,7 @@ struct InterventionStyleSelectionView: View {
     }
     
     private func saveSelectedStyle() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(selectedStyle.rawValue, forKey: "preferredInterventionStyle")
     }
 }

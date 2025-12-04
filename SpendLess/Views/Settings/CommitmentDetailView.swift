@@ -14,16 +14,17 @@ struct CommitmentDetailView: View {
     @Environment(\.dismiss) private var dismiss
     
     @Query private var profiles: [UserProfile]
-    @Query private var goals: [UserGoal]
-    
+    // Query only active goals to avoid loading all goals into memory
+    @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
+
     @State private var showRenewSignature = false
-    
+
     private var profile: UserProfile? {
         profiles.first
     }
-    
+
     private var currentGoal: UserGoal? {
-        goals.first { $0.isActive }
+        activeGoals.first
     }
     
     var body: some View {
@@ -213,7 +214,7 @@ struct RenewCommitmentView: View {
         }
 
         // Sync to App Groups
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         if let letterText = profile.futureLetterText, !letterText.isEmpty {
             sharedDefaults?.set(letterText, forKey: "futureLetterText")
         }

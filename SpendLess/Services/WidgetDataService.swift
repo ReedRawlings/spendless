@@ -11,9 +11,9 @@ import WidgetKit
 /// Service to sync data between the main app and widgets
 final class WidgetDataService {
     static let shared = WidgetDataService()
-    
-    private let suiteName = "group.com.spendless.data"
-    
+
+    private let suiteName = AppConstants.appGroupID
+
     private enum Keys {
         static let futureLetterText = "futureLetterText"
         static let goalName = "goalName"
@@ -23,12 +23,13 @@ final class WidgetDataService {
         static let commitmentDate = "commitmentDate"
         static let userName = "userName"
     }
-    
-    private var sharedDefaults: UserDefaults? {
-        UserDefaults(suiteName: suiteName)
+
+    /// Cached UserDefaults instance - created once to avoid race conditions from repeated instantiation
+    private let sharedDefaults: UserDefaults?
+
+    private init() {
+        self.sharedDefaults = UserDefaults(suiteName: suiteName)
     }
-    
-    private init() {}
     
     // MARK: - Sync Methods
     
