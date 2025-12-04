@@ -206,7 +206,9 @@ struct WaitingListView: View {
         // Delete waiting list item
         modelContext.delete(item)
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save after burying item")
+        }
         
         // Show celebration
         celebrationAmount = item.amount
@@ -229,7 +231,9 @@ struct WaitingListView: View {
         
         // Remove from waiting list - no judgment
         modelContext.delete(item)
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save after buying item")
+        }
         
         // Light haptic
         let generator = UIImpactFeedbackGenerator(style: .light)
@@ -244,7 +248,9 @@ struct WaitingListView: View {
             item.extendWaitingPeriod(days: 2)
         }
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save checkin")
+        }
         
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
@@ -508,7 +514,9 @@ struct AddToWaitingListSheet: View {
             reasonWantedNote: selectedReason == .other ? otherReasonNote : nil
         )
         modelContext.insert(item)
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save new waiting list item")
+        }
         
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)

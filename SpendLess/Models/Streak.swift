@@ -10,6 +10,10 @@ import SwiftData
 
 @Model
 final class Streak {
+    /// Unique identifier to ensure singleton pattern
+    /// Using a constant UUID ensures only one Streak record exists
+    @Attribute(.unique) var id: UUID
+    
     var currentDays: Int
     var longestDays: Int
     var lastImpulseDate: Date?
@@ -20,13 +24,18 @@ final class Streak {
     /// Milestone days for celebrations
     static let milestones: [Int] = [7, 14, 30, 60, 90, 180, 365]
     
+    /// Singleton identifier - all Streak records should use this ID
+    static let singletonID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    
     init(
+        id: UUID = Streak.singletonID,
         currentDays: Int = 0,
         longestDays: Int = 0,
         lastImpulseDate: Date? = nil,
         startDate: Date = Date(),
         graceUsedThisWeek: Bool = false
     ) {
+        self.id = id
         self.currentDays = currentDays
         self.longestDays = longestDays
         self.lastImpulseDate = lastImpulseDate
