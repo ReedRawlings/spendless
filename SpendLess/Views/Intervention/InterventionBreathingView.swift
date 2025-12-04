@@ -14,8 +14,8 @@ struct InterventionBreathingView: View {
     @State private var circleScale: CGFloat = 0.5
     @State private var cyclesCompleted = 0
     @State private var secondsRemaining = 4
-    @State private var isActive = true
     @State private var appeared = false
+    @State private var breathingTask: Task<Void, Never>?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     private let totalCycles = 2 // Complete 2 full breath cycles
@@ -88,7 +88,8 @@ struct InterventionBreathingView: View {
             VStack(spacing: SpendLessSpacing.md) {
                 if cyclesCompleted >= 1 {
                     PrimaryButton("I'm ready") {
-                        isActive = false
+                        breathingTask?.cancel()
+                        breathingTask = nil
                         onComplete()
                     }
                     .padding(.horizontal, SpendLessSpacing.lg)
@@ -107,10 +108,13 @@ struct InterventionBreathingView: View {
             withAnimation(.easeOut(duration: 0.5)) {
                 appeared = true
             }
-            startBreathingCycle()
+            breathingTask = Task {
+                await startBreathingCycle()
+            }
         }
         .onDisappear {
-            isActive = false
+            breathingTask?.cancel()
+            breathingTask = nil
         }
     }
     
@@ -122,70 +126,65 @@ struct InterventionBreathingView: View {
         }
     }
     
-    private func startBreathingCycle() {
-        guard isActive else { return }
-        
+    @MainActor
+    private func startBreathingCycle() async {
         // Reset
         breathPhase = .inhale
         circleScale = 0.5
-        secondsRemaining = 4
-        
+        secondsRemaining = reduceMotion ? 1 : 4
+
         // Animate inhale
         let inhaleDuration = reduceMotion ? 0.3 : 4.0
         withAnimation(.easeInOut(duration: inhaleDuration)) {
             circleScale = 1.0
         }
-        
-        startCountdown(duration: reduceMotion ? 1 : 4) {
-            guard self.isActive else { return }
-            
-            // Hold phase
-            self.breathPhase = .hold
-            self.secondsRemaining = self.reduceMotion ? 1 : 4
-            
-            self.startCountdown(duration: self.reduceMotion ? 1 : 4) {
-                guard self.isActive else { return }
-                
-                // Exhale phase
-                self.breathPhase = .exhale
-                self.secondsRemaining = self.reduceMotion ? 1 : 4
-                
-                let exhaleDuration = self.reduceMotion ? 0.3 : 4.0
-                withAnimation(.easeInOut(duration: exhaleDuration)) {
-                    self.circleScale = 0.5
-                }
-                
-                self.startCountdown(duration: self.reduceMotion ? 1 : 4) {
-                    // Cycle complete
-                    self.cyclesCompleted += 1
-                    
-                    if self.cyclesCompleted < self.totalCycles {
-                        self.startBreathingCycle()
-                    } else {
-                        self.onComplete()
-                    }
-                }
-            }
+
+        // Inhale countdown
+        guard await countdown(duration: reduceMotion ? 1 : 4) else { return }
+
+        // Hold phase
+        breathPhase = .hold
+        secondsRemaining = reduceMotion ? 1 : 4
+
+        guard await countdown(duration: reduceMotion ? 1 : 4) else { return }
+
+        // Exhale phase
+        breathPhase = .exhale
+        secondsRemaining = reduceMotion ? 1 : 4
+
+        let exhaleDuration = reduceMotion ? 0.3 : 4.0
+        withAnimation(.easeInOut(duration: exhaleDuration)) {
+            circleScale = 0.5
+        }
+
+        guard await countdown(duration: reduceMotion ? 1 : 4) else { return }
+
+        // Cycle complete
+        cyclesCompleted += 1
+
+        if cyclesCompleted < totalCycles {
+            await startBreathingCycle()
+        } else {
+            onComplete()
         }
     }
-    
-    private func startCountdown(duration: Int, completion: @escaping () -> Void) {
-        guard isActive else { return }
+
+    /// Counts down from `duration` seconds, updating `secondsRemaining` each second.
+    /// Returns `true` if completed, `false` if cancelled.
+    @MainActor
+    private func countdown(duration: Int) async -> Bool {
         secondsRemaining = duration
-        
-        func tick() {
-            guard isActive else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                guard self.isActive else { return }
-                self.secondsRemaining -= 1
-                if self.secondsRemaining > 0 {
-                    tick()
-                } else {
-                    completion()
-                }
+
+        for _ in 0..<duration {
+            do {
+                try await Task.sleep(for: .seconds(1))
+            } catch {
+                // Task was cancelled
+                return false
             }
+            secondsRemaining -= 1
         }
-        tick()
+        return true
     }
 }
 
