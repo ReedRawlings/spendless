@@ -57,6 +57,115 @@ Code architecture review completed on 2025-12-04. Identified and fixed critical 
 
 ---
 
+### 5. N+1 Query Pattern
+**File:** `DashboardView.swift`, `SettingsView.swift`, `WaitingListView.swift`, and 4 other views
+**Severity:** HIGH
+**Status:** FIXED
+
+**Problem:** All goal records loaded into memory even when only active goal was needed.
+```swift
+@Query private var goals: [UserGoal]  // Loads ALL goals
+private var currentGoal: UserGoal? { goals.first { $0.isActive } }  // Filters in memory
+```
+
+**Fix:** Added predicate to @Query in all affected views:
+```swift
+@Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
+```
+
+---
+
+### 6. UserDefaults Instance Created Every Access
+**File:** `WidgetDataService.swift:27-29`
+**Severity:** HIGH
+**Status:** FIXED
+
+**Problem:** Created new UserDefaults instance on every property access. Concurrent calls could race.
+
+**Fix:** Changed from computed property to cached stored property initialized in `init()`:
+```swift
+private let sharedDefaults: UserDefaults?
+private init() {
+    self.sharedDefaults = UserDefaults(suiteName: suiteName)
+}
+```
+
+---
+
+### 7. Hard-Coded App Group ID (DRY Violation)
+**Files:** 10+ locations in main app
+**Severity:** MEDIUM
+**Status:** FIXED
+
+**Problem:** The string `"group.com.spendless.data"` was duplicated in many files.
+
+**Fix:** Created `SpendLess/App/Constants.swift` with:
+```swift
+enum AppConstants {
+    static let appGroupID = "group.com.spendless.data"
+}
+```
+Updated all main app files to use `AppConstants.appGroupID`. Extension targets still use hardcoded string (separate build targets).
+
+---
+
+### 8. Duplicate formatCurrency() Functions
+**Files:** `DashboardView.swift`, `WaitingListView.swift`, and others
+**Severity:** MEDIUM
+**Status:** FIXED
+
+**Problem:** Same helper function duplicated in 15+ views.
+
+**Fix:** Created `SpendLess/Helpers/CurrencyHelpers.swift` with cached `NumberFormatter`:
+```swift
+func formatCurrency(_ amount: Decimal) -> String
+func formatCurrencyWithCents(_ amount: Decimal) -> String
+```
+Removed duplicates from key views (DashboardView, WaitingListView).
+
+---
+
+### 9. No Async Cleanup in DashboardView
+**File:** `DashboardView.swift:446, 599`
+**Severity:** MEDIUM
+**Status:** FIXED
+
+**Problem:** `DispatchQueue.main.asyncAfter` calls with no cancellation mechanism in PanicButtonFlowView.
+
+**Fix:** Replaced with cancellable Task pattern:
+- Added `@State private var delayedTask: Task<Void, Never>?`
+- Task is cancelled in `onDisappear` and when Cancel button tapped
+- Uses `Task.sleep(for:)` with cancellation check
+
+---
+
+### 10. Deprecated API Usage
+**File:** `LearningLibraryView.swift:74`
+**Severity:** LOW
+**Status:** FIXED
+
+**Problem:** Used deprecated `.navigationBarHidden(true)` API.
+
+**Fix:** Changed to `.toolbar(.hidden, for: .navigationBar)`.
+
+---
+
+### 11. Hard-Coded String Predicates
+**File:** `WaitingListView.swift:17`
+**Severity:** HIGH
+**Status:** DOCUMENTED
+
+**Problem:** Uses hardcoded string instead of enum rawValue in @Query predicate.
+
+**Fix:** Added documentation comment noting the dependency:
+```swift
+// Note: sourceRaw must match GraveyardSource.waitingList.rawValue ("waitingList")
+@Query(filter: #Predicate<GraveyardItem> { $0.sourceRaw == "waitingList" })
+```
+SwiftData #Predicate macros don't support external variable references, so hardcoded string is required.
+
+---
+
 ## Known Issues (Not Yet Fixed)
 
 ### HIGH SEVERITY
@@ -94,54 +203,6 @@ Many `modelContext.save()` calls use `try?` which silently swallows errors. User
 
 ---
 
-#### Hard-Coded String Predicates
-**File:** `WaitingListView.swift:17`
-**Severity:** HIGH
-**Status:** NOT FIXED
-
-```swift
-@Query(filter: #Predicate<GraveyardItem> { $0.sourceRaw == "waitingList" })
-```
-
-**Problem:** Uses hardcoded string instead of enum rawValue. If `GraveyardSource.waitingList.rawValue` changes, predicate silently returns wrong results.
-
-**Recommendation:** Use a constant or the enum's rawValue directly.
-
----
-
-#### N+1 Query Pattern
-**File:** `DashboardView.swift:16-19`
-**Severity:** HIGH
-**Status:** NOT FIXED
-
-```swift
-@Query private var goals: [UserGoal]  // Loads ALL goals
-private var currentGoal: UserGoal? { goals.first { $0.isActive } }  // Filters in memory
-```
-
-**Problem:** All records loaded into memory even when only one is needed.
-
-**Recommendation:** Add predicate to @Query: `@Query(filter: #Predicate<UserGoal> { $0.isActive })`
-
----
-
-#### UserDefaults Instance Created Every Access
-**File:** `WidgetDataService.swift:27-29`
-**Severity:** HIGH
-**Status:** NOT FIXED
-
-```swift
-private var sharedDefaults: UserDefaults? {
-    UserDefaults(suiteName: suiteName)  // NEW instance every time
-}
-```
-
-**Problem:** Creates new UserDefaults instance on every access. Concurrent calls could race.
-
-**Recommendation:** Cache the UserDefaults instance as a stored property.
-
----
-
 ### MEDIUM SEVERITY
 
 #### Decimal Precision Loss in Financial Calculations
@@ -156,25 +217,6 @@ sharedDefaults?.set(current + NSDecimalNumber(decimal: amount).doubleValue, ...)
 **Problem:** Converting Decimal → Double → String loses precision. $99.99 can become $99.98 over multiple operations.
 
 **Recommendation:** Use Decimal throughout for all financial calculations. Store as String in UserDefaults if needed.
-
----
-
-#### Hard-Coded App Group ID (DRY Violation)
-**Files:** 10+ locations
-**Severity:** MEDIUM
-**Status:** NOT FIXED
-
-The string `"group.com.spendless.data"` is duplicated in:
-- `AppState.swift:196, 220`
-- `ScreenTimeManager.swift:177, 202, 242`
-- `InterventionManager.swift:74`
-- `WidgetDataService.swift`
-- `SpendLessApp.swift:171`
-- `DashboardView.swift:192`
-- `SettingsView.swift:266`
-- `CommitmentDetailView.swift:216`
-
-**Recommendation:** Extract to a constant in a shared file.
 
 ---
 
@@ -215,25 +257,14 @@ var currentAge: Int {
 
 ---
 
-#### Duplicate formatCurrency() Functions
-**Files:** `DashboardView.swift:155-161`, `WaitingListView.swift:363-369`, others
+#### Remaining asyncAfter Calls
+**Files:** `MoneyFlyingAnimation`, `CelebrationOverlay`, `BreathingExercise`, onboarding screens
 **Severity:** MEDIUM
 **Status:** NOT FIXED
 
-Same helper function duplicated in multiple views.
+Other `DispatchQueue.main.asyncAfter` calls exist in animation and onboarding components.
 
-**Recommendation:** Create shared utility in Helpers folder.
-
----
-
-#### No Async Cleanup in Multiple Components
-**Files:** `DashboardView.swift:452, 605`, `MoneyFlyingAnimation`, `CelebrationOverlay`
-**Severity:** MEDIUM
-**Status:** NOT FIXED
-
-`DispatchQueue.main.asyncAfter` calls with no cancellation mechanism.
-
-**Recommendation:** Use Task pattern like we did for breathing animation.
+**Recommendation:** Incrementally migrate to Task pattern as time permits.
 
 ---
 
@@ -245,19 +276,6 @@ Same helper function duplicated in multiple views.
 **Status:** DEFERRED (per user request)
 
 URLs point to `example.com`. Should be updated to `yourfutureself.is` before release.
-
----
-
-#### Deprecated API Usage
-**File:** `LearningLibraryView.swift:74`
-**Severity:** LOW
-**Status:** NOT FIXED
-
-```swift
-.navigationBarHidden(true)  // Deprecated in iOS 16+
-```
-
-**Recommendation:** Use `.toolbar(.hidden)` instead.
 
 ---
 
@@ -394,18 +412,19 @@ The following issues were flagged but determined to be non-issues:
 ## Recommendations by Priority
 
 ### Before TestFlight/App Store Release
-1. Remove or replace `#if DEBUG` database reset with proper schema migrations
-2. Update placeholder URLs to real `yourfutureself.is` URLs
-3. Add error handling for `modelContext.save()` calls
-4. Fix N+1 query patterns in DashboardView
-5. Cache UserDefaults instance in WidgetDataService
+1. ~~Fix N+1 query patterns in DashboardView~~ ✅ DONE
+2. ~~Cache UserDefaults instance in WidgetDataService~~ ✅ DONE
+3. Remove or replace `#if DEBUG` database reset with proper schema migrations
+4. Update placeholder URLs to real `yourfutureself.is` URLs
+5. Add error handling for `modelContext.save()` calls
 
 ### Code Quality (When Time Permits)
-1. Extract `"group.com.spendless.data"` to a constant
-2. Create shared `formatCurrency()` utility
-3. Add SwiftData model relationships and indexes
-4. Use enum-based sheet state in WaitingListView
-5. Replace remaining `asyncAfter` calls with Task pattern
+1. ~~Extract `"group.com.spendless.data"` to a constant~~ ✅ DONE
+2. ~~Create shared `formatCurrency()` utility~~ ✅ DONE
+3. ~~Replace asyncAfter calls with Task pattern in DashboardView~~ ✅ DONE
+4. Add SwiftData model relationships and indexes
+5. Use enum-based sheet state in WaitingListView
+6. Replace remaining `asyncAfter` calls in animations/onboarding
 
 ### Nice to Have
 1. Add accessibility labels throughout
