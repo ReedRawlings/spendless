@@ -231,7 +231,9 @@ struct DopamineMenuSetupView: View {
         targetProfile.dopamineMenuSelectedDefaults = selectedActivities
         targetProfile.dopamineMenuCustomActivities = customActivities.isEmpty ? nil : customActivities
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save dopamine menu setup")
+        }
         dismiss()
     }
 }

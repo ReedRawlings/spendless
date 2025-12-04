@@ -269,18 +269,24 @@ struct OpportunityCostView: View {
             let newProfile = UserProfile()
             newProfile.birthYear = ToolCalculationService.birthYearFromAge(editAge)
             modelContext.insert(newProfile)
-            try? modelContext.save()
+            if !modelContext.saveSafely() {
+                print("⚠️ Warning: Failed to save profile")
+            }
             return
         }
         
         profile.birthYear = ToolCalculationService.birthYearFromAge(editAge)
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save profile")
+        }
     }
     
     private func addToWaitingList(name: String) {
         let item = WaitingListItem(name: name, amount: amount)
         modelContext.insert(item)
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save waiting list item")
+        }
         HapticFeedback.mediumSuccess()
         showAddToWaitingList = false
         dismiss()
@@ -299,7 +305,9 @@ struct OpportunityCostView: View {
             goal.savedAmount += amount
         }
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save graveyard item")
+        }
         dismiss()
     }
 }

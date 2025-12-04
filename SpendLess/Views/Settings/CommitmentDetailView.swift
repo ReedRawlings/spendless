@@ -201,7 +201,9 @@ struct RenewCommitmentView: View {
                 SignatureSheetView { signatureData, date in
                     profile?.signatureImageData = signatureData
                     profile?.commitmentDate = date
-                    try? modelContext.save()
+                    if !modelContext.saveSafely() {
+                        print("⚠️ Warning: Failed to save signature")
+                    }
                 }
             }
         }
@@ -219,7 +221,9 @@ struct RenewCommitmentView: View {
             sharedDefaults?.set(letterText, forKey: "futureLetterText")
         }
 
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save renewal")
+        }
         dismiss()
     }
 }
