@@ -310,7 +310,9 @@ struct SettingsView: View {
     private func resetSavings() {
         if let goal = currentGoal {
             goal.resetSavings()
-            try? modelContext.save()
+            if !modelContext.saveSafely() {
+                print("⚠️ Warning: Failed to reset savings")
+            }
         }
     }
     
@@ -338,7 +340,9 @@ struct SettingsView: View {
         let streak = Streak.sampleStreak
         modelContext.insert(streak)
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save sample data")
+        }
         
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
@@ -421,7 +425,9 @@ struct EditGoalSheet: View {
             modelContext.insert(newGoal)
         }
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save goal")
+        }
         dismiss()
     }
 }

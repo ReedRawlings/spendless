@@ -392,7 +392,9 @@ struct LogReturnSheet: View {
             goal.addSavings(itemAmount)
         }
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save graveyard item")
+        }
         
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)

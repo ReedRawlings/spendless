@@ -225,7 +225,9 @@ struct DopamineMenuView: View {
             profile.dopamineMenuCustomActivities = []
         }
         profile.dopamineMenuCustomActivities?.append(customActivityText)
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save custom activity")
+        }
         customActivityText = ""
     }
 }

@@ -189,16 +189,17 @@ struct InterventionConfettiView: View {
     
     private func spawnConfetti() {
         let screenWidth = UIScreen.main.bounds.width
+        let colors: [Color] = [
+            Color.spendLessPrimary,
+            Color.spendLessGold,
+            Color.spendLessSecondary,
+            Color.spendLessPrimaryLight,
+            Color.spendLessGoldLight
+        ]
         
         particles = (0..<50).map { _ in
             InterventionConfettiParticle(
-                color: [
-                    Color.spendLessPrimary,
-                    Color.spendLessGold,
-                    Color.spendLessSecondary,
-                    Color.spendLessPrimaryLight,
-                    Color.spendLessGoldLight
-                ].randomElement()!,
+                color: colors.randomElement() ?? Color.spendLessPrimary,
                 x: CGFloat.random(in: 0...screenWidth),
                 y: -20,
                 size: CGFloat.random(in: 8...14),

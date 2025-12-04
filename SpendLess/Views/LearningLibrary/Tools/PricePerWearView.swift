@@ -267,7 +267,9 @@ struct PricePerWearView: View {
         let item = WaitingListItem(name: name, amount: price)
         item.pricePerWearEstimate = estimatedUses
         modelContext.insert(item)
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save waiting list item")
+        }
         HapticFeedback.mediumSuccess()
         showAddToWaitingList = false
         dismiss()
@@ -286,7 +288,9 @@ struct PricePerWearView: View {
             goal.savedAmount += price
         }
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save graveyard item")
+        }
         dismiss()
     }
 }

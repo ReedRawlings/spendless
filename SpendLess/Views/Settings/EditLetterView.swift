@@ -79,7 +79,9 @@ struct EditLetterView: View {
             sharedDefaults?.set(letterText.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "futureLetterText")
         }
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save letter")
+        }
         dismiss()
     }
 }

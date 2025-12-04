@@ -10,7 +10,12 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    var id: UUID
+    /// Unique identifier to ensure singleton pattern
+    /// Using a constant UUID ensures only one UserProfile record exists
+    @Attribute(.unique) var id: UUID
+    
+    /// Singleton identifier - all UserProfile records should use this ID
+    static let singletonID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
     
     // Onboarding responses
     var triggersRaw: [String] // ShoppingTrigger raw values
@@ -43,7 +48,7 @@ final class UserProfile {
     var birthYear: Int? // For opportunity cost calculator
     
     init(
-        id: UUID = UUID(),
+        id: UUID = UserProfile.singletonID,
         triggers: [ShoppingTrigger] = [],
         timings: [ShoppingTiming] = [],
         estimatedSpend: SpendRange = .medium,

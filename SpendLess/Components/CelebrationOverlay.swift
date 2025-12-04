@@ -110,15 +110,16 @@ struct CelebrationOverlay: View {
     }
     
     private func spawnConfetti() {
+        let colors: [Color] = [
+            Color.spendLessPrimary,
+            Color.spendLessGold,
+            Color.spendLessSecondary,
+            Color.spendLessPrimaryLight,
+            Color.spendLessGoldLight
+        ]
         confettiPieces = (0..<50).map { _ in
             ConfettiPiece(
-                color: [
-                    Color.spendLessPrimary,
-                    Color.spendLessGold,
-                    Color.spendLessSecondary,
-                    Color.spendLessPrimaryLight,
-                    Color.spendLessGoldLight
-                ].randomElement()!,
+                color: colors.randomElement() ?? Color.spendLessPrimary,
                 x: CGFloat.random(in: 0...UIScreen.main.bounds.width),
                 startY: -20,
                 rotation: Double.random(in: 0...360),
@@ -242,12 +243,13 @@ struct ConfettiParticle: Identifiable {
     var opacity: Double = 1
     
     init() {
-        self.color = [
+        let colors: [Color] = [
             Color.spendLessPrimary,
             Color.spendLessGold,
             Color.spendLessSecondary,
             Color.spendLessPrimaryLight
-        ].randomElement()!
+        ]
+        self.color = colors.randomElement() ?? Color.spendLessPrimary
         self.size = CGFloat.random(in: 6...12)
     }
 }
