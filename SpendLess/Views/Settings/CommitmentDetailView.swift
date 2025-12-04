@@ -211,15 +211,15 @@ struct RenewCommitmentView: View {
               profile.signatureImageData != nil else {
             return
         }
-        
+
         // Sync to App Groups
         let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
         if let letterText = profile.futureLetterText, !letterText.isEmpty {
             sharedDefaults?.set(letterText, forKey: "futureLetterText")
         }
-        
+
         try? modelContext.save()
         dismiss()
-        }
     }
+}
 

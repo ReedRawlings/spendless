@@ -284,9 +284,10 @@ final class InterventionManager {
         withAnimation(.easeOut(duration: 0.3)) {
             isShowingIntervention = false
         }
-        
+
         // Reset state after animation completes
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        Task {
+            try? await Task.sleep(for: .milliseconds(350))
             self.currentStep = .initial
             self.haltResult = HALTResult()
             self.selectedHALTState = nil
