@@ -14,19 +14,19 @@ struct InterventionGoalReminderView: View {
     
     // Read from shared defaults
     private var goalName: String {
-        UserDefaults(suiteName: "group.com.spendless.data")?.string(forKey: "goalName") ?? "Your Goal"
+        UserDefaults(suiteName: AppConstants.appGroupID)?.string(forKey: "goalName") ?? "Your Goal"
     }
-    
+
     private var savedAmount: Double {
-        UserDefaults(suiteName: "group.com.spendless.data")?.double(forKey: "savedAmount") ?? 0
+        UserDefaults(suiteName: AppConstants.appGroupID)?.double(forKey: "savedAmount") ?? 0
     }
-    
+
     private var targetAmount: Double {
-        UserDefaults(suiteName: "group.com.spendless.data")?.double(forKey: "targetAmount") ?? 1000
+        UserDefaults(suiteName: AppConstants.appGroupID)?.double(forKey: "targetAmount") ?? 1000
     }
-    
+
     private var commitment: String {
-        let defaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let defaults = UserDefaults(suiteName: AppConstants.appGroupID)
         return defaults?.string(forKey: "userCommitment")
             ?? defaults?.string(forKey: "futureLetterText")
             ?? "I'm done buying things I don't need"

@@ -74,7 +74,7 @@ struct EditLetterView: View {
         profile?.futureLetterText = letterText.trimmingCharacters(in: .whitespacesAndNewlines)
         
         // Sync to App Groups
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         if !letterText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             sharedDefaults?.set(letterText.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "futureLetterText")
         }

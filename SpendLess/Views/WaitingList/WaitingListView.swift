@@ -13,20 +13,22 @@ struct WaitingListView: View {
     @Environment(AppState.self) private var appState
     
     @Query(sort: \WaitingListItem.expiresAt) private var items: [WaitingListItem]
-    @Query private var goals: [UserGoal]
+    // Query only active goals to avoid loading all goals into memory
+    @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
+    // Note: sourceRaw must match GraveyardSource.waitingList.rawValue ("waitingList")
     @Query(filter: #Predicate<GraveyardItem> { $0.sourceRaw == "waitingList" })
     private var buriedFromWaitingList: [GraveyardItem]
-    
+
     @State private var showAddSheet = false
     @State private var showCelebration = false
     @State private var celebrationAmount: Decimal = 0
-    
+
     // Sheet state for bury/buy flows
     @State private var itemToBury: WaitingListItem?
     @State private var itemToBuy: WaitingListItem?
-    
+
     private var currentGoal: UserGoal? {
-        goals.first { $0.isActive }
+        activeGoals.first
     }
     
     private var activeItems: [WaitingListItem] {
@@ -359,15 +361,7 @@ struct WaitingListItemRow: View {
         .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
         .spendLessShadow(SpendLessShadow.cardShadow)
     }
-    
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: amount as NSDecimalNumber) ?? "$0"
-    }
-    
+
     private func formatPercentage(_ percentage: Double) -> String {
         if percentage >= 1 {
             return String(format: "%.0f", percentage)

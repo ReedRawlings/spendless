@@ -15,8 +15,9 @@ struct SettingsView: View {
     @Environment(\.scenePhase) private var scenePhase
     
     @Query private var profiles: [UserProfile]
-    @Query private var goals: [UserGoal]
-    
+    // Query only active goals to avoid loading all goals into memory
+    @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
+
     @Bindable var screenTimeManager = ScreenTimeManager.shared
     @State private var selection = FamilyActivitySelection()
     @State private var showAppPicker = false
@@ -24,13 +25,13 @@ struct SettingsView: View {
     @State private var showResetOnboardingConfirmation = false
     @State private var showEditGoal = false
     @State private var currentInterventionStyleText: String = "Full"
-    
+
     private var profile: UserProfile? {
         profiles.first
     }
-    
+
     private var currentGoal: UserGoal? {
-        goals.first { $0.isActive }
+        activeGoals.first
     }
     
     var body: some View {
@@ -263,7 +264,7 @@ struct SettingsView: View {
     }
     
     private func updateInterventionStyle() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         let styleString = sharedDefaults?.string(forKey: "preferredInterventionStyle") ?? "full"
         
         switch styleString {

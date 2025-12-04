@@ -174,7 +174,7 @@ final class ScreenTimeManager: ScreenTimeManaging {
     
     /// Save selection to App Groups for extensions
     func saveSelection() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         
         // Use PropertyListEncoder for UserDefaults compatibility
         let encoder = PropertyListEncoder()
@@ -199,7 +199,7 @@ final class ScreenTimeManager: ScreenTimeManaging {
     
     /// Load selection from App Groups
     private func loadSelection() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         guard let data = sharedDefaults?.data(forKey: "blockedApps") else {
             print("[ScreenTimeManager] No saved selection found")
             return
@@ -239,7 +239,7 @@ final class ScreenTimeManager: ScreenTimeManaging {
         defaults.removeObject(forKey: "screenTime.isAuthorized")
         defaults.removeObject(forKey: "screenTime.blockedAppCount")
         
-        let sharedDefaults = UserDefaults(suiteName: "group.com.spendless.data")
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.removeObject(forKey: "blockedApps")
         
         AppState.shared.isScreenTimeAuthorized = false

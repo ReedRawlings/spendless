@@ -11,7 +11,8 @@ import SwiftData
 struct PricePerWearView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query private var goals: [UserGoal]
+    // Query only active goals to avoid loading all goals into memory
+    @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
     
     @State private var priceText = ""
     @State private var usesText = ""
@@ -281,7 +282,7 @@ struct PricePerWearView: View {
         modelContext.insert(item)
         
         // Add to goal if exists
-        if let goal = goals.first(where: { $0.isActive }) {
+        if let goal = activeGoals.first {
             goal.savedAmount += price
         }
         

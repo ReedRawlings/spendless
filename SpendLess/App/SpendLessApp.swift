@@ -40,7 +40,7 @@ struct SpendLessApp: App {
             print("Resetting store for development...")
 
             // Get the store URL from the App Group container
-            let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.spendless.data")
+            let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID)
             let storeURL = containerURL?.appendingPathComponent("Library/Application Support/default.store")
 
             if let storeURL = storeURL, FileManager.default.fileExists(atPath: storeURL.path) {
@@ -173,10 +173,9 @@ struct RootView: View {
     // MARK: - Control Widget Action Check
     
     private func checkForPendingControlWidgetAction() {
-        let suiteName = "group.com.spendless.data"
         let pendingPanicKey = "pendingPanicAction"
-        
-        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+
+        guard let defaults = UserDefaults(suiteName: AppConstants.appGroupID) else { return }
         
         if defaults.bool(forKey: pendingPanicKey) {
             // Clear the flag

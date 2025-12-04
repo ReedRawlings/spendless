@@ -12,7 +12,8 @@ struct OpportunityCostView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var profiles: [UserProfile]
-    @Query private var goals: [UserGoal]
+    // Query only active goals to avoid loading all goals into memory
+    @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
     
     @State private var amountText = ""
     @State private var showAgeEditor = false
@@ -294,7 +295,7 @@ struct OpportunityCostView: View {
         modelContext.insert(item)
         
         // Add to goal if exists
-        if let goal = goals.first(where: { $0.isActive }) {
+        if let goal = activeGoals.first {
             goal.savedAmount += amount
         }
         
