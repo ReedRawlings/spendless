@@ -72,7 +72,11 @@ color: colors.randomElement() ?? Color.spendLessPrimary  // Safe fallback
 - ✅ Updated `getOrCreateProfile()` and `getOrCreateStreak()` to use singleton ID predicates
 - ✅ Ensures only one record can exist per model type
 
-**Note:** This requires a SwiftData migration. Test thoroughly before launch.
+**Note:** Since we have no users yet, we've implemented automatic database reset on schema changes:
+- Added schema version tracking (`currentSchemaVersion = 2`)
+- Database automatically resets when schema version changes
+- Works in both DEBUG and RELEASE builds (safe since no users)
+- After launch, implement proper SwiftData migrations instead
 
 ---
 
