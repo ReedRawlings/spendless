@@ -12,6 +12,7 @@ import FamilyControls
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
+    @Environment(SuperwallService.self) private var superwallService
     @Environment(\.scenePhase) private var scenePhase
     
     @Query private var profiles: [UserProfile]
@@ -24,7 +25,6 @@ struct SettingsView: View {
     @State private var showResetConfirmation = false
     @State private var showResetOnboardingConfirmation = false
     @State private var showEditGoal = false
-    @State private var currentInterventionStyleText: String = "Full"
 
     private var profile: UserProfile? {
         profiles.first
@@ -43,7 +43,6 @@ struct SettingsView: View {
                     // Blocking Section
                     Section {
                         blockedAppsRow
-                        interventionStyleRow
                     } header: {
                         Text("Blocking")
                     }
@@ -135,6 +134,78 @@ struct SettingsView: View {
                         }
                     }
                     
+                    // Subscription Section
+                    Section {
+                        if appState.subscriptionService.hasProAccess {
+                            HStack {
+                                Label("Pro Member", systemImage: "checkmark.seal.fill")
+                                    .foregroundStyle(Color.spendLessPrimary)
+                                Spacer()
+                                if let expirationDate = appState.subscriptionService.expirationDate {
+                                    Text("Expires: \(formatDate(expirationDate))")
+                                        .font(SpendLessFont.caption)
+                                        .foregroundStyle(Color.spendLessTextMuted)
+                                }
+                            }
+                            
+                            Button {
+                                // Open subscription management (Apple's system UI)
+                                if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                                    UIApplication.shared.open(url)
+                                }
+                            } label: {
+                                Label("Manage Subscription", systemImage: "creditcard")
+                            }
+                        } else {
+                            Button {
+                                superwallService.register(event: "settings_upgrade")
+                            } label: {
+                                Label("Upgrade to Pro", systemImage: "star.fill")
+                                    .foregroundStyle(Color.spendLessPrimary)
+                            }
+                            
+                            Button {
+                                Task {
+                                    do {
+                                        try await appState.subscriptionService.restorePurchases()
+                                        // Show success feedback
+                                        let generator = UINotificationFeedbackGenerator()
+                                        generator.notificationOccurred(.success)
+                                    } catch {
+                                        print("❌ Restore failed: \(error)")
+                                        // You could show an alert here
+                                    }
+                                }
+                            } label: {
+                                Label("Restore Purchases", systemImage: "arrow.clockwise")
+                            }
+                        }
+                    } header: {
+                        Text("Subscription")
+                    }
+                    
+                    // Lead Magnet Section (only show if email not collected)
+                    if profile?.leadMagnetEmailCollected != true {
+                        Section {
+                            NavigationLink {
+                                LeadMagnetView(
+                                    source: .settings,
+                                    onComplete: {
+                                        // View will automatically refresh when profile changes
+                                    },
+                                    onSkip: nil
+                                )
+                            } label: {
+                                Label("Get Your Free Guide", systemImage: "gift.fill")
+                                    .foregroundStyle(Color.spendLessPrimary)
+                            }
+                        } header: {
+                            Text("Resources")
+                        } footer: {
+                            Text("Get our free Self-Compassion Guide to help you recover from spending slip-ups")
+                        }
+                    }
+                    
                     // About Section
                     Section {
                         NavigationLink {
@@ -199,14 +270,11 @@ struct SettingsView: View {
             }
             .onAppear {
                 selection = screenTimeManager.selection
-                updateInterventionStyle()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("InterventionStyleDidChange"))) { _ in
-                updateInterventionStyle()
-            }
-            .onChange(of: scenePhase) { oldPhase, newPhase in
-                if newPhase == .active {
-                    updateInterventionStyle()
+                
+                // Check subscription status when Settings opens (lazy loading)
+                // This avoids showing Apple ID prompt during onboarding
+                Task {
+                    await appState.subscriptionService.checkSubscriptionStatus()
                 }
             }
             .sheet(isPresented: $showEditGoal) {
@@ -248,32 +316,6 @@ struct SettingsView: View {
             }
         }
         .foregroundStyle(Color.spendLessTextPrimary)
-    }
-    
-    private var interventionStyleRow: some View {
-        NavigationLink {
-            InterventionStyleSettingView()
-        } label: {
-            HStack {
-                Label("Intervention Style", systemImage: "sparkles")
-                Spacer()
-                Text(currentInterventionStyleText)
-                    .foregroundStyle(Color.spendLessTextMuted)
-            }
-        }
-    }
-    
-    private func updateInterventionStyle() {
-        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
-        let styleString = sharedDefaults?.string(forKey: "preferredInterventionStyle") ?? "full"
-        
-        switch styleString {
-        case "breathing": currentInterventionStyleText = "Breathing"
-        case "halt": currentInterventionStyleText = "HALT Check"
-        case "goal": currentInterventionStyleText = "Goal Reminder"
-        case "quick": currentInterventionStyleText = "Quick Pause"
-        default: currentInterventionStyleText = "Full"
-        }
     }
     
     private var editGoalRow: some View {
@@ -347,6 +389,13 @@ struct SettingsView: View {
     private func formatCommitmentDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .long
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
         formatter.timeStyle = .none
         return formatter.string(from: date)
     }

@@ -165,33 +165,4 @@ struct ConfigurableInterventionIntent: AppIntent {
     }
 }
 
-// MARK: - Preferred Intervention Intent
-
-/// Uses whatever intervention style the user has selected in settings
-@available(iOS 16.0, *)
-struct PreferredInterventionIntent: AppIntent {
-    
-    static var title: LocalizedStringResource = "My SpendLess Intervention"
-    
-    static var description = IntentDescription(
-        "Opens SpendLess with your preferred intervention style.",
-        categoryName: "Wellness"
-    )
-    
-    static var openAppWhenRun: Bool = true
-    
-    @MainActor
-    func perform() async throws -> some IntentResult & OpensIntent {
-        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
-        
-        // Read user's preferred style
-        let preferredStyle = sharedDefaults?.string(forKey: "preferredInterventionStyle") ?? "full"
-        
-        sharedDefaults?.set(true, forKey: "interventionTriggered")
-        sharedDefaults?.set(preferredStyle, forKey: "interventionType")
-        sharedDefaults?.set(Date().timeIntervalSince1970, forKey: "interventionTimestamp")
-        
-        return .result()
-    }
-}
 

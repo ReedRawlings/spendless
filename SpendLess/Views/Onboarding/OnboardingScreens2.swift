@@ -16,7 +16,7 @@ struct OnboardingCommitmentView: View {
     let onContinue: () -> Void
     
     @State private var currentPage = 0
-    @State private var letterText = ""
+    @State private var letterText = "" // Kept for backward compatibility but not used in new flow
     @State private var hasSigned = false
     @State private var showSignatureSheet = false
     @State private var commitmentDate: Date?
@@ -28,6 +28,15 @@ struct OnboardingCommitmentView: View {
     @State private var showSecondCard = false
     @State private var showButton = false
     @State private var secondCardIconPop = false
+    
+    // Animation states for profile analysis page
+    @State private var isAnalyzing = true
+    @State private var showHeader = false
+    @State private var showStrengths = false
+    @State private var showFocusAreas = false
+    @State private var showPrediction = false
+    @State private var showLetterSelection = false
+    @State private var selectedLetterOption: FutureSelfLetterOption?
     
     private let totalPages = 3
     
@@ -371,200 +380,367 @@ struct OnboardingCommitmentView: View {
         )
     }
     
-    // MARK: - Page 2: The Reflection
+    // MARK: - Page 2: Your Profile
     
-    private var uniqueStruggleDisplayNames: [String] {
-        let triggerDisplayNames = Set(appState.onboardingTriggers.map { displayName(for: $0) })
-        let timingDisplayNames = Set(appState.onboardingTimings.map { displayName(for: $0) })
-        return triggerDisplayNames.union(timingDisplayNames).sorted()
+    private var analysis: ProfileAnalysis {
+        ProfileAnalysisEngine.analyzeProfile(appState: appState)
     }
     
     private var futureSelfLetterPage: some View {
         ScrollView {
             VStack(spacing: SpendLessSpacing.lg) {
-                // Header
-                VStack(spacing: SpendLessSpacing.xs) {
-                    Text("Here's what you shared")
-                        .font(SpendLessFont.title2)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                }
-                .padding(.top, SpendLessSpacing.lg)
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // You struggle with card
-                Card {
-                    VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                        HStack(spacing: SpendLessSpacing.xs) {
-                            Text("😩")
-                            Text("You struggle with:")
-                                .font(SpendLessFont.bodyBold)
-                                .foregroundStyle(Color.spendLessTextPrimary)
-                        }
+                if isAnalyzing {
+                    // Analyzing state
+                    VStack(spacing: SpendLessSpacing.md) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(Color.spendLessPrimary)
                         
-                        VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
-                            ForEach(uniqueStruggleDisplayNames, id: \.self) { displayName in
-                                HStack(spacing: SpendLessSpacing.xs) {
-                                    Text("•")
-                                        .foregroundStyle(Color.spendLessTextSecondary)
-                                    Text(displayName)
+                        Text("Analyzing your patterns...")
+                            .font(SpendLessFont.body)
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 300)
+                } else {
+                    // Header
+                    VStack(spacing: SpendLessSpacing.xs) {
+                        Text("✨ YOUR PROFILE")
+                            .font(SpendLessFont.title2)
+                            .foregroundStyle(Color.spendLessTextPrimary)
+                        
+                        Text("Based on what you shared, here's what we see.")
+                            .font(SpendLessFont.body)
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, SpendLessSpacing.lg)
+                    .padding(.horizontal, SpendLessSpacing.lg)
+                    .opacity(showHeader ? 1 : 0)
+                    .offset(y: showHeader ? 0 : 10)
+                    
+                    // Strengths Section
+                    if !analysis.strengths.isEmpty {
+                        VStack(alignment: .leading, spacing: SpendLessSpacing.md) {
+                            HStack(spacing: SpendLessSpacing.xs) {
+                                Text("🌟")
+                                Text("STRENGTHS")
+                                    .font(SpendLessFont.caption)
+                                    .foregroundStyle(Color.spendLessGold)
+                            }
+                            
+                            Rectangle()
+                                .fill(Color.spendLessGold.opacity(0.3))
+                                .frame(height: 1)
+                            
+                            VStack(spacing: SpendLessSpacing.sm) {
+                                ForEach(Array(analysis.strengths.enumerated()), id: \.offset) { index, strength in
+                                    Card {
+                                        VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                                            Text(strength.title)
+                                                .font(SpendLessFont.bodyBold)
+                                                .foregroundStyle(Color.spendLessTextPrimary)
+                                            
+                                            Text(strength.description)
+                                                .font(SpendLessFont.body)
+                                                .foregroundStyle(Color.spendLessTextSecondary)
+                                        }
+                                    }
+                                    .opacity(showStrengths ? 1 : 0)
+                                    .offset(y: showStrengths ? 0 : 10)
+                                    .animation(
+                                        .spring(response: 0.4, dampingFraction: 0.7)
+                                        .delay(Double(index) * 0.1),
+                                        value: showStrengths
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.horizontal, SpendLessSpacing.lg)
+                    }
+                    
+                    // Focus Areas Section
+                    if !analysis.focusAreas.isEmpty {
+                        VStack(alignment: .leading, spacing: SpendLessSpacing.md) {
+                            HStack(spacing: SpendLessSpacing.xs) {
+                                Text("🌱")
+                                Text("AREAS FOR EXPLORATION")
+                                    .font(SpendLessFont.caption)
+                                    .foregroundStyle(Color.spendLessSecondary)
+                            }
+                            
+                            Rectangle()
+                                .fill(Color.spendLessSecondary.opacity(0.3))
+                                .frame(height: 1)
+                            
+                            VStack(spacing: SpendLessSpacing.sm) {
+                                ForEach(Array(analysis.focusAreas.enumerated()), id: \.offset) { index, focusArea in
+                                    Card {
+                                        VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                                            Text(focusArea.title)
+                                                .font(SpendLessFont.bodyBold)
+                                                .foregroundStyle(Color.spendLessTextPrimary)
+                                            
+                                            Text(focusArea.description)
+                                                .font(SpendLessFont.body)
+                                                .foregroundStyle(Color.spendLessTextSecondary)
+                                        }
+                                    }
+                                    .background(Color.spendLessSecondary.opacity(0.05))
+                                    .opacity(showFocusAreas ? 1 : 0)
+                                    .offset(y: showFocusAreas ? 0 : 10)
+                                    .animation(
+                                        .spring(response: 0.4, dampingFraction: 0.7)
+                                        .delay(Double(index) * 0.1),
+                                        value: showFocusAreas
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.horizontal, SpendLessSpacing.lg)
+                    }
+                    
+                    // Prediction Section
+                    if let prediction = analysis.prediction {
+                        VStack(alignment: .leading, spacing: SpendLessSpacing.md) {
+                            Card {
+                                VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
+                                    HStack(spacing: SpendLessSpacing.xs) {
+                                        Text("📅")
+                                        Text("YOUR PATH")
+                                            .font(SpendLessFont.bodyBold)
+                                            .foregroundStyle(Color.spendLessTextPrimary)
+                                    }
+                                    
+                                    Text("At your pace—resisting just \(prediction.resistanceRate) of impulses—you could reach your goal in ~\(prediction.daysToGoal) days.")
                                         .font(SpendLessFont.body)
                                         .foregroundStyle(Color.spendLessTextSecondary)
                                 }
                             }
+                            .background(Color.spendLessPrimary.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: SpendLessRadius.lg)
+                                    .strokeBorder(Color.spendLessPrimary, lineWidth: 1)
+                            )
+                            .opacity(showPrediction ? 1 : 0)
+                            .offset(y: showPrediction ? 0 : 10)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showPrediction)
                         }
-                    }
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // You want card
-                Card {
-                    VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                        HStack(spacing: SpendLessSpacing.xs) {
-                            Text("✨")
-                            Text("You want:")
-                                .font(SpendLessFont.bodyBold)
-                                .foregroundStyle(Color.spendLessTextPrimary)
-                        }
-                        
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 140))], alignment: .leading, spacing: SpendLessSpacing.xs) {
-                            ForEach(Array(appState.onboardingDesiredOutcomes), id: \.self) { outcome in
-                                HStack(spacing: SpendLessSpacing.xs) {
-                                    Text(outcome.icon)
-                                    Text(outcome.displayName)
-                                        .font(SpendLessFont.caption)
-                                        .foregroundStyle(Color.spendLessTextPrimary)
-                                }
-                                .padding(.horizontal, SpendLessSpacing.sm)
-                                .padding(.vertical, SpendLessSpacing.xs)
-                                .background(Color.spendLessPrimary.opacity(0.1))
-                                .clipShape(Capsule())
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Your goal card
-                Card {
-                    VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                        HStack(spacing: SpendLessSpacing.xs) {
-                            Text("🎯")
-                            Text("Your goal:")
-                                .font(SpendLessFont.bodyBold)
-                                .foregroundStyle(Color.spendLessTextPrimary)
-                        }
-                        
-                        HStack(spacing: SpendLessSpacing.md) {
-                            Text(appState.onboardingGoalType.icon)
-                                .font(.title2)
-                            
-                            VStack(alignment: .leading, spacing: SpendLessSpacing.xxs) {
-                                if appState.onboardingGoalType.requiresDetails && !appState.onboardingGoalName.isEmpty {
-                                    Text(appState.onboardingGoalName)
-                                        .font(SpendLessFont.bodyBold)
-                                        .foregroundStyle(Color.spendLessTextPrimary)
-                                } else {
-                                    Text(goalDisplayName)
-                                        .font(SpendLessFont.bodyBold)
-                                        .foregroundStyle(Color.spendLessTextPrimary)
-                                }
-                                
-                                if appState.onboardingGoalAmount > 0 {
-                                    Text(formatCurrency(appState.onboardingGoalAmount))
-                                        .font(SpendLessFont.caption)
+                        .padding(.horizontal, SpendLessSpacing.lg)
+                    } else if appState.onboardingGoalType == .justStop {
+                        VStack(alignment: .leading, spacing: SpendLessSpacing.md) {
+                            Card {
+                                VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
+                                    HStack(spacing: SpendLessSpacing.xs) {
+                                        Text("📅")
+                                        Text("YOUR PATH")
+                                            .font(SpendLessFont.bodyBold)
+                                            .foregroundStyle(Color.spendLessTextPrimary)
+                                    }
+                                    
+                                    Text("Every dollar you keep is a win. Let's start counting.")
+                                        .font(SpendLessFont.body)
                                         .foregroundStyle(Color.spendLessTextSecondary)
                                 }
                             }
-                            
-                            Spacer()
+                            .background(Color.spendLessPrimary.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: SpendLessRadius.lg)
+                                    .strokeBorder(Color.spendLessPrimary, lineWidth: 1)
+                            )
+                            .opacity(showPrediction ? 1 : 0)
+                            .offset(y: showPrediction ? 0 : 10)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showPrediction)
                         }
-                    }
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Divider
-                Rectangle()
-                    .fill(Color.spendLessTextMuted.opacity(0.3))
-                    .frame(height: 1)
-                    .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // We commit to help you card
-                Card {
-                    VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                        HStack(spacing: SpendLessSpacing.xs) {
-                            Text("🤝")
-                            Text("We commit to help you:")
-                                .font(SpendLessFont.bodyBold)
-                                .foregroundStyle(Color.spendLessTextPrimary)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
-                            commitmentFeature(icon: "🛡️", text: "Block your tempting apps")
-                            commitmentFeature(icon: "⏳", text: "7-day waiting list")
-                            commitmentFeature(icon: "🎯", text: "Track your progress")
-                            commitmentFeature(icon: "💪", text: "Build real self-control")
-                        }
-                    }
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Divider
-                Rectangle()
-                    .fill(Color.spendLessTextMuted.opacity(0.3))
-                    .frame(height: 1)
-                    .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Future self letter section
-                VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                    Text("What would your future self want you to remember?")
-                        .font(SpendLessFont.body)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                    
-                    TextEditor(text: $letterText)
-                        .frame(minHeight: 120)
-                        .padding(SpendLessSpacing.sm)
-                        .background(Color.spendLessCardBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
-                        .overlay(
-                            Group {
-                                if letterText.isEmpty {
-                                    Text(generatePlaceholderText(
-                                        triggers: appState.onboardingTriggers,
-                                        goalName: appState.onboardingGoalName.isEmpty ? nil : appState.onboardingGoalName
-                                    ))
-                                    .font(SpendLessFont.body)
-                                    .foregroundStyle(Color.spendLessTextMuted)
-                                    .padding(SpendLessSpacing.md)
-                                    .allowsHitTesting(false)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .padding(.horizontal, SpendLessSpacing.lg)
+                    } else if appState.onboardingGoalAmount > 0 {
+                        // Long timeline case (>365 days)
+                        VStack(alignment: .leading, spacing: SpendLessSpacing.md) {
+                            Card {
+                                VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
+                                    HStack(spacing: SpendLessSpacing.xs) {
+                                        Text("📅")
+                                        Text("YOUR PATH")
+                                            .font(SpendLessFont.bodyBold)
+                                            .foregroundStyle(Color.spendLessTextPrimary)
+                                    }
+                                    
+                                    Text("At your pace, you'll make real progress within your first month.")
+                                        .font(SpendLessFont.body)
+                                        .foregroundStyle(Color.spendLessTextSecondary)
                                 }
                             }
-                        )
+                            .background(Color.spendLessPrimary.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: SpendLessRadius.lg)
+                                    .strokeBorder(Color.spendLessPrimary, lineWidth: 1)
+                            )
+                            .opacity(showPrediction ? 1 : 0)
+                            .offset(y: showPrediction ? 0 : 10)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showPrediction)
+                        }
+                        .padding(.horizontal, SpendLessSpacing.lg)
+                    }
                     
-                    Text("💡 We'll show you this when you try to open a blocked app.")
-                        .font(SpendLessFont.caption)
-                        .foregroundStyle(Color.spendLessTextMuted)
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Continue button
-                PrimaryButton("Continue") {
-                    // Save letter text (or use default if empty)
-                    if letterText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        appState.onboardingFutureLetterText = generatePlaceholderText(
-                            triggers: appState.onboardingTriggers,
+                    // Letter Selection Section
+                    VStack(alignment: .leading, spacing: SpendLessSpacing.md) {
+                        HStack(spacing: SpendLessSpacing.xs) {
+                            Text("💌")
+                            Text("YOUR REMINDER")
+                                .font(SpendLessFont.caption)
+                                .foregroundStyle(Color.spendLessTextSecondary)
+                        }
+                        
+                        Text("Choose a message to show yourself when you're tempted:")
+                            .font(SpendLessFont.body)
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                            .padding(.bottom, SpendLessSpacing.xs)
+                        
+                        let letterOptions = getFutureSelfLetterOptions(
                             goalName: appState.onboardingGoalName.isEmpty ? nil : appState.onboardingGoalName
                         )
-                    } else {
-                        appState.onboardingFutureLetterText = letterText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        
+                        VStack(spacing: SpendLessSpacing.sm) {
+                            ForEach(letterOptions.prefix(6)) { option in
+                                Button {
+                                    selectedLetterOption = option
+                                    appState.onboardingFutureLetterText = option.text
+                                    let generator = UIImpactFeedbackGenerator(style: .light)
+                                    generator.impactOccurred()
+                                } label: {
+                                    HStack(alignment: .top, spacing: SpendLessSpacing.sm) {
+                                        // Selection indicator
+                                        ZStack {
+                                            Circle()
+                                                .stroke(
+                                                    selectedLetterOption?.id == option.id ? Color.spendLessPrimary : Color.spendLessTextMuted,
+                                                    lineWidth: 2
+                                                )
+                                                .frame(width: 20, height: 20)
+                                            
+                                            if selectedLetterOption?.id == option.id {
+                                                Circle()
+                                                    .fill(Color.spendLessPrimary)
+                                                    .frame(width: 12, height: 12)
+                                            }
+                                        }
+                                        .padding(.top, 2)
+                                        
+                                        // Letter text
+                                        Text(option.text)
+                                            .font(SpendLessFont.body)
+                                            .foregroundStyle(Color.spendLessTextPrimary)
+                                            .multilineTextAlignment(.leading)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .padding(SpendLessSpacing.md)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                                            .fill(
+                                                selectedLetterOption?.id == option.id
+                                                ? Color.spendLessPrimary.opacity(0.1)
+                                                : Color.spendLessCardBackground
+                                            )
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                                            .strokeBorder(
+                                                selectedLetterOption?.id == option.id
+                                                ? Color.spendLessPrimary
+                                                : Color.clear,
+                                                lineWidth: 2
+                                            )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        
+                        // Note about customization
+                        Text("💡 You can change this later in Settings")
+                            .font(SpendLessFont.caption)
+                            .foregroundStyle(Color.spendLessTextMuted)
+                            .padding(.top, SpendLessSpacing.xs)
                     }
+                    .padding(.horizontal, SpendLessSpacing.lg)
+                    .opacity(showLetterSelection ? 1 : 0)
+                    .offset(y: showLetterSelection ? 0 : 10)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showLetterSelection)
                     
-                    withAnimation {
-                        currentPage = 2
+                    // Continue button
+                    PrimaryButton("Continue") {
+                        // Use selected letter or fallback to first option
+                        if appState.onboardingFutureLetterText == nil {
+                            let options = getFutureSelfLetterOptions(
+                                goalName: appState.onboardingGoalName.isEmpty ? nil : appState.onboardingGoalName
+                            )
+                            appState.onboardingFutureLetterText = options.first?.text ?? generatePlaceholderText(
+                                triggers: appState.onboardingTriggers,
+                                goalName: appState.onboardingGoalName.isEmpty ? nil : appState.onboardingGoalName
+                            )
+                        }
+                        
+                        withAnimation {
+                            currentPage = 2
+                        }
+                    }
+                    .padding(.horizontal, SpendLessSpacing.lg)
+                    .padding(.top, SpendLessSpacing.lg)
+                    .padding(.bottom, SpendLessSpacing.xl)
+                }
+            }
+        }
+        .onAppear {
+            // Start analyzing animation
+            isAnalyzing = true
+            showHeader = false
+            showStrengths = false
+            showFocusAreas = false
+            showPrediction = false
+            
+            // After 1.5 seconds, show content with staggered animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                isAnalyzing = false
+                
+                // Staggered reveal
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    showHeader = true
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        showStrengths = true
                     }
                 }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                .padding(.bottom, SpendLessSpacing.xl)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        showFocusAreas = true
+                    }
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        showPrediction = true
+                    }
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        showLetterSelection = true
+                    }
+                }
+            }
+        }
+        .onChange(of: currentPage) { oldValue, newValue in
+            // Reset animation states when navigating away
+            if newValue != 1 {
+                isAnalyzing = true
+                showHeader = false
+                showStrengths = false
+                showFocusAreas = false
+                showPrediction = false
+                showLetterSelection = false
             }
         }
     }
@@ -1241,8 +1417,8 @@ struct OnboardingHowItWorksView: View {
     @State private var currentSlide = 0
     
     private let slides = [
-        ("hand.raised.fill", "When you try to open a blocked app...", "We'll step in and ask what you wanted."),
-        ("questionmark.circle.fill", "We'll ask what you wanted", "Just browsing? Something specific? We'll help you decide."),
+        ("hand.raised.fill", "When you try to open a blocked app...", "A shield screen appears to pause you. Simple, but effective."),
+        ("sparkles", "Rich interventions via Shortcuts", "Set up Shortcuts to get breathing exercises and reflection prompts when you're tempted."),
         ("clock.fill", "Add it to your 7-day Waiting List", "If you still want it after a week, buy it guilt-free."),
         ("leaf.fill", "Bury what you don't need", "Most impulses don't survive 7 days. Watch your Cart Graveyard grow!"),
         ("target", "Watch your progress", "Every dollar you don't waste goes toward your goal.")

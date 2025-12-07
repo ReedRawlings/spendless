@@ -82,18 +82,6 @@ struct SpendLessShortcuts: AppShortcutsProvider {
             shortTitle: "Custom Intervention",
             systemImageName: "slider.horizontal.3"
         )
-        
-        // User's preferred intervention (uses their settings)
-        AppShortcut(
-            intent: PreferredInterventionIntent(),
-            phrases: [
-                "Open \(.applicationName)",
-                "Start \(.applicationName)",
-                "Help me with \(.applicationName)"
-            ],
-            shortTitle: "My Intervention",
-            systemImageName: "heart.fill"
-        )
     }
 }
 

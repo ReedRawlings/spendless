@@ -281,10 +281,22 @@ struct WaitingListItemRow: View {
     let onBuy: (() -> Void)?
     let onStillWantIt: () -> Void
     
+    @Query private var profiles: [UserProfile]
+    
+    private var profile: UserProfile? {
+        profiles.first
+    }
+    
     private var goalPercentage: Double? {
         guard let goal, goal.targetAmount > 0 else { return nil }
         let percentage = (item.amount as NSDecimalNumber).doubleValue / (goal.targetAmount as NSDecimalNumber).doubleValue * 100
         return percentage
+    }
+    
+    private var opportunityCost: Decimal? {
+        guard let birthYear = profile?.birthYear else { return nil }
+        let currentAge = ToolCalculationService.ageFromBirthYear(birthYear)
+        return ToolCalculationService.opportunityCost(amount: item.amount, currentAge: currentAge)
     }
     
     var body: some View {
@@ -333,6 +345,32 @@ struct WaitingListItemRow: View {
                 }
             }
             
+            // Tool insights (small, integrated)
+            if let costPerUse = item.calculatedCostPerUse, let uses = item.pricePerWearEstimate {
+                HStack(spacing: SpendLessSpacing.xs) {
+                    Text("👗")
+                        .font(.caption)
+                    Text("\(ToolCalculationService.formatCurrencyWithCents(costPerUse)) per use")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextSecondary)
+                    Text("(\(uses) uses)")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextMuted)
+                }
+                .padding(.top, SpendLessSpacing.xxs)
+            }
+            
+            if let futureValue = opportunityCost {
+                HStack(spacing: SpendLessSpacing.xs) {
+                    Text("📈")
+                        .font(.caption)
+                    Text("This \(ToolCalculationService.formatCurrency(item.amount)) → \(ToolCalculationService.formatCurrency(futureValue)) by retirement")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextSecondary)
+                }
+                .padding(.top, SpendLessSpacing.xxs)
+            }
+            
             // Progress bar
             CountdownProgressBar(
                 progress: item.progress,
@@ -369,6 +407,10 @@ struct WaitingListItemRow: View {
             return String(format: "%.1f", percentage)
         }
     }
+    
+    private func formatCurrency(_ amount: Decimal) -> String {
+        ToolCalculationService.formatCurrency(amount)
+    }
 }
 
 // MARK: - Add to Waiting List Sheet
@@ -382,6 +424,8 @@ struct AddToWaitingListSheet: View {
     @State private var selectedReason: ReasonWanted?
     @State private var otherReasonNote = ""
     @State private var showReasonPicker = false
+    @State private var showPricePerWear = false
+    @State private var pricePerWearEstimate: Int?
     
     var body: some View {
         NavigationStack {
@@ -412,6 +456,33 @@ struct AddToWaitingListSheet: View {
                                 title: "How much?",
                                 amount: $itemAmount
                             )
+                            
+                            // Optional: Calculate price per wear
+                            if itemAmount > 0 {
+                                Button {
+                                    showPricePerWear = true
+                                } label: {
+                                    HStack {
+                                        Text("👗")
+                                        Text("Calculate price per wear?")
+                                            .font(SpendLessFont.body)
+                                            .foregroundStyle(Color.spendLessPrimary)
+                                        Spacer()
+                                        if pricePerWearEstimate != nil {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundStyle(Color.spendLessSuccess)
+                                        } else {
+                                            Image(systemName: "chevron.right")
+                                                .foregroundStyle(Color.spendLessTextMuted)
+                                                .font(.caption)
+                                        }
+                                    }
+                                    .padding(SpendLessSpacing.md)
+                                    .background(Color.spendLessCardBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                                }
+                                .buttonStyle(.plain)
+                            }
                             
                             // Why do you want this? picker
                             VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
@@ -497,6 +568,14 @@ struct AddToWaitingListSheet: View {
                 ReasonWantedPicker(selectedReason: $selectedReason)
                     .presentationDetents([.medium])
             }
+            .fullScreenCover(isPresented: $showPricePerWear) {
+                NavigationStack {
+                    PricePerWearView(initialPrice: itemAmount) { estimate in
+                        pricePerWearEstimate = estimate
+                        showPricePerWear = false
+                    }
+                }
+            }
         }
     }
     
@@ -507,6 +586,7 @@ struct AddToWaitingListSheet: View {
             reasonWanted: selectedReason,
             reasonWantedNote: selectedReason == .other ? otherReasonNote : nil
         )
+        item.pricePerWearEstimate = pricePerWearEstimate
         modelContext.insert(item)
         try? modelContext.save()
         

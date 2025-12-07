@@ -61,7 +61,97 @@ func generateVisionText(goalType: GoalType, goalName: String?) -> String {
     }
 }
 
-// MARK: - Placeholder Text Generation
+// MARK: - Future Self Letter Options
+
+struct FutureSelfLetterOption: Identifiable {
+    let id: String
+    let text: String
+    let category: LetterCategory
+    
+    enum LetterCategory {
+        case motivation
+        case reminder
+        case goalFocused
+        case emotional
+    }
+}
+
+/// Pre-written letter options for users to choose from
+func getFutureSelfLetterOptions(goalName: String? = nil) -> [FutureSelfLetterOption] {
+    let goalText = goalName ?? "your goal"
+    
+    return [
+        // Motivation-focused
+        FutureSelfLetterOption(
+            id: "motivation_1",
+            text: "Remember why you started. Every 'no' gets you closer to \(goalText).",
+            category: .motivation
+        ),
+        FutureSelfLetterOption(
+            id: "motivation_2",
+            text: "You're stronger than this urge. The feeling will pass.",
+            category: .motivation
+        ),
+        FutureSelfLetterOption(
+            id: "motivation_3",
+            text: "Future you will thank present you for this moment of strength.",
+            category: .motivation
+        ),
+        
+        // Reminder-focused
+        FutureSelfLetterOption(
+            id: "reminder_1",
+            text: "This feeling is temporary. Your goal is not.",
+            category: .reminder
+        ),
+        FutureSelfLetterOption(
+            id: "reminder_2",
+            text: "Sales come back. This feeling won't last.",
+            category: .reminder
+        ),
+        FutureSelfLetterOption(
+            id: "reminder_3",
+            text: "Nothing good comes from impulse shopping. Sleep on it.",
+            category: .reminder
+        ),
+        
+        // Goal-focused
+        FutureSelfLetterOption(
+            id: "goal_1",
+            text: "Every dollar you don't spend gets you closer to \(goalText).",
+            category: .goalFocused
+        ),
+        FutureSelfLetterOption(
+            id: "goal_2",
+            text: "This money could go toward \(goalText) instead.",
+            category: .goalFocused
+        ),
+        FutureSelfLetterOption(
+            id: "goal_3",
+            text: "Is this purchase worth delaying \(goalText)?",
+            category: .goalFocused
+        ),
+        
+        // Emotional
+        FutureSelfLetterOption(
+            id: "emotional_1",
+            text: "Shopping won't fix what's bothering you. Take a breath instead.",
+            category: .emotional
+        ),
+        FutureSelfLetterOption(
+            id: "emotional_2",
+            text: "Buying things won't make you happy. Call a friend instead.",
+            category: .emotional
+        ),
+        FutureSelfLetterOption(
+            id: "emotional_3",
+            text: "You're not bored, you're just looking for a dopamine hit. Go for a walk.",
+            category: .emotional
+        ),
+    ]
+}
+
+// MARK: - Placeholder Text Generation (Legacy - for fallback)
 
 func generatePlaceholderText(triggers: Set<ShoppingTrigger>, goalName: String? = nil) -> String {
     // Use primary trigger (first trigger) for personalized placeholder

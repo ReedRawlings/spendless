@@ -25,31 +25,33 @@ SpendLess is an iOS app that helps users overcome compulsive shopping and impuls
 | Dashboard View | ✅ Complete | `Views/Dashboard/DashboardView.swift` |
 | Panic Button Flow | ✅ Complete | `Views/Dashboard/DashboardView.swift` |
 | Waiting List View | ✅ Complete | `Views/WaitingList/WaitingListView.swift` |
-| Graveyard View | ✅ Complete | `Views/Graveyard/GraveyardView.swift` (moved to Settings) |
+| Graveyard View | ⏸️ On Hiatus | `Views/Graveyard/GraveyardView.swift` (on hiatus, not actively developing) |
 | Learning Library | ✅ Complete | `Views/LearningLibrary/*.swift` |
 | Settings View | ✅ Complete | `Views/Settings/SettingsView.swift` |
 | Onboarding (15 screens) | ✅ Complete | `Views/Onboarding/*.swift` |
 | Extension Templates | ✅ Complete | `Extensions/*.swift` |
 | Haptic Feedback System | ✅ Complete | `Components/HapticFeedback.swift` |
 | Accessibility Helpers | ✅ Complete | `Components/AccessibilityModifiers.swift` |
+| RevenueCat Integration | ✅ Complete | `Services/SubscriptionService.swift` |
+| Superwall SDK Integration | 🔄 In Progress | `Services/SuperwallService.swift` - SDK added, needs dashboard config |
+| Paywall UI | 🔄 In Progress | `Views/Settings/PaywallView.swift` - Currently using RevenueCat PaywallView, needs Superwall replacement |
 
-### 🚧 Requires Entitlements (Blocked)
+### ✅ Screen Time Integration (Complete)
 
-| Component | Status | Dependency |
-|-----------|--------|------------|
-| FamilyActivityPicker Integration | 🚧 Stubbed | Family Controls entitlement |
-| Shield Screen (Live) | 🚧 Template ready | Family Controls entitlement |
-| App Blocking (Live) | 🚧 Template ready | Family Controls entitlement |
-| DeviceActivityMonitor Extension | 🚧 Template ready | Family Controls entitlement |
-| ShieldConfiguration Extension | 🚧 Template ready | Family Controls entitlement |
-| ShieldAction Extension | 🚧 Template ready | Family Controls entitlement |
+| Component | Status | Notes |
+|-----------|--------|-------|
+| FamilyActivityPicker Integration | ✅ Complete | Real picker integrated in onboarding |
+| Shield Screen (Live) | ✅ Complete | Custom shield UI with difficulty modes |
+| App Blocking (Live) | ✅ Complete | Shields applied via DeviceActivityMonitor |
+| DeviceActivityMonitor Extension | ✅ Complete | Fully implemented, working on device |
+| ShieldConfiguration Extension | ✅ Complete | Custom shield configuration with dynamic content |
+| ShieldAction Extension | ✅ Complete | Handles shield button actions |
 
 ### 📋 Deferred to Later
 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Notification Manager | 📋 Deferred | Waiting list reminders, streak celebrations |
-| Paywall / Pro Tier | 📋 Deferred | RevenueCat + Superwall integration |
 | "Do I Really Need This?" Questionnaire | 📋 Deferred | Pro feature |
 | Sharing / Social Cards | 📋 Deferred | V1.1 |
 | Analytics Integration | 📋 Deferred | Mixpanel/Amplitude |
@@ -76,10 +78,10 @@ SpendLess is an iOS app that helps users overcome compulsive shopping and impuls
 - **App Groups** — Required for sharing data between main app and extensions
 - **UserDefaults** — Simple preferences and extension communication
 
-### Third-Party Services (Planned)
-- **Superwall** — Paywall A/B testing and management
-- **RevenueCat** — Subscription management
-- **Mixpanel** or **Amplitude** — Analytics (opt-in, privacy-respecting)
+### Third-Party Services
+- **RevenueCat** — ✅ Integrated — Subscription management (`Services/SubscriptionService.swift`)
+- **Superwall** — 🔄 In Progress — Paywall A/B testing and management (`Services/SuperwallService.swift` - SDK added, dashboard config pending)
+- **Mixpanel** or **Amplitude** — 📋 Planned — Analytics (opt-in, privacy-respecting)
 
 ### Entitlements Required
 - `com.apple.developer.family-controls` — Must request from Apple via developer portal
@@ -148,7 +150,9 @@ SpendLess/
 ├── Services/
 │   ├── AppState.swift
 │   ├── ScreenTimeManager.swift
-│   └── LearningCardService.swift
+│   ├── LearningCardService.swift
+│   ├── SubscriptionService.swift
+│   └── SuperwallService.swift
 ├── Theme/
 │   └── Theme.swift
 └── Extensions/
@@ -185,14 +189,18 @@ All models use SwiftData `@Model` macro for persistence:
 
 ### Overview
 
-The Learning Library replaces the Graveyard tab with educational content about shopping manipulation tactics. The Graveyard functionality is preserved and accessible from Settings.
+The Learning Library is a tab in the main navigation that provides educational content about shopping manipulation tactics. It's organized into "Learn" (dark pattern cards) and "Tools" (interactive calculators and helpers).
 
 ### Features
 
-- **Flip Card Mechanic** — Users see a tactic name, tap to reveal the psychology, then confirm understanding
-- **Progress Tracking** — Cards can be marked as learned, with progress persisted to UserDefaults
-- **Completed Card Styling** — Learned cards appear with 60% opacity
-- **Review Mode** — Users can review all cards after completing the library
+- **List View** — `LessonsListView` shows all available cards with progress tracking
+- **Card Stack View** — `CardStackView` provides full-screen card learning experience
+- **Flip Card Mechanic** — Users see a tactic name on front, tap to reveal psychology on back
+- **Progress Tracking** — Cards marked as learned, with progress persisted to UserDefaults
+- **Review Mode** — After all cards are completed, users can review all cards again
+- **Completed Card Styling** — Learned cards appear with 60% opacity in list view
+- **Cooldown System** — Cards can resurface after cooldown period (default: 14 days)
+- **Shareable Cards** — Cards can be shared as images/text (to be implemented)
 
 ### Data Model
 
@@ -211,14 +219,16 @@ The Learning Library replaces the Graveyard tab with educational content about s
 
 | View | Purpose |
 |------|---------|
-| `LearningLibraryView` | Main tab view with progress, card previews, and Coming Soon section |
-| `CardStackView` | Full-screen card learning experience with flip animations |
+| `LearningLibraryView` | Main tab view with grid: Learn, Podcasts (coming soon), Articles (coming soon), Tools |
+| `LessonsListView` | List of all dark pattern cards with progress summary |
+| `CardStackView` | Full-screen card learning experience with flip animations and card transitions |
 
 ### Components
 
 | Component | Purpose |
 |-----------|---------|
 | `FlipCard` | Reusable 3D flip card with Y-axis rotation animation |
+| `LessonRow` | Card row in list view with icon, name, tactic preview, and completion indicator |
 
 ### Services
 
@@ -230,27 +240,48 @@ The Learning Library replaces the Graveyard tab with educational content about s
 
 - **Card Flip**: 0.4s spring animation, scale dips to 0.95x at midpoint
 - **Card Transition**: 0.3s slide-out/slide-in between cards
+- **List to Stack Transition**: Custom flip-and-expand animation when opening card from list
 - **Haptics**: `HapticFeedback.celebration()` on card completion
 - Respects `UIAccessibility.isReduceMotionEnabled`
 
 ### Current Cards (V1)
 
-One example card implemented: **Fake Urgency**
-- Icon: ⏰
-- Tactic: "Sale ends in 2 hours!"
-- Explanation: Psychology of loss aversion and timer manipulation
-- Reframe: "Would I want this if there was no timer?"
+Three cards implemented:
+
+1. **Fake Urgency** ⏰
+   - Tactic: "Sale ends in 2 hours!"
+   - Explanation: Psychology of loss aversion and timer manipulation
+   - Reframe: "Would I want this if there was no timer?"
+
+2. **Dopamine Menu** 📋
+   - Tactic: "I'll just browse for a minute..."
+   - Explanation: Shopping gives quick dopamine, but alternatives exist. Pre-made menu creates pause.
+   - Reframe: "What's on my dopamine menu today?"
+
+3. **Frictionless vs Effortful Dopamine** ⚡
+   - Tactic: "One-click purchase"
+   - Explanation: Difference between easy dopamine (addictive) and effortful dopamine (satisfying)
+   - Reframe: "Can I add friction to this purchase?"
+
+### Card Flow
+
+1. User opens "Learn" from Learning Library tab
+2. `LessonsListView` shows all cards with progress summary
+3. User taps a card → transitions to `CardStackView` starting at that card
+4. Card shows front (icon, name, tactic) → user taps to flip
+5. Back shows explanation and reframe → user taps "I understand"
+6. Card marked as learned → animates to next available card
+7. When all cards learned → completion screen → review mode available
 
 ### Future Enhancements
 
-- Add remaining 11 cards (Fake Scarcity, Social Proof, Confirm Shaming, etc.)
+- **Card Sharing** — Generate shareable image/text for each card (Instagram stories format)
+- Add remaining cards (Fake Scarcity, Social Proof, Confirm Shaming, etc.)
 - Migrate to SwiftData for persistence
 - Card grouping by category
 - Cooldown visibility UI
 - New content notifications
 - Podcasts & Articles section
-- `GoalType` — vacation, debtFree, bigPurchase, etc.
-- `SpendingCategory` — clothing, electronics, home, etc.
 
 ---
 
@@ -269,7 +300,7 @@ One example card implemented: **Fake Urgency**
     **Future: Apple Intelligence integration opportunity** — Use AI to help craft personalized goal descriptions, suggest realistic target amounts based on user's monthly spend, and generate motivational copy.
 9. **Commitment** — Tap to commit "I'm done buying things I don't need"
 10. **Permission Explanation** — Screen Time access explanation
-11. **App Selection** — FamilyActivityPicker (currently stubbed with mock picker)
+11. **App Selection** — FamilyActivityPicker (fully integrated)
 12. **Website Blocking** — Option to block shopping sites in Safari
 13. **Selection Confirmation** — Show selected apps
 14. **How It Works** — Animated walkthrough of the 7-day waiting list flow
@@ -622,7 +653,9 @@ Schedule local notifications for waiting list items:
 
 ---
 
-## Core Feature: Cart Graveyard (Implemented)
+## Core Feature: Cart Graveyard (⏸️ On Hiatus)
+
+**Status:** This feature is currently on hiatus and not being actively developed. The code exists but future enhancements are deferred.
 
 ### Graveyard Tab View
 
@@ -1055,20 +1088,22 @@ Generate shareable cards (PNG/Instagram stories format) for:
 | No-Goal Mode UI | Medium | Cash pile visualization for users without specific goals |
 | Relapse Handling Flow | Medium | Grace period logic, educational content |
 | Returns Logging | Low | Already in graveyard, just needs dedicated entry point |
+| Paywall Integration | High | RevenueCat + Superwall, trial + subscription model |
+| Card Sharing | Medium | Generate shareable images/text for dark pattern cards |
+| Share to Waitlist | Medium | Share items from Amazon/Target directly to waitlist (iOS Share Extension) |
 
 ### V1.5 Feature Candidates
 
 These features have strong research backing but aren't essential for MVP. Consider adding after launch based on user feedback.
 
-#### 1. Dark Pattern Education Cards
+#### 1. Additional Dark Pattern Cards
 
-Teach users to recognize manipulation tactics. Show one card daily or contextually when they resist.
+Currently 3 cards implemented. Add remaining cards to expand library:
 
-**Card Content:**
+**Remaining Cards to Add:**
 | Name | Tactic | Reality |
 |------|--------|---------|
 | Fake Scarcity | "Only 3 left!" | There's almost always more. They want panic-buying. |
-| Fake Urgency | "Sale ends in 2:00:00!" | These timers often reset. The sale will return. |
 | Social Pressure | "47 people viewing this" | Designed to trigger competition anxiety. |
 | Confirm Shaming | "No thanks, I hate saving" | Guilt language to manipulate you. |
 | Hidden Costs | "Free shipping at $50!" | You'll spend $20 to "save" $5. |
@@ -1077,11 +1112,13 @@ Teach users to recognize manipulation tactics. Show one card daily or contextual
 | Infinite Scroll | Keep scrolling... | Keeps you browsing longer than intended. |
 | Push Notifications | "Your cart misses you 🥺" | Engineered to trigger FOMO. |
 | Personalized Ads | "Picked just for you!" | Algorithms exploit your weaknesses. |
+| Loyalty Traps | "You're 50 points from Gold!" | Designed to keep you spending |
+| Subscription Creep | "Subscribe & save 15%" | Recurring charges you'll forget |
 
-**Delivery Options:**
+**Future Delivery Options:**
 - Daily card on dashboard (swipeable)
 - Contextual: show relevant card when user logs item from specific app
-- "Learn" section accessible from Settings
+- Card grouping by category (urgency tactics, social proof, pricing tricks)
 
 #### 2. ADHD-Friendly Considerations
 
@@ -1101,42 +1138,51 @@ Research shows ADHD brains are 4x more likely to impulse shop due to dopamine de
 - Encourage Shortcuts setup
 - Auto-add $1 on every resist
 
-#### 3. HALT Check Integration
+#### 3. HALT Check Integration ✅ **IMPLEMENTED**
 
-Before showing "What brought you here?", ask:
+HALT (Hungry, Angry, Lonely, Tired) check is integrated as an intervention step.
 
-```
-Are you feeling:
-[ ] Hungry
-[ ] Angry
-[ ] Lonely
-[ ] Tired
-```
+**Implementation:**
+- `InterventionHALTCheckView` — Shows HALT state selection
+- `InterventionManager` — Manages HALT check flow and redirect logic
+- Available as standalone intervention type or part of full flow
+- When HALT state selected → shows redirect screen with contextual suggestions
+- User can accept redirect (adds $1 to savings) or decline and continue
 
-If any selected:
-- "Shopping won't fix that. Here's what might:"
-- Suggest contextual alternatives (eat something, call a friend, take a nap)
-- Still allow them to proceed but with extra awareness
+**Flow:**
+1. User triggers intervention (via Shortcut or panic button)
+2. HALT check screen appears: "How are you feeling?"
+3. User selects state(s): Hungry 🍎, Angry 😠, Lonely 💬, Tired 😴
+4. If state selected → Redirect screen with suggestions
+5. If "I'm fine, actually" → Continues to reflection step
 
-#### 4. Alternative Dopamine Activities
+#### 4. Dopamine Menu ✅ **IMPLEMENTED**
 
-After breathing exercise, before dismissing:
+Dopamine Menu is implemented as a tool in the Learning Library and as an intervention step.
 
-```
-"The urge will pass. Try one of these instead:"
+**Implementation:**
+- `DopamineMenuView` — Main tool view accessible from Learning Library → Tools
+- `DopamineMenuSetupView` — Setup/editing interface for customizing activities
+- `InterventionDopamineMenuView` — Shows menu during intervention flow
+- Integrated into intervention flow when user selects "Just Browsing"
+- Activities stored in `UserProfile.dopamineMenuSelectedDefaults` and `dopamineMenuCustomActivities`
 
-🚶 Go for a 10-minute walk
-💬 Text a friend something nice
-🎨 Make something (draw, cook, craft)
-🗂️ Organize one drawer
-📺 Watch one episode of something
-🧘 Do 5 minutes of stretching
-📝 Write 3 things you're grateful for
-🎵 Put on your favorite album
-✨ I'm good now
-```
+**Default Activities:**
+- 🚶 Go for a 10-minute walk
+- 💬 Text a friend something nice
+- 🎨 Make something (draw, cook, craft)
+- 🗂️ Organize one drawer
+- 📺 Watch one episode of something
+- 🧘 Do 5 minutes of stretching
+- 📝 Write 3 things you're grateful for
+- 🎵 Put on your favorite album
 
-Let users customize their own list in Settings (Pro feature).
+**Features:**
+- Users can select from default activities
+- Users can add custom activities
+- Setup required on first use
+- Editable from Settings → Tools → Dopamine Menu
+- Shows in intervention flow as alternative to shopping
 
 #### 5. Letter to Future Self
 
@@ -1307,17 +1353,29 @@ Key insights from this guide:
 
 ### Entitlement Request Process
 
-1. Go to: https://developer.apple.com/contact/request/family-controls-distribution
-2. Submit request for EACH target:
-   - Main app bundle ID
-   - DeviceActivityMonitor extension bundle ID
-   - ShieldConfiguration extension bundle ID
-   - ShieldAction extension bundle ID
-3. Provide clear explanation of app purpose
-4. Expect 2-6 weeks for approval
-5. No confirmation email is sent — approval appears in developer portal
+✅ **COMPLETE** — All entitlements approved and active
 
-**Important:** Development entitlement works immediately for testing. Distribution entitlement required for TestFlight and App Store.
+1. ~~Go to: https://developer.apple.com/contact/request/family-controls-distribution~~ ✅
+2. ~~Submit request for EACH target~~ ✅
+   - Main app bundle ID ✅
+   - DeviceActivityMonitor extension bundle ID ✅
+   - ShieldConfiguration extension bundle ID ✅
+   - ShieldAction extension bundle ID ✅
+3. ~~Provide clear explanation of app purpose~~ ✅
+4. ~~Expect 2-6 weeks for approval~~ ✅ **APPROVED**
+5. ~~No confirmation email is sent — approval appears in developer portal~~ ✅
+
+**Status:** All entitlements approved. Development and distribution entitlements active for all targets.
+
+**Next Steps (Verification):**
+- [ ] Verify Family Controls entitlement is enabled in Xcode for all targets:
+  - Main app target → Signing & Capabilities → Add "Family Controls" capability
+  - DeviceActivityMonitorExtension target → Add capability
+  - ShieldConfigurationExtension target → Add capability
+  - ShieldActionExtension target → Add capability
+- [ ] Verify App Groups are configured for all targets (required for data sharing)
+- [ ] Verify entitlements files (`.entitlements`) include `com.apple.developer.family-controls`
+- [ ] Test on physical device to confirm shields are working
 
 ### Known API Limitations & Bugs
 
@@ -1528,7 +1586,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
 ### Testing Notes
 
-- **Simulator does NOT work** — Must test on physical device
+- ✅ **Physical device testing in progress** — Screen Time APIs working correctly
+- ✅ **FamilyActivityPicker integrated** — Real picker working in onboarding
+- ✅ **Extensions tested** — All three extensions functional on device
 - Sign in to an iCloud account on test device
 - First time opening FamilyActivityPicker may show empty categories — dismiss and reopen
 - Test both "individual" authorization (self-control) and "child" authorization (parental) if supporting both
@@ -1548,47 +1608,50 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
 ## Key Next Steps
 
-### Immediate (Blocking)
+### ✅ Completed (No Longer Blocking)
 
-1. **Request Family Controls Entitlement**
-   - Go to: https://developer.apple.com/contact/request/family-controls-distribution
-   - Submit request for ALL targets:
-     - `com.spendless.app` (main app)
-     - `com.spendless.app.DeviceActivityMonitorExtension`
-     - `com.spendless.app.ShieldConfigurationExtension`
-     - `com.spendless.app.ShieldActionExtension`
-   - Expect 2-6 weeks for approval
+1. ~~**Request Family Controls Entitlement**~~ ✅ **COMPLETE**
+   - Entitlements approved for all targets
+   - Main app and all extensions have Family Controls access
 
-2. **Create Actual Extension Targets in Xcode**
-   - Follow instructions in `Extensions/EXTENSION_SETUP.md`
-   - Add App Groups capability to all targets
-   - Copy template code from stub files
+2. ~~**Create Actual Extension Targets in Xcode**~~ ✅ **COMPLETE**
+   - All three extensions fully implemented and working
+   - App Groups configured for data sharing
+   - Extensions tested and functional
 
-3. **Test on Physical Device**
-   - Screen Time APIs don't work in Simulator
-   - Sign in to iCloud on test device
-   - Test full onboarding flow with real FamilyActivityPicker
+3. ~~**Test on Physical Device**~~ ✅ **IN PROGRESS**
+   - Physical device testing ongoing
+   - Screen Time APIs working correctly
+   - Full onboarding flow tested with real FamilyActivityPicker
 
-### After Entitlement Approval
+4. ~~**Enable Real Screen Time Integration**~~ ✅ **COMPLETE**
+   - Real `FamilyActivityPicker` integrated in onboarding
+   - Extensions connected and applying shields
+   - Shield screens tested on blocked app open
 
-4. **Enable Real Screen Time Integration**
-   - Replace mock picker with real `FamilyActivityPicker`
-   - Connect extensions to apply actual shields
-   - Test shield screens on blocked app open
+### Remaining V1 Tasks
 
-5. **Implement Notification System**
+5. **Add Paywall & Subscription System** 🔄 **In Progress**
+   - ✅ RevenueCat SDK integrated and configured
+   - ✅ SubscriptionService created for subscription management
+   - ✅ RevenueCat PaywallView implemented (temporary)
+   - ✅ Settings integration (upgrade, restore, manage subscription)
+   - ✅ Paywall triggers: After onboarding, Settings upgrade button
+   - 🔄 Superwall SDK integrated (needs dashboard configuration)
+   - 🔄 SuperwallService created (needs RevenueCat adapter refinement)
+   - ⏭️ Replace RevenueCat PaywallView with Superwall paywall
+   - ⏭️ Dashboard configuration: Products, entitlements, offerings in RevenueCat dashboard
+   - ⏭️ Dashboard configuration: Paywall design and events in Superwall dashboard
+   - ⏭️ Testing: Purchase flow, restore purchases, subscription status checks
+
+6. **Implement Notification System**
    - Waiting list reminders (Day 2, 4, 6, 7)
    - Streak celebration notifications
    - Weekly summary
 
-6. **Add No-Goal Mode UI**
+7. **Add No-Goal Mode UI**
    - Cash pile visualization
    - "Set a goal for this?" prompts
-
-7. **Add Paywall**
-   - Integrate RevenueCat for subscription management
-   - Integrate Superwall for paywall UI
-   - Implement free tier limits (5 apps, 1 goal, 3 waiting list items)
 
 ### Polish & Launch
 
@@ -1601,6 +1664,403 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
    - TestFlight distribution
    - Gather feedback on core flows
    - Iterate on friction points
+
+---
+
+## Common Launch Issues & Solutions
+
+### Screen Time API Issues
+- **Issue:** Users can't authorize Screen Time
+  - **Solution:** Clear instructions in onboarding, support documentation
+- **Issue:** Shields not appearing
+  - **Solution:** Verify App Groups configuration, check extension logs
+- **Issue:** FamilyActivityPicker crashes
+  - **Solution:** Known issue - recommend dictation/paste instead of search
+
+### Subscription Issues
+- **Issue:** Users can't restore purchases
+  - **Solution:** Clear restore button in Settings, RevenueCat restore flow
+- **Issue:** Trial not activating
+  - **Solution:** Verify RevenueCat configuration, check entitlements
+
+### Onboarding Issues
+- **Issue:** High drop-off during onboarding
+  - **Solution:** A/B test onboarding length, simplify early screens
+- **Issue:** Users skip app selection
+  - **Solution:** Emphasize importance, show value before picker
+
+## Resources
+
+### Apple Documentation
+- [ ] **App Icon** (1024x1024, all required sizes)
+- [ ] **Screenshots** (6.7", 6.5", 5.5" displays)
+  - Onboarding flow highlights
+  - Dashboard with goal progress
+  - Waiting list interface
+  - Shield screen (if possible to capture)
+  - Learning library cards
+- [ ] **App Preview Video** (30 seconds, optional but recommended)
+  - Show problem → solution flow
+  - Highlight key features (blocking, waiting list, goal tracking)
+- [ ] **App Store Description**
+  - Subtitle (30 characters max)
+  - Description (4000 characters max)
+  - Keywords (100 characters max)
+  - Promotional text (170 characters, can update without resubmission)
+- [ ] **Privacy Policy URL** (required)
+- [ ] **Terms of Service URL** (recommended)
+- [ ] **Support URL** (required)
+
+#### Legal & Compliance
+- [ ] Privacy Policy created and hosted
+  - Data collection disclosure
+  - Screen Time API usage explanation
+  - Third-party services (RevenueCat, Superwall, analytics)
+  - User data rights (GDPR, CCPA if applicable)
+- [ ] Terms of Service created and hosted
+- [ ] App Privacy details completed in App Store Connect
+  - Data types collected
+  - Data linked to user
+  - Data used to track user
+  - Data not collected
+
+#### Monetization Setup
+- [x] RevenueCat SDK integrated ✅
+  - [x] SubscriptionService created ✅
+  - [x] API key configuration added ✅
+  - [x] Entitlement configured ("Future Selves Pro") ✅
+  - [x] RevenueCat PaywallView implemented (temporary) ✅
+  - [ ] Products created in App Store Connect (monthly, annual)
+  - [ ] Products configured in RevenueCat dashboard
+  - [ ] Offerings created in RevenueCat dashboard
+  - [ ] Webhooks set up (optional)
+- [x] Superwall SDK integrated 🔄
+  - [x] SuperwallService created ✅
+  - [x] RevenueCat adapter created (needs refinement) 🔄
+  - [x] API key configuration added ✅
+  - [ ] PaywallView replaced with Superwall (currently using RevenueCat PaywallView)
+  - [x] Event triggers set up in code (onboarding_complete, settings_upgrade) ✅
+  - [ ] Connect RevenueCat in Superwall dashboard
+  - [ ] Paywall templates created (use carousel format showing features)
+  - [ ] A/B test variants set up
+  - [ ] Paywall events configured in dashboard
+- [x] **Paywall Integration (Temporary)** ✅
+  - [x] Paywall appears after onboarding (using RevenueCat PaywallView) ✅
+  - [x] Settings integration (upgrade, restore, manage) ✅
+  - [x] Subscription status checking throughout app ✅
+  - [ ] Replace with Superwall paywall for A/B testing
+- [ ] **Paywall Messaging Strategy** (Dashboard configuration)
+  - "Hey this is going to cost money, we need to earn money to continue building amazing tools. We want you to trial our tool before committing"
+  - Show systems and outcomes, not just features
+  - Show who they'll become using the app
+  - Use carousel format for features they'll get access to
+- [ ] Subscription pricing finalized
+  - Monthly: $6.99
+  - Annual: $39.99 (or equivalent)
+  - Trial period duration determined
+- [ ] Subscription terms tested end-to-end
+  - Trial signup flow
+  - Subscription purchase
+  - Restore purchases
+  - Subscription management
+
+#### Attribution & Analytics Setup
+- [ ] **Analytics Platform Configured** (Amplitude or Mixpanel)
+  - User journey tracking
+  - Conversion funnel analysis
+  - Cohort analysis by acquisition source
+  - "Where did you hear about us?" tracking
+- [ ] **Attribution Tracking**
+  - Track which ads/videos users came from
+  - Test dozens of ad variations
+  - Identify which cohorts convert best
+  - Track organic vs. paid acquisition
+
+#### Testing & QA
+- [ ] **Internal Testing**
+  - All onboarding screens tested
+  - App blocking tested on multiple shopping apps
+  - Shield screens tested (all difficulty modes)
+  - Waiting list flow tested (7-day timer)
+  - Graveyard functionality tested
+  - Panic button flow tested
+  - Goal tracking tested
+  - Notification delivery tested
+- [ ] **TestFlight Beta**
+  - Build uploaded to TestFlight
+  - External testers invited (10-50 users)
+  - Feedback collection system in place
+  - Crash reporting enabled (if using service)
+  - Test duration: 2-4 weeks minimum
+- [ ] **Edge Cases Tested**
+  - No internet connection scenarios
+  - App backgrounded during critical flows
+  - Screen Time authorization revoked
+  - Multiple device scenarios (if applicable)
+  - Low storage space scenarios
+
+#### Marketing Preparation
+
+**Content Strategy (Start Immediately)**
+- [ ] **Start writing content immediately** — Longer it's up, better Google/LLM indexing
+  - Blog posts about shopping compulsion, impulse buying, ADHD and shopping
+  - "How to spend less" guides
+  - Psychology of shopping addiction content
+  - SEO-optimized articles targeting keywords users search for
+- [ ] **Create shareable resources**
+  - "How to Spend Less Guide" (like Kaizen journal) — link to SpendLess inside
+  - TikTok shop videos with guide downloads
+  - Free downloadable resources (PDFs, checklists)
+
+**App Store Optimization (ASO) - Critical**
+- [ ] **Keyword Research** (Use Sensor Tower + App Store search)
+  - Find 2-3 keywords users associate with their future self (breaking compulsive shopping, reducing spending)
+  - **MUST search App Store** to see what's currently ranking
+  - Goal: Hold #1 ranking for target keywords
+- [ ] **Title & Subtitle Optimization**
+  - Put right keywords in title and subtitle
+  - Test different combinations
+  - Ensure keywords match what users search for
+- [ ] **Description Optimization**
+  - Call out pain points and offer solutions
+  - Show aggregate view: "How they see themselves today" vs "What they could look like with SpendLess"
+  - Position user as hero for choosing to spend less
+  - Include keywords naturally throughout
+
+**Community & Review Strategy**
+- [ ] **Pre-launch review preparation**
+  - Have users ready to write reviews immediately after launch
+  - Identify beta testers who are likely to leave positive reviews
+  - Prepare review request messaging (non-pushy)
+- [ ] **Reddit & Quora Strategy**
+  - Post product to relevant subreddits (r/shoppingaddiction, r/nobuy, r/adhd, etc.)
+  - Post to Quora answering questions about shopping addiction
+  - Answer authentically when users are looking for competitors
+  - Provide value, not just promotion
+  - Engagement bait, not rage bait
+
+**Launch Strategy**
+- [ ] Launch date selected
+- [ ] Press kit prepared (if applicable)
+- [ ] Social media accounts ready
+- [ ] Launch announcement copy prepared
+- [ ] TikTok shop video strategy planned
+
+### Launch Day Checklist
+
+#### App Store Connect
+- [ ] Final build uploaded and submitted for review
+- [ ] App Store listing finalized
+- [ ] Pricing and availability set
+- [ ] Release date/time scheduled (or manual release)
+- [ ] App review information completed
+  - Demo account credentials (if required)
+  - Review notes explaining Screen Time API usage
+  - Contact information for reviewer questions
+
+#### Technical Monitoring
+- [ ] Analytics dashboard set up (if using analytics)
+- [ ] Crash reporting monitoring active
+- [ ] RevenueCat dashboard monitoring
+- [ ] Server/backend monitoring (if applicable)
+- [ ] Error tracking alerts configured
+
+#### Support Preparation
+- [ ] Support email/contact method ready
+- [ ] FAQ document prepared
+- [ ] Common issues troubleshooting guide
+- [ ] Response templates for common questions
+
+### Post-Launch (First Week)
+
+#### Monitoring
+- [ ] Daily review of:
+  - App Store reviews and ratings
+  - Crash reports
+  - RevenueCat subscription metrics
+  - User feedback channels
+  - Analytics (Amplitude/Mixpanel)
+  - **Keyword rankings** (track position changes)
+  - **Ad performance** (which ads/videos are converting)
+  - **Attribution data** (where users are coming from)
+- [ ] Monitor for:
+  - Critical bugs
+  - User confusion points
+  - Paywall conversion rates
+  - Onboarding drop-off points
+  - **First 5 minutes engagement** (are users seeing value?)
+  - **7-day journey completion** (are users progressing through the journey?)
+
+#### Organic Growth Strategy
+- [ ] **Start with organic** — See what works organically first
+- [ ] **Then scale with paid** — Use paid acquisition to amplify what's working
+- [ ] **Create flywheel effect** — Organic + paid acquisition creates momentum
+- [ ] **Content marketing**
+  - Continue publishing SEO content
+  - Answer questions on Reddit/Quora authentically
+  - Engage in communities where users need help
+
+#### Quick Response
+- [ ] Respond to App Store reviews (especially negative ones)
+- [ ] Address critical bugs immediately
+- [ ] Update FAQ based on common questions
+- [ ] Consider hotfix release if critical issues found
+
+#### Iteration Planning
+- [ ] Gather user feedback
+- [ ] Identify top feature requests
+- [ ] Plan V1.1 update based on real usage data
+- [ ] Document lessons learned
+- [ ] **Analyze ad performance** — Test dozens of ad variations, identify winners
+- [ ] **Optimize onboarding** — This is where users convert (ads get them in, onboarding gets money)
+- [ ] **Refine paywall** — Test different messaging, carousel formats, feature presentations
+
+### Launch Metrics to Track
+
+#### User Acquisition
+- App Store impressions
+- App Store conversion rate (views → installs)
+- Organic vs. paid installs
+- **Keyword rankings** (track position for target keywords)
+- **CPM (Cost Per Mille)** for paid ads
+- Attribution by source (which ads/videos drive installs)
+- "Where did you hear about us?" responses
+
+#### Engagement
+- **Onboarding completion rate** (critical — ads get users in door, onboarding gets them to spend money)
+- **First 5 minutes value delivery** (must convey value immediately)
+- Daily active users (DAU)
+- Weekly active users (WAU)
+- Retention rates (Day 1, Day 7, Day 30)
+- **7-Day Journey Completion**
+  - Day 1: Get set up and identify goals/triggers
+  - Day 2: Trial new interventions
+  - Day 3: Learn about psychology
+  - Day 4: Start leveraging waitlist
+  - Day 5: First resisted shopping experience
+  - Day 6: Leverage tools for better habits
+  - Day 7: Watch waitlist items fade away
+
+#### Monetization
+- Trial signup rate
+- Trial-to-paid conversion rate
+- Monthly recurring revenue (MRR)
+- Annual plan adoption rate
+- Churn rate
+- **Demographics of converting users** (who responds to ads, converts, commits, generates revenue)
+- **SMS engagement** (95% of texts read within 5 minutes)
+
+#### Feature Usage
+- App blocking usage (shields triggered)
+- Waiting list items created
+- Graveyard items buried
+- Panic button usage
+- Goal completion rate
+
+### Ad Strategy & Creative Guidelines
+
+#### Ad Best Practices
+- **Clear Intent** — Clearly call out the tool and what it does
+- **Differentiator** — What makes SpendLess unique vs. competitors
+- **Engagement Bait, Not Rage Bait** — Create curiosity and engagement, not anger
+- **Persuasion Hooks** — Use psychological triggers that resonate
+- **Headlines** — Strong, clear headlines that communicate value
+- **Building Trust** — Show social proof, testimonials, results
+- **Strong CTA** — Clear call-to-action
+
+#### Ad Testing Strategy
+- **Test dozens of variations** — Don't settle on first ad
+- **Experiment with cohorts** — Track which ads drive which user types
+- **UGC Ads** — User-generated content performs well
+- **Influencer Partnerships** — Consider influencer collaborations
+- **TikTok Shop Videos** — Create "How to spend less guide" videos linking to SpendLess
+
+#### Ad Targeting Considerations
+- **Who's responding to ads?** (Demographics)
+- **Who's converting through ads?** (Conversion analysis)
+- **Who's going to commit and generate revenue?** (Revenue attribution)
+- Focus paid spend on cohorts that convert and generate revenue
+
+### User Engagement & Retention Strategy
+
+#### GIVE, GIVE, GIVE Model
+- **Give value first** — Provide helpful resources before asking for anything
+- **Get email or SMS** — After providing value, capture contact info
+- **Send helpful resources** — Text/email with helpful content
+- **Personalized interventions** — "This intervention might work best for you" based on their profile
+
+#### SMS Strategy (95% read within 5 minutes)
+- Use SMS for high-engagement communications
+- Send helpful resources via SMS
+- Personalized intervention suggestions
+- Check-in messages during trial period
+
+#### User Sharing & Virality
+- **Shared Goals Feature** — Enable users to share goals with friends/family
+- **Share to Waitlist Feature** — Allow users to share items from Amazon/Target directly to waitlist (instead of copying links)
+- **Social sharing** — Make it easy to share wins, streaks, goal progress
+- **Referral program** — Incentivize users to share the app
+
+### Onboarding Optimization (Critical for Conversion)
+
+#### Onboarding Philosophy
+- **"Ads get users in the door, onboarding gets them to spend money"**
+- This is the best setup opportunity — make it count
+- Must convey value in first 5 minutes
+
+#### Onboarding Strategy
+- **Tie users to their questions earlier** — They give you answers, you make them feel seen
+- **Call out pain points and offer solutions** — Address their struggles directly
+- **Show aggregate view** — "How they see themselves today" vs "What they could look like with SpendLess"
+- **Position user as hero** — They're making a brave choice to spend less and hit their goals
+- **Trial messaging** — "We want you to trial our tool before committing"
+
+#### 7-Day Journey Framework
+Show users the systems and outcomes they'll receive:
+
+- **Day 1:** Get set up and identify your goals and triggers
+- **Day 2:** Trial new interventions to find what fits
+- **Day 3:** Learn about the psychology of habit formation and shopping compulsion
+- **Day 4:** Start leveraging your waitlist
+- **Day 5:** Experience your first resisted shopping experience
+- **Day 6:** Leverage tools to help your brain build better habits
+- **Day 7:** Watch your first waitlist items fade away as you make progress toward your goals
+
+
+### Screen Time API Issues
+- **Issue:** Users can't authorize Screen Time
+  - **Solution:** Clear instructions in onboarding, support documentation
+- **Issue:** Shields not appearing
+  - **Solution:** Verify App Groups configuration, check extension logs
+- **Issue:** FamilyActivityPicker crashes
+  - **Solution:** Known issue - recommend dictation/paste instead of search
+
+### Subscription Issues
+- **Issue:** Users can't restore purchases
+  - **Solution:** Clear restore button in Settings, RevenueCat restore flow
+- **Issue:** Trial not activating
+  - **Solution:** Verify RevenueCat configuration, check entitlements
+
+### Onboarding Issues
+- **Issue:** High drop-off during onboarding
+  - **Solution:** A/B test onboarding length, simplify early screens
+- **Issue:** Users skip app selection
+  - **Solution:** Emphasize importance, show value before picker
+
+## Resources
+
+### Apple Documentation
+- [App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+- [App Store Connect Help](https://help.apple.com/app-store-connect/)
+- [Family Controls Entitlement](https://developer.apple.com/documentation/familycontrols)
+
+### Third-Party Services
+- [RevenueCat Documentation](https://docs.revenuecat.com/)
+- [Superwall Documentation](https://docs.superwall.com/)
+
+### Testing Tools
+- [TestFlight](https://developer.apple.com/testflight/)
+- [App Store Connect Analytics](https://appstoreconnect.apple.com/analytics)
 
 ---
 

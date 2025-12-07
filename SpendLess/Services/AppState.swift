@@ -27,6 +27,10 @@ final class AppState {
     // MARK: - Deep Linking
     var pendingDeepLink: String? = nil
     
+    // MARK: - Subscription State
+    var subscriptionService = SubscriptionService.shared
+    var shouldShowPaywallAfterOnboarding: Bool = false
+    
     // MARK: - Temporary Onboarding State
     var onboardingTriggers: Set<ShoppingTrigger> = []
     var onboardingTimings: Set<ShoppingTiming> = []
@@ -50,6 +54,7 @@ final class AppState {
         static let hasCompletedOnboarding = "hasCompletedOnboarding"
         static let isScreenTimeAuthorized = "isScreenTimeAuthorized"
         static let blockedAppCount = "blockedAppCount"
+        static let hasShownPaywallAfterOnboarding = "hasShownPaywallAfterOnboarding"
     }
     
     // MARK: - Persistence
@@ -66,6 +71,16 @@ final class AppState {
         defaults.set(hasCompletedOnboarding, forKey: UserDefaultsKeys.hasCompletedOnboarding)
         defaults.set(isScreenTimeAuthorized, forKey: UserDefaultsKeys.isScreenTimeAuthorized)
         defaults.set(blockedAppCount, forKey: UserDefaultsKeys.blockedAppCount)
+    }
+    
+    // MARK: - Paywall After Onboarding
+    
+    func hasShownPaywallAfterOnboarding() -> Bool {
+        return UserDefaults.standard.bool(forKey: UserDefaultsKeys.hasShownPaywallAfterOnboarding)
+    }
+    
+    func markPaywallShownAfterOnboarding() {
+        UserDefaults.standard.set(true, forKey: UserDefaultsKeys.hasShownPaywallAfterOnboarding)
     }
     
     // MARK: - Onboarding
@@ -213,6 +228,11 @@ extension AppState {
         
         completeOnboarding()
         clearOnboardingState()
+        
+        // Trigger paywall after onboarding (only if not already shown)
+        if !hasShownPaywallAfterOnboarding() {
+            shouldShowPaywallAfterOnboarding = true
+        }
     }
     
     /// Sync streak and savings data to App Groups for shield display

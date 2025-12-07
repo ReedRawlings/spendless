@@ -42,6 +42,13 @@ final class UserProfile {
     // Tools - Opportunity Cost
     var birthYear: Int? // For opportunity cost calculator
     
+    // Lead Magnet / Email Collection
+    var leadMagnetEmailCollected: Bool
+    var leadMagnetEmailAddress: String?
+    var leadMagnetOptedIntoMarketing: Bool
+    var leadMagnetCollectedAt: Date?
+    var leadMagnetSourceRaw: String? // LeadMagnetSource raw value
+    
     init(
         id: UUID = UUID(),
         triggers: [ShoppingTrigger] = [],
@@ -64,6 +71,11 @@ final class UserProfile {
         self.dopamineMenuSelectedDefaultsRaw = []
         self.dopamineMenuCustomActivities = nil
         self.birthYear = nil
+        self.leadMagnetEmailCollected = false
+        self.leadMagnetEmailAddress = nil
+        self.leadMagnetOptedIntoMarketing = false
+        self.leadMagnetCollectedAt = nil
+        self.leadMagnetSourceRaw = nil
     }
     
     // MARK: - Computed Properties
@@ -125,6 +137,13 @@ final class UserProfile {
     var currentAge: Int {
         guard let birthYear else { return 30 } // Default to 30 if not set
         return ToolCalculationService.ageFromBirthYear(birthYear)
+    }
+    
+    // MARK: - Lead Magnet
+    
+    var leadMagnetSource: LeadMagnetSource? {
+        get { leadMagnetSourceRaw.flatMap { LeadMagnetSource(rawValue: $0) } }
+        set { leadMagnetSourceRaw = newValue?.rawValue }
     }
     
     // MARK: - Methods

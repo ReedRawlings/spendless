@@ -74,6 +74,34 @@ struct SpendLessApp: App {
     
     @State private var interventionManager = InterventionManager.shared
     
+    // MARK: - Subscription Service
+    
+    @State private var subscriptionService = SubscriptionService.shared
+    
+    // MARK: - Superwall Service
+    
+    @State private var superwallService = SuperwallService.shared
+    
+    // MARK: - Initialization
+    
+    init() {
+        // Configure RevenueCat
+        // Note: Make sure to replace the API key in Constants.swift with your actual key
+        if AppConstants.revenueCatAPIKey != "YOUR_REVENUECAT_API_KEY_HERE" {
+            subscriptionService.configure(apiKey: AppConstants.revenueCatAPIKey)
+        } else {
+            print("⚠️ RevenueCat API key not configured. Please add your API key to Constants.swift")
+        }
+        
+        // Store Superwall API key (lazy configuration - won't trigger StoreKit on launch)
+        // Superwall will be configured when first paywall is requested
+        if AppConstants.superwallAPIKey != "YOUR_SUPERWALL_API_KEY_HERE" {
+            superwallService.setAPIKey(AppConstants.superwallAPIKey)
+        } else {
+            print("⚠️ Superwall API key not configured. Please add your API key to Constants.swift")
+        }
+    }
+    
     // MARK: - Body
     
     var body: some Scene {
@@ -81,6 +109,8 @@ struct SpendLessApp: App {
             RootView()
                 .environment(appState)
                 .environment(interventionManager)
+                .environment(subscriptionService)
+                .environment(superwallService)
                 .onOpenURL { url in
                     handleDeepLink(url)
                 }
@@ -129,6 +159,8 @@ struct SpendLessApp: App {
 struct RootView: View {
     @Environment(AppState.self) private var appState
     @Environment(InterventionManager.self) private var interventionManager
+    @Environment(SubscriptionService.self) private var subscriptionService
+    @Environment(SuperwallService.self) private var superwallService
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     
@@ -151,6 +183,33 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: interventionManager.isShowingIntervention)
+        .onChange(of: appState.shouldShowPaywallAfterOnboarding) { oldValue, newValue in
+            if newValue && !oldValue {
+                // Only show paywall if user doesn't already have subscription
+                // Check subscription status first
+                Task {
+                    await subscriptionService.checkSubscriptionStatus()
+                    
+                    // Show paywall after a brief delay to let onboarding transition complete
+                    // Only if they don't already have Pro access
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        if !subscriptionService.hasProAccess {
+                            print("📱 Attempting to show paywall after onboarding...")
+                            print("📱 Subscription status: hasProAccess = \(subscriptionService.hasProAccess)")
+                            print("📱 Superwall configured: \(superwallService.isConfigured)")
+                            
+                            // Trigger Superwall paywall via placement
+                            // Uses "campaign_trigger" placement configured in Superwall dashboard
+                            superwallService.register(event: "campaign_trigger")
+                        } else {
+                            print("✅ User already has Pro access, skipping paywall")
+                        }
+                        appState.markPaywallShownAfterOnboarding()
+                        appState.shouldShowPaywallAfterOnboarding = false
+                    }
+                }
+            }
+        }
         .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .active {
                 // Check for pending interventions when app becomes active
@@ -158,6 +217,9 @@ struct RootView: View {
                 
                 // Check for pending Control Widget action (panic button from Control Center)
                 checkForPendingControlWidgetAction()
+                
+                // Process pending email submissions
+                processPendingEmailSubmissions()
                 
                 // Sync widget data when app becomes active
                 if appState.hasCompletedOnboarding {
@@ -184,6 +246,33 @@ struct RootView: View {
             
             // Trigger the panic button flow
             appState.pendingDeepLink = "panicButton"
+        }
+    }
+    
+    // MARK: - Pending Email Submissions
+    
+    private func processPendingEmailSubmissions() {
+        let pending = PendingSubmissionsStore.shared.all()
+        guard !pending.isEmpty else { return }
+        
+        Task {
+            for submission in pending {
+                do {
+                    try await ConvertKitService.shared.submitEmailForPDF(
+                        email: submission.email,
+                        optedIntoMarketing: submission.optedIntoMarketing,
+                        source: submission.source
+                    )
+                    
+                    // Success - remove from queue
+                    await MainActor.run {
+                        PendingSubmissionsStore.shared.remove(submission)
+                    }
+                } catch {
+                    // Will retry next time app becomes active
+                    print("⚠️ Failed to process pending email submission: \(error)")
+                }
+            }
         }
     }
 }

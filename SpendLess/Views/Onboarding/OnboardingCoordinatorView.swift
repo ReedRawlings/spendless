@@ -33,12 +33,12 @@ struct OnboardingCoordinatorView: View {
         case goalDetails
         case desiredOutcomes
         case commitment
+        case leadMagnet
         case permissionExplanation
         case appSelection
         case websiteBlocking
         case selectionConfirmation
         case howItWorks
-        case interventionStyleSelection
         case shortcutsSetup
         
         var progress: Double {
@@ -90,7 +90,15 @@ struct OnboardingCoordinatorView: View {
         case .desiredOutcomes:
             OnboardingDesiredOutcomesView { navigateTo(.commitment) }
         case .commitment:
-            OnboardingCommitmentView { navigateTo(.permissionExplanation) }
+            OnboardingCommitmentView { navigateTo(.leadMagnet) }
+        case .leadMagnet:
+            OnboardingContainer(step: .leadMagnet) {
+                LeadMagnetView(
+                    source: .onboarding,
+                    onComplete: { navigateTo(.permissionExplanation) },
+                    onSkip: { navigateTo(.permissionExplanation) }
+                )
+            }
         case .permissionExplanation:
             OnboardingPermissionView { navigateTo(.appSelection) }
         case .appSelection:
@@ -100,9 +108,7 @@ struct OnboardingCoordinatorView: View {
         case .selectionConfirmation:
             OnboardingConfirmationView { navigateTo(.howItWorks) }
         case .howItWorks:
-            OnboardingHowItWorksView { navigateTo(.interventionStyleSelection) }
-        case .interventionStyleSelection:
-            InterventionStyleSelectionView { navigateTo(.shortcutsSetup) }
+            OnboardingHowItWorksView { navigateTo(.shortcutsSetup) }
         case .shortcutsSetup:
             ShortcutsSetupView(
                 onComplete: { completeOnboarding() },

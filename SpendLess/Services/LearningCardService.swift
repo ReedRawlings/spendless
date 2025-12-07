@@ -75,6 +75,24 @@ final class LearningCardService {
         completedCount == totalCount
     }
     
+    /// Get all unique categories from cards
+    func getAllCategories() -> [String] {
+        let categories = Set(cards.map { $0.category })
+        return Array(categories).sorted()
+    }
+    
+    /// Get cards for a specific category
+    func getCardsByCategory(_ category: String) -> [DarkPatternCard] {
+        cards.filter { $0.category == category }.sorted { $0.sortOrder < $1.sortOrder }
+    }
+    
+    /// Get category statistics
+    func getCategoryStats(_ category: String) -> (total: Int, completed: Int) {
+        let categoryCards = getCardsByCategory(category)
+        let completed = categoryCards.filter { $0.isLearned }.count
+        return (total: categoryCards.count, completed: completed)
+    }
+    
     /// Mark a card as learned
     func markCardAsLearned(_ card: DarkPatternCard) {
         guard let index = cards.firstIndex(where: { $0.id == card.id }) else { return }

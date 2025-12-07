@@ -14,6 +14,9 @@ struct PricePerWearView: View {
     // Query only active goals to avoid loading all goals into memory
     @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
     
+    let initialPrice: Decimal?
+    let onComplete: ((Int?) -> Void)?
+    
     @State private var priceText = ""
     @State private var usesText = ""
     @State private var showResult = false
@@ -23,6 +26,11 @@ struct PricePerWearView: View {
     
     enum Field {
         case price, uses
+    }
+    
+    init(initialPrice: Decimal? = nil, onComplete: ((Int?) -> Void)? = nil) {
+        self.initialPrice = initialPrice
+        self.onComplete = onComplete
     }
     
     private var price: Decimal {
@@ -84,6 +92,22 @@ struct PricePerWearView: View {
         }
         .onChange(of: priceText) { _, _ in updateResult() }
         .onChange(of: usesText) { _, _ in updateResult() }
+        .onAppear {
+            if let initialPrice = initialPrice {
+                priceText = String(format: "%.0f", NSDecimalNumber(decimal: initialPrice).doubleValue)
+            }
+        }
+        .toolbar {
+            if onComplete != nil {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        let estimate = estimatedUses > 0 ? estimatedUses : nil
+                        onComplete?(estimate)
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - Header Section
