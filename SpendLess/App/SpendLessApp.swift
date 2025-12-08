@@ -15,6 +15,10 @@ struct SpendLessApp: App {
     
     // MARK: - SwiftData Container
     
+    /// Current schema version - increment this when making breaking schema changes
+    /// Since we have no users yet, we can reset the database when this changes
+    private static let currentSchemaVersion = 2
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             UserGoal.self,
@@ -30,42 +34,62 @@ struct SpendLessApp: App {
             groupContainer: .automatic // Will use App Groups when configured
         )
         
+        // Check if we need to reset the database due to schema changes
+        // Safe to do since we have no users yet
+        let schemaVersionKey = "SwiftDataSchemaVersion"
+        let defaults = UserDefaults.standard
+        let savedSchemaVersion = defaults.integer(forKey: schemaVersionKey)
+        
+        if savedSchemaVersion != Self.currentSchemaVersion {
+            print("🔄 Schema version changed (\(savedSchemaVersion) -> \(Self.currentSchemaVersion)). Resetting database...")
+            Self.resetDatabase()
+            defaults.set(Self.currentSchemaVersion, forKey: schemaVersionKey)
+        }
+        
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            #if DEBUG
-            // During development, if migration fails, reset the store
-            // This is safe since we don't have active users yet
-            // TODO: Remove this before shipping - implement proper schema versioning instead
+            // If creation fails, try resetting and recreating
             print("⚠️ ModelContainer creation failed: \(error)")
-            print("Resetting store for development...")
-
-            // Get the store URL from the App Group container
-            let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID)
-            let storeURL = containerURL?.appendingPathComponent("Library/Application Support/default.store")
-
-            if let storeURL = storeURL, FileManager.default.fileExists(atPath: storeURL.path) {
-                do {
-                    // Delete the store and its related files
-                    try FileManager.default.removeItem(at: storeURL)
-                    let walURL = storeURL.appendingPathExtension("wal")
-                    let shmURL = storeURL.appendingPathExtension("shm")
-                    try? FileManager.default.removeItem(at: walURL)
-                    try? FileManager.default.removeItem(at: shmURL)
-
-                    print("✅ Store reset. Recreating ModelContainer...")
-                    return try ModelContainer(for: schema, configurations: [modelConfiguration])
-                } catch {
-                    fatalError("Could not reset store: \(error)")
-                }
-            } else {
-                fatalError("Could not create ModelContainer: \(error)")
+            print("Attempting to reset database and recreate...")
+            
+            Self.resetDatabase()
+            
+            do {
+                return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            } catch {
+                fatalError("Could not create ModelContainer even after reset: \(error)")
             }
-            #else
-            fatalError("Could not create ModelContainer: \(error)")
-            #endif
         }
     }()
+    
+    /// Resets the SwiftData database by deleting all store files
+    /// Safe to call since we have no users yet
+    private static func resetDatabase() {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID) else {
+            print("⚠️ Could not get container URL for database reset")
+            return
+        }
+        
+        let storeURL = containerURL.appendingPathComponent("Library/Application Support/default.store")
+        let walURL = storeURL.appendingPathExtension("wal")
+        let shmURL = storeURL.appendingPathExtension("shm")
+        
+        // Delete all database files
+        let filesToDelete = [storeURL, walURL, shmURL]
+        for url in filesToDelete {
+            if FileManager.default.fileExists(atPath: url.path) {
+                do {
+                    try FileManager.default.removeItem(at: url)
+                    print("✅ Deleted: \(url.lastPathComponent)")
+                } catch {
+                    print("⚠️ Failed to delete \(url.lastPathComponent): \(error)")
+                }
+            }
+        }
+        
+        print("✅ Database reset complete")
+    }
     
     // MARK: - App State
     

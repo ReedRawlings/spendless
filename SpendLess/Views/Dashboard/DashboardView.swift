@@ -639,7 +639,9 @@ struct FeelingTemptedFlowView: View {
             goal.addSavings(itemAmount)
         }
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save panic button item")
+        }
         
         // Sync widget data
         appState.syncWidgetData(context: modelContext)

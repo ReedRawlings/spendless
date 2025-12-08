@@ -173,7 +173,9 @@ struct BirthYearSettingsView: View {
             modelContext.insert(newProfile)
         }
         
-        try? modelContext.save()
+        if !modelContext.saveSafely() {
+            print("⚠️ Warning: Failed to save birth year")
+        }
         dismiss()
     }
 }

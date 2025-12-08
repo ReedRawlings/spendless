@@ -151,26 +151,34 @@ final class AppState {
         return try? context.fetch(descriptor).first
     }
     
-    /// Get or create user profile
+    /// Get or create user profile (singleton pattern)
     func getOrCreateProfile(from context: ModelContext) -> UserProfile {
-        let descriptor = FetchDescriptor<UserProfile>()
+        // Use the singleton ID to ensure uniqueness
+        let descriptor = FetchDescriptor<UserProfile>(
+            predicate: #Predicate<UserProfile> { $0.id == UserProfile.singletonID }
+        )
         if let existing = try? context.fetch(descriptor).first {
             return existing
         }
         
-        let newProfile = UserProfile()
+        // Create new profile with singleton ID
+        let newProfile = UserProfile(id: UserProfile.singletonID)
         context.insert(newProfile)
         return newProfile
     }
     
-    /// Get or create streak
+    /// Get or create streak (singleton pattern)
     func getOrCreateStreak(from context: ModelContext) -> Streak {
-        let descriptor = FetchDescriptor<Streak>()
+        // Use the singleton ID to ensure uniqueness
+        let descriptor = FetchDescriptor<Streak>(
+            predicate: #Predicate<Streak> { $0.id == Streak.singletonID }
+        )
         if let existing = try? context.fetch(descriptor).first {
             return existing
         }
         
-        let newStreak = Streak()
+        // Create new streak with singleton ID
+        let newStreak = Streak(id: Streak.singletonID)
         context.insert(newStreak)
         return newStreak
     }
@@ -221,7 +229,10 @@ extension AppState {
         // The selection is saved when user picks apps in onboarding
         
         // Save and complete
-        try? context.save()
+        if !context.saveSafely() {
+            // Log error but continue - user has already completed onboarding
+            print("⚠️ Warning: Failed to save onboarding data")
+        }
         
         // Sync widget data
         syncWidgetData(context: context)
