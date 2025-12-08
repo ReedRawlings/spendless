@@ -166,7 +166,7 @@ enum BreathingPhase {
     }
 }
 
-// MARK: - Quick Breathing (shorter version for panic button)
+// MARK: - Quick Breathing (shorter version for feeling tempted flow)
 
 struct QuickBreathingExercise: View {
     let onComplete: () -> Void

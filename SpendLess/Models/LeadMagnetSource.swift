@@ -10,7 +10,7 @@ import Foundation
 enum LeadMagnetSource: String, Codable {
     case onboarding
     case settings
-    case postPanic
+    case postPanic // Keep raw value for backward compatibility, represents "post feeling tempted"
     case unknown
 }
 

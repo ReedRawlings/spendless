@@ -19,7 +19,7 @@ struct LearningLibraryView: View {
                 
                 VStack(spacing: 0) {
                     // Title
-                    Text("Get Educated")
+                    Text(AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnPageTitle : "Get Educated")
                         .font(SpendLessFont.largeTitle)
                         .foregroundStyle(Color.spendLessTextPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -34,7 +34,8 @@ struct LearningLibraryView: View {
                     ], spacing: SpendLessSpacing.md) {
                         // Learn - Active
                         EducationSquareCard(
-                            title: "Learn",
+                            title: AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnCards[0].title : "Learn",
+                            subtitle: AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnCards[0].subtitle : nil,
                             animationName: "brain",
                             isEnabled: true
                         ) {
@@ -44,21 +45,24 @@ struct LearningLibraryView: View {
                         
                         // Podcasts - Coming Soon
                         EducationSquareCard(
-                            title: "Podcasts",
+                            title: AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnCards[1].title : "Podcasts",
+                            subtitle: AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnCards[1].subtitle : nil,
                             animationName: "podcast",
                             isEnabled: false
                         ) {}
                         
                         // Articles - Coming Soon
                         EducationSquareCard(
-                            title: "Articles",
+                            title: AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnCards[2].title : "Articles",
+                            subtitle: AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnCards[2].subtitle : nil,
                             animationName: "pencil",
                             isEnabled: false
                         ) {}
                         
                         // Tools - Active
                         EducationSquareCard(
-                            title: "Tools",
+                            title: AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnCards[3].title : "Tools",
+                            subtitle: AppConstants.isScreenshotMode ? ScreenshotDataHelper.learnCards[3].subtitle : nil,
                             animationName: "tool",
                             isEnabled: true
                         ) {
@@ -86,11 +90,20 @@ struct LearningLibraryView: View {
 
 struct EducationSquareCard: View {
     let title: String
+    let subtitle: String?
     let animationName: String
     let isEnabled: Bool
     let action: () -> Void
     
     @State private var isPressed = false
+    
+    init(title: String, subtitle: String? = nil, animationName: String, isEnabled: Bool, action: @escaping () -> Void) {
+        self.title = title
+        self.subtitle = subtitle
+        self.animationName = animationName
+        self.isEnabled = isEnabled
+        self.action = action
+    }
     
     var body: some View {
         Button(action: {
@@ -99,19 +112,34 @@ struct EducationSquareCard: View {
                 action()
             }
         }) {
-            VStack(spacing: SpendLessSpacing.md) {
-                // Lottie animation
+            VStack(spacing: SpendLessSpacing.sm) {
+                // Lottie animation - reduce size slightly in screenshot mode to make room for text
                 LottieAnimationView(animationName: animationName)
-                    .frame(height: 120)
+                    .frame(height: AppConstants.isScreenshotMode ? 100 : 120)
                     .opacity(isEnabled ? 1.0 : 0.5)
                 
-                // Title
+                // Title - allow wrapping for screenshot mode keywords
                 Text(title)
-                    .font(SpendLessFont.title3)
+                    .font(AppConstants.isScreenshotMode ? SpendLessFont.headline : SpendLessFont.title3)
                     .foregroundStyle(isEnabled ? Color.spendLessTextPrimary : Color.spendLessTextMuted)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(AppConstants.isScreenshotMode ? 3 : 2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, SpendLessSpacing.xs)
+                
+                // Subtitle (for screenshot mode)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextMuted)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, SpendLessSpacing.xs)
+                }
                 
                 // Coming soon badge
-                if !isEnabled {
+                if !isEnabled && subtitle == nil {
                     Text("Soon")
                         .font(SpendLessFont.caption)
                         .foregroundStyle(Color.spendLessTextMuted)
@@ -119,7 +147,7 @@ struct EducationSquareCard: View {
             }
             .frame(maxWidth: .infinity)
             .aspectRatio(1, contentMode: .fit)
-            .padding(SpendLessSpacing.xl)
+            .padding(AppConstants.isScreenshotMode ? SpendLessSpacing.md : SpendLessSpacing.xl)
             .background(Color.spendLessCardBackground)
             .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
             .spendLessShadow(SpendLessShadow.cardShadow)

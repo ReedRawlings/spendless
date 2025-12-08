@@ -179,7 +179,7 @@ extension GraveyardItem {
                 amount: 47,
                 buriedAt: Calendar.current.date(byAdding: .day, value: -21, to: Date()) ?? Date(),
                 originalReason: "Don't even remember this",
-                source: .panicButton,
+                source: .panicButton, // Display label shows "Feeling Tempted"
                 category: .clothing
             ),
             GraveyardItem(

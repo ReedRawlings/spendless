@@ -14,6 +14,11 @@ struct InterventionHALTCheckView: View {
     @State private var appeared = false
     @State private var selectedState: HALTState? = nil
     
+    private let columns = [
+        GridItem(.flexible(), spacing: SpendLessSpacing.md),
+        GridItem(.flexible(), spacing: SpendLessSpacing.md)
+    ]
+    
     var body: some View {
         VStack(spacing: SpendLessSpacing.xl) {
             Spacer()
@@ -33,8 +38,8 @@ struct InterventionHALTCheckView: View {
             
             Spacer()
             
-            // HALT Options
-            VStack(spacing: SpendLessSpacing.md) {
+            // HALT Options - 2x2 Grid
+            LazyVGrid(columns: columns, spacing: SpendLessSpacing.md) {
                 ForEach(HALTState.allCases) { state in
                     HALTOptionButton(
                         emoji: state.emoji,
@@ -94,17 +99,17 @@ struct HALTOptionButton: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: SpendLessSpacing.md) {
+            VStack(spacing: SpendLessSpacing.sm) {
                 Text(emoji)
-                    .font(.title2)
+                    .font(.system(size: 48))
                 
                 Text(label)
-                    .font(SpendLessFont.headline)
+                    .font(SpendLessFont.title3)
                     .foregroundStyle(isSelected ? .white : Color.spendLessTextPrimary)
-                
-                Spacer()
+                    .multilineTextAlignment(.center)
             }
-            .padding(SpendLessSpacing.md)
+            .frame(maxWidth: .infinity)
+            .padding(SpendLessSpacing.lg)
             .background(
                 RoundedRectangle(cornerRadius: SpendLessRadius.md)
                     .fill(isSelected ? Color.spendLessPrimary : Color.spendLessCardBackground)

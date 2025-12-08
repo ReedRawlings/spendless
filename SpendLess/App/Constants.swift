@@ -41,6 +41,20 @@ enum AppConstants {
     /// Get it from: https://app.superwall.com → Settings → API Keys
     static let superwallAPIKey = "pk_JLjJY-Q1WZ9bvb68Gs8If"
     
+    // MARK: - Debug Configuration
+    
+    /// Set to true to use RevenueCat's built-in PaywallView instead of Superwall
+    /// Useful for testing purchase flow before Superwall dashboard is configured
+    /// Set to false for production or when Superwall is fully configured
+    static let useRevenueCatPaywallForTesting = false
+    
+    // MARK: - Screenshot Mode Configuration
+    
+    /// Set to true to enable screenshot demo mode with fake/seeded data for App Store screenshots
+    /// IMPORTANT: Set to false before shipping to production
+    /// This flag injects optimized ASO keywords and demo data into views
+    static let isScreenshotMode = true
+    
     // MARK: - ConvertKit Configuration
     
     /// ConvertKit API Key
@@ -53,4 +67,25 @@ enum AppConstants {
     /// TODO: Replace with your actual Form ID
     /// Get it from: https://app.convertkit.com → Forms → Select your form → Settings → Form ID
     static let convertKitFormID = "YOUR_FORM_ID"
+    
+    // MARK: - Shield & Temporary Access
+    
+    /// DeviceActivity name for temporary access sessions
+    static let temporaryAccessActivityName = "temporaryAccess"
+    
+    /// Notification category identifier for shield restoration
+    static let shieldRestoreNotificationCategory = "SHIELD_RESTORE"
+    
+    /// Notification identifier for shield restoration
+    static let shieldRestoreNotificationID = "shieldRestore"
+    
+    /// App Group keys for session management
+    enum SessionKeys {
+        static let pendingLiveActivityStart = "pendingLiveActivityStart"
+        static let pendingLiveActivityEnd = "pendingLiveActivityEnd"
+        static let sessionStartRequest = "sessionStartRequest"
+    }
+    
+    /// Temporary access duration in minutes
+    static let temporaryAccessDurationMinutes: Int = 10
 }

@@ -11,18 +11,20 @@ struct GoalProgressView: View {
     let goal: UserGoal?
     let totalSaved: Decimal
     let showFullView: Bool
+    let onSetGoal: (() -> Void)?
     
-    init(goal: UserGoal?, totalSaved: Decimal = 0, showFullView: Bool = true) {
+    init(goal: UserGoal?, totalSaved: Decimal = 0, showFullView: Bool = true, onSetGoal: (() -> Void)? = nil) {
         self.goal = goal
         self.totalSaved = totalSaved
         self.showFullView = showFullView
+        self.onSetGoal = onSetGoal
     }
     
     var body: some View {
         if let goal {
             GoalWithTargetView(goal: goal, showFullView: showFullView)
         } else {
-            CashPileView(totalSaved: totalSaved, showFullView: showFullView)
+            CashPileView(totalSaved: totalSaved, showFullView: showFullView, onSetGoal: onSetGoal)
         }
     }
 }
@@ -50,19 +52,26 @@ private struct GoalWithTargetView: View {
                 GoalIconView(goalType: goal.type, size: showFullView ? 100 : 60)
             }
             
-            // Goal type (main title)
-            Text(goal.type.rawValue)
-                .font(showFullView ? SpendLessFont.title2 : SpendLessFont.headline)
-                .foregroundStyle(Color.spendLessTextPrimary)
-                .multilineTextAlignment(.center)
-            
-            // Goal "why" (subtitle) - only show if it exists and is different from the goal type
-            if !goal.name.isEmpty && goal.name != goal.type.rawValue {
-                Text(goal.name)
-                    .font(showFullView ? SpendLessFont.body : SpendLessFont.caption)
-                    .foregroundStyle(Color.spendLessTextSecondary)
+            // Goal type (main title) - in screenshot mode, prefer goal name if it's "Paris Trip"
+            if AppConstants.isScreenshotMode && goal.name == ScreenshotDataHelper.goalName {
+                Text("✈️ \(goal.name)")
+                    .font(showFullView ? SpendLessFont.title2 : SpendLessFont.headline)
+                    .foregroundStyle(Color.spendLessTextPrimary)
                     .multilineTextAlignment(.center)
-                    .padding(.top, SpendLessSpacing.xxs)
+            } else {
+                Text(goal.type.rawValue)
+                    .font(showFullView ? SpendLessFont.title2 : SpendLessFont.headline)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                    .multilineTextAlignment(.center)
+                
+                // Goal "why" (subtitle) - only show if it exists and is different from the goal type
+                if !goal.name.isEmpty && goal.name != goal.type.rawValue {
+                    Text(goal.name)
+                        .font(showFullView ? SpendLessFont.body : SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, SpendLessSpacing.xxs)
+                }
             }
             
             if showFullView {
@@ -135,6 +144,7 @@ private struct GoalWithTargetView: View {
 private struct CashPileView: View {
     let totalSaved: Decimal
     let showFullView: Bool
+    let onSetGoal: (() -> Void)?
     
     var body: some View {
         VStack(spacing: SpendLessSpacing.md) {
@@ -156,21 +166,23 @@ private struct CashPileView: View {
                 .font(showFullView ? SpendLessFont.largeTitle : SpendLessFont.title2)
                 .foregroundStyle(Color.spendLessPrimary)
             
-            Text("kept in your pocket")
+            Text(AppConstants.isScreenshotMode ? ScreenshotDataHelper.dashboardSavingsLabel : "kept in your pocket")
                 .font(SpendLessFont.body)
                 .foregroundStyle(Color.spendLessTextSecondary)
             
             if showFullView {
-                Text("Money you didn't waste on things you didn't need")
+                Text(AppConstants.isScreenshotMode ? ScreenshotDataHelper.dashboardSavingsDescription : "Money you didn't waste on things you didn't need")
                     .font(SpendLessFont.caption)
                     .foregroundStyle(Color.spendLessTextMuted)
                     .multilineTextAlignment(.center)
                 
                 // Suggest setting a goal
-                SecondaryButton("Set a goal for this?", icon: "arrow.right") {
-                    // Action to set goal
+                if let onSetGoal = onSetGoal {
+                    SecondaryButton("Set a goal for this?", icon: "arrow.right") {
+                        onSetGoal()
+                    }
+                    .padding(.top, SpendLessSpacing.sm)
                 }
-                .padding(.top, SpendLessSpacing.sm)
             }
         }
         .padding(SpendLessSpacing.lg)

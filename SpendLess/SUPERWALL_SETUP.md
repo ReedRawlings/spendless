@@ -79,12 +79,12 @@ static let superwallAPIKey = "pk_YOUR_ACTUAL_KEY_HERE"
 
 Superwall uses events to trigger paywalls. The code is set up to trigger these events:
 
-- `onboarding_complete` - Triggered after onboarding finishes
+- `campaign_trigger` - Triggered after onboarding finishes (for non-subscribers)
 - `settings_upgrade` - Triggered when user taps "Upgrade to Pro" in Settings
 
 1. In Superwall dashboard, go to **Events**
 2. Create these events if they don't exist:
-   - `onboarding_complete`
+   - `campaign_trigger` (used for post-onboarding paywall)
    - `settings_upgrade`
 3. Attach your paywall to these events
 
@@ -126,8 +126,8 @@ Superwall uses events to trigger paywalls. The code is set up to trigger these e
 The app triggers Superwall events, which then show paywalls based on your dashboard configuration:
 
 ```swift
-// Trigger paywall after onboarding
-superwallService.register(event: "onboarding_complete")
+// Trigger paywall after onboarding (for non-subscribers)
+superwallService.register(event: "campaign_trigger")
 
 // Trigger paywall from settings
 superwallService.register(event: "settings_upgrade")

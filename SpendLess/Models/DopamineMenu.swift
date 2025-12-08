@@ -82,7 +82,7 @@ struct DopamineActivityLog: Codable, Identifiable {
 }
 
 enum DopamineContext: String, Codable {
-    case panicButton
+    case panicButton // Keep raw value for backward compatibility, but represents "feeling tempted"
     case intervention
     case manual
 }

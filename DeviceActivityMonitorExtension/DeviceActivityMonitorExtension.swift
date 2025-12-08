@@ -38,8 +38,14 @@ nonisolated class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     nonisolated override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
         
-        // Remove shields when schedule ends
-        store.clearAllSettings()
+        // Check if this is the temporary access activity
+        if activity.rawValue == "temporaryAccess" {
+            // Restore shields for temporary access session end
+            restoreShieldsForTemporaryAccess()
+        } else {
+            // Remove shields when schedule ends (main schedule)
+            store.clearAllSettings()
+        }
         
         // Log event
         logEvent("Schedule ended: \(activity.rawValue)")
@@ -69,6 +75,39 @@ nonisolated class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     }
     
     // MARK: - Shield Management
+    
+    /// Restore shields when temporary access session ends
+    private func restoreShieldsForTemporaryAccess() {
+        // Load current session (as JSON string since we can't import main app models)
+        guard let sessionJSONString = sharedDefaults?.string(forKey: "currentAccessSession"),
+              let sessionData = sessionJSONString.data(using: .utf8),
+              var sessionDict = try? JSONSerialization.jsonObject(with: sessionData) as? [String: Any] else {
+            logEvent("No current session found for restoration")
+            // Still restore shields from saved selection
+            applyShieldsFromSavedSelection()
+            return
+        }
+        
+        // Update session to mark restoration via DeviceActivity
+        sessionDict["restoredViaDeviceActivity"] = true
+        sessionDict["actualEndTimestamp"] = ISO8601DateFormatter().string(from: Date())
+        
+        // Save updated session
+        if let updatedData = try? JSONSerialization.data(withJSONObject: sessionDict),
+           let updatedString = String(data: updatedData, encoding: .utf8) {
+            sharedDefaults?.set(updatedString, forKey: "currentAccessSession")
+            sharedDefaults?.synchronize()
+        }
+        
+        // Request Live Activity end (main app will handle this)
+        sharedDefaults?.set(true, forKey: "pendingLiveActivityEnd")
+        sharedDefaults?.synchronize()
+        
+        // Restore shields from saved selection
+        applyShieldsFromSavedSelection()
+        
+        logEvent("Shields restored via DeviceActivityMonitor for temporary access session")
+    }
     
     private func applyShieldsFromSavedSelection() {
         // Load saved FamilyActivitySelection from App Groups

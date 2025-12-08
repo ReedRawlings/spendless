@@ -115,7 +115,7 @@ struct VoiceOverAnnouncement {
 struct AccessibilityHints {
     static let waitingListItem = "Double tap to see options. Swipe up or down to adjust."
     static let graveyardItem = "Buried purchase. Double tap for details."
-    static let panicButton = "Double tap when feeling tempted to shop."
+    static let feelingTempted = "Double tap when feeling tempted to shop."
     static let progressBar = "Shows progress toward goal."
     static let addButton = "Double tap to add a new item."
     static let buryButton = "Double tap to bury this item and add to your savings."

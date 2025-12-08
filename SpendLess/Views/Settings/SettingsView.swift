@@ -24,6 +24,7 @@ struct SettingsView: View {
     @State private var showAppPicker = false
     @State private var showResetConfirmation = false
     @State private var showResetOnboardingConfirmation = false
+    @State private var showDeleteAnalyticsConfirmation = false
     @State private var showEditGoal = false
 
     private var profile: UserProfile? {
@@ -91,7 +92,7 @@ struct SettingsView: View {
                                 Label("Birth Year", systemImage: "calendar")
                                 Spacer()
                                 if let birthYear = profile?.birthYear {
-                                    Text("\(birthYear)")
+                                    Text(formatBirthYear(birthYear))
                                         .foregroundStyle(Color.spendLessTextMuted)
                                 } else {
                                     Text("Not Set")
@@ -158,7 +159,7 @@ struct SettingsView: View {
                             }
                         } else {
                             Button {
-                                superwallService.register(event: "settings_upgrade")
+                                superwallService.register(event: "campaign_trigger")
                             } label: {
                                 Label("Upgrade to Pro", systemImage: "star.fill")
                                     .foregroundStyle(Color.spendLessPrimary)
@@ -182,6 +183,49 @@ struct SettingsView: View {
                         }
                     } header: {
                         Text("Subscription")
+                    }
+                    
+                    // Analytics Section
+                    Section {
+                        Toggle(isOn: Binding(
+                            get: { ShieldAnalytics.shared.isAnalyticsEnabled },
+                            set: { ShieldAnalytics.shared.isAnalyticsEnabled = $0 }
+                        )) {
+                            Label("Analytics", systemImage: "chart.bar")
+                        }
+                        
+                        // Show current session status if active
+                        if let session = ShieldSessionManager.shared.currentSession, session.isActive {
+                            HStack {
+                                Label("Active Session", systemImage: "timer")
+                                Spacer()
+                                Text("\(session.minutesRemaining) min remaining")
+                                    .foregroundStyle(Color.spendLessTextMuted)
+                            }
+                            
+                            Button {
+                                ShieldSessionManager.shared.restoreShieldEarly()
+                            } label: {
+                                Label("Restore Shield Now", systemImage: "lock.shield")
+                                    .foregroundStyle(Color.spendLessError)
+                            }
+                        }
+                        
+                        Button {
+                            exportAnalyticsData()
+                        } label: {
+                            Label("Export Data", systemImage: "square.and.arrow.up")
+                        }
+                        
+                        Button(role: .destructive) {
+                            showDeleteAnalyticsConfirmation = true
+                        } label: {
+                            Label("Delete All Data", systemImage: "trash")
+                        }
+                    } header: {
+                        Text("Analytics")
+                    } footer: {
+                        Text("Analytics help us understand your patterns and improve the app. All data is stored locally on your device.")
                     }
                     
                     // Lead Magnet Section (only show if email not collected)
@@ -296,6 +340,14 @@ struct SettingsView: View {
             } message: {
                 Text("This will reset the app as if you just installed it.")
             }
+            .alert("Delete All Analytics Data?", isPresented: $showDeleteAnalyticsConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    deleteAnalyticsData()
+                }
+            } message: {
+                Text("This will permanently delete all shield interaction and session data. This action cannot be undone.")
+            }
         }
     }
     
@@ -398,6 +450,43 @@ struct SettingsView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
         return formatter.string(from: date)
+    }
+    
+    private func formatBirthYear(_ year: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.groupingSeparator = ""
+        return formatter.string(from: NSNumber(value: year)) ?? "\(year)"
+    }
+    
+    private func exportAnalyticsData() {
+        guard let data = AnalyticsManager.shared.exportData() else {
+            print("Failed to export analytics data")
+            return
+        }
+        
+        // Save to temporary file and share
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("spendless-analytics-\(Date().timeIntervalSince1970).json")
+        
+        do {
+            try data.write(to: tempURL)
+            let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+            
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootViewController = windowScene.windows.first?.rootViewController {
+                rootViewController.present(activityVC, animated: true)
+            }
+        } catch {
+            print("Failed to write analytics data: \(error)")
+        }
+    }
+    
+    private func deleteAnalyticsData() {
+        ShieldAnalytics.shared.clearAllEvents()
+        ShieldAnalytics.shared.clearAllSessions()
+        
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
     }
 }
 
@@ -504,8 +593,8 @@ struct HowItWorksView: View {
                     
                     howItWorksSection(
                         icon: "4.circle.fill",
-                        title: "Hit the Panic Button",
-                        description: "Feeling tempted outside the app? Hit the panic button for a quick breathing exercise and log what you resisted."
+                        title: "Feeling Tempted",
+                        description: "Feeling tempted outside the app? Tap 'Feeling Tempted' for a quick breathing exercise and log what you resisted."
                     )
                     
                     howItWorksSection(

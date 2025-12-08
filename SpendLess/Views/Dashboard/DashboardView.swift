@@ -19,12 +19,13 @@ struct DashboardView: View {
     @Query private var streaks: [Streak]
     @Query private var profiles: [UserProfile]
 
-    @State private var showPanicButton = false
+    @State private var showFeelingTempted = false
     @State private var showCelebration = false
     @State private var celebrationAmount: Decimal = 0
     @State private var celebrationMessage = ""
     @State private var showAnniversary: Bool = false
     @State private var anniversaryMilestone: Int = 0
+    @State private var showEditGoal = false
 
     private var currentGoal: UserGoal? {
         activeGoals.first
@@ -39,10 +40,16 @@ struct DashboardView: View {
     }
     
     private var totalSaved: Decimal {
-        graveyardItems.reduce(0) { $0 + $1.amount }
+        if AppConstants.isScreenshotMode {
+            return ScreenshotDataHelper.dashboardTotalSaved
+        }
+        return graveyardItems.reduce(0) { $0 + $1.amount }
     }
     
     private var thisWeekSaved: Decimal {
+        if AppConstants.isScreenshotMode {
+            return ScreenshotDataHelper.dashboardThisWeekValue
+        }
         let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         return graveyardItems
             .filter { $0.buriedAt >= weekAgo }
@@ -50,9 +57,28 @@ struct DashboardView: View {
     }
     
     private var impulsesResisted: Int {
+        if AppConstants.isScreenshotMode {
+            return ScreenshotDataHelper.dashboardResistedValue
+        }
         let graveyardCount = graveyardItems.count
         let interventionCount = interventionManager.resistCount
         return graveyardCount + interventionCount
+    }
+    
+    private var screenshotStreak: Int {
+        AppConstants.isScreenshotMode ? ScreenshotDataHelper.dashboardStreakValue : (currentStreak?.currentDays ?? 0)
+    }
+    
+    private var screenshotGoal: UserGoal? {
+        guard AppConstants.isScreenshotMode else { return currentGoal }
+        // Create a fake goal for screenshot mode
+        let goal = UserGoal(
+            name: ScreenshotDataHelper.goalName,
+            targetAmount: ScreenshotDataHelper.goalTargetAmount,
+            savedAmount: ScreenshotDataHelper.goalSavedAmount,
+            goalType: .vacation
+        )
+        return goal
     }
     
     var body: some View {
@@ -64,15 +90,21 @@ struct DashboardView: View {
                 ScrollView {
                     VStack(spacing: SpendLessSpacing.lg) {
                         // Goal Progress Section
-                        GoalProgressView(goal: currentGoal, totalSaved: totalSaved)
-                            .padding(.horizontal, SpendLessSpacing.md)
+                        GoalProgressView(
+                            goal: screenshotGoal ?? currentGoal,
+                            totalSaved: totalSaved,
+                            onSetGoal: {
+                                showEditGoal = true
+                            }
+                        )
+                        .padding(.horizontal, SpendLessSpacing.md)
                         
                         // Stats Row
                         HStack(spacing: SpendLessSpacing.md) {
                             StatsCard(
                                 icon: "flame.fill",
-                                value: "\(currentStreak?.currentDays ?? 0)",
-                                label: "Day Streak",
+                                value: "\(screenshotStreak)",
+                                label: AppConstants.isScreenshotMode ? ScreenshotDataHelper.dashboardStreakLabel : "Day Streak",
                                 iconColor: .spendLessStreak
                             )
                             
@@ -109,12 +141,14 @@ struct DashboardView: View {
                     .padding(.top, SpendLessSpacing.md)
                 }
                 
-                // Panic Button (floating at bottom)
+                // Feeling Tempted Button (floating at bottom)
                 VStack {
                     Spacer()
                     
-                    PanicButtonView {
-                        showPanicButton = true
+                    FeelingTemptedView(
+                        subheadText: AppConstants.isScreenshotMode ? ScreenshotDataHelper.feelingTemptedSubhead : nil
+                    ) {
+                        showFeelingTempted = true
                     }
                     .padding(.horizontal, SpendLessSpacing.lg)
                     .padding(.bottom, SpendLessSpacing.md)
@@ -142,13 +176,16 @@ struct DashboardView: View {
             .onAppear {
                 checkAnniversaries()
             }
-            .sheet(isPresented: $showPanicButton) {
-                PanicButtonFlowView { amount in
-                    // Handle panic button completion
+            .sheet(isPresented: $showFeelingTempted) {
+                FeelingTemptedFlowView { amount in
+                    // Handle feeling tempted completion
                     celebrationAmount = amount
                     celebrationMessage = generateCelebrationMessage(for: amount)
                     showCelebration = true
                 }
+            }
+            .sheet(isPresented: $showEditGoal) {
+                EditGoalSheet(goal: currentGoal)
             }
         }
     }
@@ -192,12 +229,18 @@ struct DashboardView: View {
     }
 }
 
-// MARK: - Panic Button View
+// MARK: - Feeling Tempted View
 
-struct PanicButtonView: View {
+struct FeelingTemptedView: View {
+    let subheadText: String?
     let action: () -> Void
     
     @State private var isPressed = false
+    
+    init(subheadText: String? = nil, action: @escaping () -> Void) {
+        self.subheadText = subheadText
+        self.action = action
+    }
     
     var body: some View {
         Button(action: action) {
@@ -206,9 +249,9 @@ struct PanicButtonView: View {
                     .font(.title2)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("PANIC BUTTON")
+                    Text("FEELING TEMPTED")
                         .font(SpendLessFont.headline)
-                    Text("Feeling tempted?")
+                    Text(subheadText ?? "Need a moment?")
                         .font(SpendLessFont.caption)
                         .opacity(0.9)
                 }
@@ -229,13 +272,13 @@ struct PanicButtonView: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
         }
         .buttonStyle(PressableButtonStyle(isPressed: $isPressed))
-        .accessibilityLabel("Panic button. Tap when feeling tempted to shop.")
+        .accessibilityLabel("Feeling tempted button. Tap when you need a moment to pause.")
     }
 }
 
-// MARK: - Panic Button Flow
+// MARK: - Feeling Tempted Flow
 
-struct PanicButtonFlowView: View {
+struct FeelingTemptedFlowView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
@@ -447,7 +490,7 @@ struct PanicButtonFlowView: View {
             showDopamineConfirmation = true
         }
         
-        // Dismiss after 2 seconds and close the panic flow
+        // Dismiss after 2 seconds and close the feeling tempted flow
         delayedTask?.cancel()
         delayedTask = Task {
             try? await Task.sleep(for: .seconds(2))

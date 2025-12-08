@@ -20,21 +20,27 @@ nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     
     /// Configure the shield for a blocked application
     nonisolated override func configuration(shielding application: Application) -> ShieldConfiguration {
+        // Extract app name for analytics
+        let appName = application.localizedDisplayName ?? "Unknown App"
+        
         // Load user's streak and savings from shared defaults
         let currentStreak = sharedDefaults?.integer(forKey: "currentStreak") ?? 0
         let totalSaved = sharedDefaults?.double(forKey: "totalSaved") ?? 0
         let futureLetterText = sharedDefaults?.string(forKey: "futureLetterText")
+        
+        // Log shield appearance for analytics
+        logShieldAppearance(appName: appName, currentStreak: currentStreak)
         
         // Create subtitle - prefer future letter text if available, otherwise show streak/savings
         let subtitleText: String
         if let letterText = futureLetterText, !letterText.isEmpty {
             subtitleText = letterText
         } else if currentStreak > 0 && totalSaved > 0 {
-            subtitleText = "You've been shopping-free for \(currentStreak) days.\nYou've saved $\(Int(totalSaved)) so far."
+            subtitleText = "You've been shopping-free for \(currentStreak) days.\nYou've saved $\(Int(totalSaved)) so far.\n\nNeed access? You can unlock for 10 minutes."
         } else if currentStreak > 0 {
-            subtitleText = "You've been shopping-free for \(currentStreak) days."
+            subtitleText = "You've been shopping-free for \(currentStreak) days.\n\nNeed access? You can unlock for 10 minutes."
         } else {
-            subtitleText = "What were you looking for?"
+            subtitleText = "What were you looking for?\n\nNeed access? You can unlock for 10 minutes."
         }
         
         return ShieldConfiguration(
@@ -50,15 +56,50 @@ nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: SpendLessColors.textSecondary
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: "Something Specific",
+                text: "Access for 10 min",
                 color: .white
             ),
             primaryButtonBackgroundColor: SpendLessColors.primary,
             secondaryButtonLabel: ShieldConfiguration.Label(
-                text: "Just Browsing",
+                text: "Stay Protected",
                 color: SpendLessColors.primary
             )
         )
+    }
+    
+    // MARK: - Analytics Logging
+    
+    /// Log shield appearance (minimal implementation for extension)
+    private func logShieldAppearance(appName: String, currentStreak: Int) {
+        // Check if analytics is enabled
+        let analyticsEnabled = sharedDefaults?.bool(forKey: "analyticsEnabled") ?? true
+        guard analyticsEnabled else { return }
+        
+        // Calculate days since last bypass
+        let daysSinceLastBypass: Int?
+        if let lastBypassTimestamp = sharedDefaults?.object(forKey: "lastBypassTimestamp") as? Date {
+            let calendar = Calendar.current
+            let days = calendar.dateComponents([.day], from: lastBypassTimestamp, to: Date()).day
+            daysSinceLastBypass = days
+        } else {
+            daysSinceLastBypass = nil
+        }
+        
+        // Create partial event (will be completed in ShieldActionExtension)
+        let eventData: [String: Any] = [
+            "id": UUID().uuidString,
+            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "appName": appName,
+            "currentStreak": currentStreak,
+            "daysSinceLastBypass": daysSinceLastBypass as Any
+        ]
+        
+        // Store as JSON string for main app to process
+        if let jsonData = try? JSONSerialization.data(withJSONObject: eventData),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            sharedDefaults?.set(jsonString, forKey: "partialShieldEvent")
+            sharedDefaults?.synchronize()
+        }
     }
     
     /// Configure the shield for a blocked application category

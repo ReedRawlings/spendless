@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import Foundation
 
 // MARK: - Dopamine Menu Settings
 
@@ -119,7 +120,7 @@ struct BirthYearSettingsView: View {
                 
                 Picker("Birth Year", selection: $selectedYear) {
                     ForEach((currentYear - 80)...(currentYear - 16), id: \.self) { year in
-                        Text("\(year)").tag(year)
+                        Text(formatBirthYear(year)).tag(year)
                     }
                 }
                 .pickerStyle(.wheel)
@@ -152,6 +153,13 @@ struct BirthYearSettingsView: View {
                 selectedYear = currentYear - 30
             }
         }
+    }
+    
+    private func formatBirthYear(_ year: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.groupingSeparator = ""
+        return formatter.string(from: NSNumber(value: year)) ?? "\(year)"
     }
     
     private func saveBirthYear() {

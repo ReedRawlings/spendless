@@ -130,6 +130,22 @@ final class ScreenTimeManager: ScreenTimeManaging {
         print("[ScreenTimeManager] Shields removed")
     }
     
+    /// Restore shields from saved selection (for temporary access restoration)
+    func restoreShields() {
+        guard isAuthorized else {
+            print("[ScreenTimeManager] Cannot restore shields: not authorized")
+            return
+        }
+        
+        // Reload selection from App Groups to ensure we have the latest
+        loadSelection()
+        
+        // Apply shields
+        applyShields()
+        
+        print("[ScreenTimeManager] Shields restored from saved selection")
+    }
+    
     // MARK: - DeviceActivity Schedule
     
     private func startMonitoring() {

@@ -80,7 +80,7 @@ enum GraveyardSource: String, Codable, Identifiable {
     var displayLabel: String {
         switch self {
         case .waitingList: return "From Waiting List"
-        case .panicButton: return "Panic Button"
+        case .panicButton: return "Feeling Tempted"
         case .blockIntercept: return "Block Intercept"
         case .manual: return "Manually Added"
         case .returned: return "Returned"
@@ -421,5 +421,13 @@ enum PurchaseFeeling: String, CaseIterable, Codable, Identifiable {
         case .inBetween: return "🤷"
         }
     }
+}
+
+// MARK: - Shield User Action
+
+enum ShieldUserAction: String, Codable {
+    case primaryButton = "primaryButton"
+    case secondaryButton = "secondaryButton"
+    case dismissed = "dismissed"
 }
 

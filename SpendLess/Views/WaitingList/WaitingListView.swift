@@ -32,15 +32,33 @@ struct WaitingListView: View {
     }
     
     private var activeItems: [WaitingListItem] {
-        items.filter { !$0.isExpired }
+        if AppConstants.isScreenshotMode {
+            return ScreenshotDataHelper.screenshotWaitingListItems().filter { !$0.isExpired }
+        }
+        return items.filter { !$0.isExpired }
     }
     
     private var expiredItems: [WaitingListItem] {
-        items.filter { $0.isExpired }
+        if AppConstants.isScreenshotMode {
+            return ScreenshotDataHelper.screenshotWaitingListItems().filter { $0.isExpired }
+        }
+        return items.filter { $0.isExpired }
     }
     
     private var waitingListStats: WaitingListStats {
-        calculateWaitingListStats(
+        if AppConstants.isScreenshotMode {
+            // Return fake stats for screenshot mode
+            return WaitingListStats(
+                totalValueWaiting: ScreenshotDataHelper.waitingListTotal,
+                itemCount: ScreenshotDataHelper.waitingListItemCount,
+                purchaseRate: 0.12, // 12%
+                averageWaitDaysBuy: nil,
+                averageWaitDaysBury: nil,
+                totalBuried: 0,
+                totalPurchased: 0
+            )
+        }
+        return calculateWaitingListStats(
             waitingItems: items,
             graveyardItems: buriedFromWaitingList,
             purchasedItems: PurchasedItemsStore.shared.items
@@ -52,10 +70,10 @@ struct WaitingListView: View {
             ZStack {
                 Color.spendLessBackground.ignoresSafeArea()
                 
-                if items.isEmpty {
-                    emptyState
-                } else {
+                if AppConstants.isScreenshotMode || !items.isEmpty {
                     itemsList
+                } else {
+                    emptyState
                 }
                 
                 if showCelebration {
@@ -339,7 +357,7 @@ struct WaitingListItemRow: View {
                     }
                     
                     // Real-life equivalent
-                    Text("= \(realLifeEquivalent(for: item.amount))")
+                    Text("= \(AppConstants.isScreenshotMode ? (ScreenshotDataHelper.screenshotEquivalent(for: item.name) ?? realLifeEquivalent(for: item.amount)) : realLifeEquivalent(for: item.amount))")
                         .font(SpendLessFont.caption)
                         .foregroundStyle(Color.spendLessTextMuted)
                 }

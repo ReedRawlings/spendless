@@ -1644,6 +1644,15 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
    - ⏭️ Dashboard configuration: Paywall design and events in Superwall dashboard
    - ⏭️ Testing: Purchase flow, restore purchases, subscription status checks
 
+   **Current Implementation Behavior (from logs):**
+   - ✅ Paywall trigger flow after onboarding is working:
+     - App checks subscription status (`hasProAccess = false` for non-subscribers)
+     - Superwall configuration is lazy-loaded (starts as `false`, then configures when needed)
+     - Superwall successfully configures when paywall is about to be shown
+     - Event `campaign_trigger` is registered to trigger the paywall
+   - 📝 Note: Event name is `campaign_trigger` (not `onboarding_complete` as originally planned)
+     - Ensure Superwall dashboard has a paywall attached to the `campaign_trigger` event
+
 6. **Implement Notification System**
    - Waiting list reminders (Day 2, 4, 6, 7)
    - Streak celebration notifications
@@ -1739,7 +1748,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
   - [x] RevenueCat adapter created (needs refinement) 🔄
   - [x] API key configuration added ✅
   - [ ] PaywallView replaced with Superwall (currently using RevenueCat PaywallView)
-  - [x] Event triggers set up in code (onboarding_complete, settings_upgrade) ✅
+  - [x] Event triggers set up in code ✅
+    - `campaign_trigger` - Triggered after onboarding completes (for non-subscribers)
+    - `settings_upgrade` - Triggered when user taps "Upgrade to Pro" in Settings
   - [ ] Connect RevenueCat in Superwall dashboard
   - [ ] Paywall templates created (use carousel format showing features)
   - [ ] A/B test variants set up

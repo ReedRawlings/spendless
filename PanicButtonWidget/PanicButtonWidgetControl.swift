@@ -35,13 +35,13 @@ struct PanicButtonWidgetControl: ControlWidget {
 // MARK: - App Intent
 
 struct OpenPanicButtonIntent: AppIntent {
-    static let title: LocalizedStringResource = "Open Panic Button"
+    static let title: LocalizedStringResource = "Feeling Tempted"
     static let description = IntentDescription("Opens SpendLess to help you pause and breathe.")
     static let openAppWhenRun: Bool = true
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        // Store a flag in shared UserDefaults to signal the app to show the panic flow
+        // Store a flag in shared UserDefaults to signal the app to show the feeling tempted flow
         // The app will check for this flag when it becomes active
         if let defaults = UserDefaults(suiteName: ControlWidgetKeys.suiteName) {
             defaults.set(true, forKey: ControlWidgetKeys.pendingPanicAction)
