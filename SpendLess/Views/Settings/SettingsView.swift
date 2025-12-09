@@ -348,16 +348,23 @@ struct SettingsView: View {
                                 Label("How SpendLess Works", systemImage: "questionmark.circle")
                             }
                             
-                            Link(destination: URL(string: "https://example.com/privacy")!) {
-                                Label("Privacy Policy", systemImage: "lock.shield")
+                            // TODO: Update these URLs before release
+                            if let privacyURL = URL(string: "https://yourfutureself.is/privacy") {
+                                Link(destination: privacyURL) {
+                                    Label("Privacy Policy", systemImage: "lock.shield")
+                                }
                             }
-                            
-                            Link(destination: URL(string: "https://example.com/terms")!) {
-                                Label("Terms of Service", systemImage: "doc.text")
+
+                            if let termsURL = URL(string: "https://yourfutureself.is/terms") {
+                                Link(destination: termsURL) {
+                                    Label("Terms of Service", systemImage: "doc.text")
+                                }
                             }
-                            
-                            Link(destination: URL(string: "mailto:support@spendless.app")!) {
-                                Label("Contact Support", systemImage: "envelope")
+
+                            if let supportURL = URL(string: "mailto:support@spendless.app") {
+                                Link(destination: supportURL) {
+                                    Label("Contact Support", systemImage: "envelope")
+                                }
                             }
                         }
                     } header: {

@@ -638,9 +638,13 @@ struct FeelingTemptedFlowView: View {
         if let goal = currentGoal {
             goal.addSavings(itemAmount)
         }
-        
-        try? modelContext.save()
-        
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save graveyard item: \(error.localizedDescription)")
+        }
+
         // Sync widget data
         appState.syncWidgetData(context: modelContext)
         

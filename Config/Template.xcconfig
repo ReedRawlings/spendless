@@ -1,0 +1,16 @@
+// Template.xcconfig
+// Copy this file to Debug.xcconfig and Release.xcconfig and fill in your actual API keys.
+// NEVER commit the actual config files - they are gitignored.
+
+// RevenueCat API Key
+// Get this from: https://app.revenuecat.com/overview
+REVENUECAT_API_KEY = YOUR_REVENUECAT_API_KEY_HERE
+
+// Superwall API Key
+// Get this from: https://superwall.com/dashboard
+SUPERWALL_API_KEY = YOUR_SUPERWALL_API_KEY_HERE
+
+// ConvertKit API Key and Form ID
+// Get these from: https://app.convertkit.com/account_settings/developer_settings
+CONVERTKIT_API_KEY = YOUR_CONVERTKIT_API_KEY_HERE
+CONVERTKIT_FORM_ID = YOUR_CONVERTKIT_FORM_ID_HERE

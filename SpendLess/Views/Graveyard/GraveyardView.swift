@@ -391,9 +391,13 @@ struct LogReturnSheet: View {
         if let goal = currentGoal {
             goal.addSavings(itemAmount)
         }
-        
-        try? modelContext.save()
-        
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save manual graveyard item: \(error.localizedDescription)")
+        }
+
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         

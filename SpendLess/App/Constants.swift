@@ -27,19 +27,20 @@ enum AppConstants {
     }
     
     // MARK: - RevenueCat Configuration
-    
-    /// RevenueCat API Key
-    /// TODO: Replace with your actual API key from RevenueCat dashboard
-    /// Get it from: https://app.revenuecat.com → Your Project → API Keys
-    /// Use the PUBLIC API KEY (not the secret key)
-    static let revenueCatAPIKey = "test_dHhQzsfzdWSbSvAhLnDMNgnBkDk"
-    
+
+    /// RevenueCat API Key - reads from Info.plist (populated by xcconfig)
+    /// Setup: Copy Config/Template.xcconfig to Config/Debug.xcconfig and Config/Release.xcconfig
+    /// Add your keys there. The xcconfig files are gitignored.
+    static var revenueCatAPIKey: String {
+        Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_API_KEY") as? String ?? "YOUR_REVENUECAT_API_KEY_HERE"
+    }
+
     // MARK: - Superwall Configuration
-    
-    /// Superwall API Key
-    /// TODO: Replace with your actual API key from Superwall dashboard
-    /// Get it from: https://app.superwall.com → Settings → API Keys
-    static let superwallAPIKey = "pk_JLjJY-Q1WZ9bvb68Gs8If"
+
+    /// Superwall API Key - reads from Info.plist (populated by xcconfig)
+    static var superwallAPIKey: String {
+        Bundle.main.object(forInfoDictionaryKey: "SUPERWALL_API_KEY") as? String ?? "YOUR_SUPERWALL_API_KEY_HERE"
+    }
     
     // MARK: - Debug Configuration
     
@@ -56,17 +57,16 @@ enum AppConstants {
     static let isScreenshotMode = false
     
     // MARK: - ConvertKit Configuration
-    
-    /// ConvertKit API Key
-    /// TODO: Replace with your actual API key from ConvertKit dashboard
-    /// Get it from: https://app.convertkit.com → Settings → Advanced → API Secret
-    /// Note: Use the API Secret (not the API Key) for form subscriptions
-    static let convertKitAPIKey = "YOUR_CONVERTKIT_API_KEY"
-    
-    /// ConvertKit Form ID
-    /// TODO: Replace with your actual Form ID
-    /// Get it from: https://app.convertkit.com → Forms → Select your form → Settings → Form ID
-    static let convertKitFormID = "YOUR_FORM_ID"
+
+    /// ConvertKit API Key - reads from Info.plist (populated by xcconfig)
+    static var convertKitAPIKey: String {
+        Bundle.main.object(forInfoDictionaryKey: "CONVERTKIT_API_KEY") as? String ?? "YOUR_CONVERTKIT_API_KEY_HERE"
+    }
+
+    /// ConvertKit Form ID - reads from Info.plist (populated by xcconfig)
+    static var convertKitFormID: String {
+        Bundle.main.object(forInfoDictionaryKey: "CONVERTKIT_FORM_ID") as? String ?? "YOUR_CONVERTKIT_FORM_ID_HERE"
+    }
     
     // MARK: - Shield & Temporary Access
     
