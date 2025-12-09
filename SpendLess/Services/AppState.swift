@@ -244,9 +244,9 @@ extension AppState {
         let streak = getOrCreateStreak(from: context)
         sharedDefaults?.set(streak.currentDays, forKey: "currentStreak")
         
-        // Sync total saved
+        // Sync total saved (store as String to preserve Decimal precision)
         let totalSaved = calculateTotalSaved(from: context)
-        sharedDefaults?.set((totalSaved as NSDecimalNumber).doubleValue, forKey: "totalSaved")
+        sharedDefaults?.set("\(totalSaved)", forKey: "totalSaved")
         
         // Also sync widget data
         syncWidgetData(context: context)

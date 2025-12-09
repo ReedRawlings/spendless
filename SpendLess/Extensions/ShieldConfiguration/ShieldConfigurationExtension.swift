@@ -30,7 +30,9 @@ nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     nonisolated override func configuration(shielding application: Application) -> ShieldConfiguration {
         // Load user's streak and savings from shared defaults
         let currentStreak = sharedDefaults?.integer(forKey: "currentStreak") ?? 0
-        let totalSaved = sharedDefaults?.double(forKey: "totalSaved") ?? 0
+        // Read as String for precision (with fallback for legacy Double values)
+        let totalSavedString = sharedDefaults?.string(forKey: "totalSaved") ?? "0"
+        let totalSaved = Decimal(string: totalSavedString) ?? Decimal(sharedDefaults?.double(forKey: "totalSaved") ?? 0)
         let futureLetterText = sharedDefaults?.string(forKey: "futureLetterText")
         
         // Create subtitle - prefer future letter text if available, otherwise show streak/savings
@@ -38,7 +40,7 @@ nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         if let letterText = futureLetterText, !letterText.isEmpty {
             subtitleText = letterText
         } else if currentStreak > 0 && totalSaved > 0 {
-            subtitleText = "You've been shopping-free for \(currentStreak) days.\nYou've saved $\(Int(totalSaved)) so far."
+            subtitleText = "You've been shopping-free for \(currentStreak) days.\nYou've saved $\(NSDecimalNumber(decimal: totalSaved).intValue) so far."
         } else if currentStreak > 0 {
             subtitleText = "You've been shopping-free for \(currentStreak) days."
         } else {

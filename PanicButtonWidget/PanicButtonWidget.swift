@@ -47,11 +47,13 @@ struct WidgetData {
         guard let defaults = UserDefaults(suiteName: WidgetDataKeys.suiteName) else {
             return .placeholder
         }
-        
+
         let letterText = defaults.string(forKey: WidgetDataKeys.futureLetterText)
         let goalName = defaults.string(forKey: WidgetDataKeys.goalName)
         let goalProgress = defaults.double(forKey: WidgetDataKeys.goalProgress)
-        let totalSaved = defaults.double(forKey: WidgetDataKeys.totalSaved)
+        // Read totalSaved as String for precision (with fallback for legacy Double values)
+        let totalSavedString = defaults.string(forKey: WidgetDataKeys.totalSaved) ?? "0"
+        let totalSaved = Double(totalSavedString) ?? defaults.double(forKey: WidgetDataKeys.totalSaved)
         let streakDays = defaults.integer(forKey: WidgetDataKeys.streakDays)
         let userName = defaults.string(forKey: WidgetDataKeys.userName)
         

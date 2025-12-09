@@ -60,9 +60,8 @@ final class WidgetDataService {
         // Sync streak data
         defaults.set(streak?.currentDays ?? 0, forKey: Keys.streakDays)
         
-        // Sync total saved
-        let savedDouble = (totalSaved as NSDecimalNumber).doubleValue
-        defaults.set(savedDouble, forKey: Keys.totalSaved)
+        // Sync total saved (store as String to preserve Decimal precision)
+        defaults.set("\(totalSaved)", forKey: Keys.totalSaved)
         
         // Refresh widget timeline
         refreshWidgets()
@@ -90,8 +89,8 @@ final class WidgetDataService {
     
     /// Updates total saved amount
     func syncTotalSaved(_ amount: Decimal) {
-        let savedDouble = (amount as NSDecimalNumber).doubleValue
-        sharedDefaults?.set(savedDouble, forKey: Keys.totalSaved)
+        // Store as String to preserve Decimal precision
+        sharedDefaults?.set("\(amount)", forKey: Keys.totalSaved)
         refreshWidgets()
     }
     
