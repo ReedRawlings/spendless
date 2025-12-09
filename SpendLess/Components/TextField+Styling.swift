@@ -99,6 +99,128 @@ struct CurrencyTextField: View {
     }
 }
 
+// MARK: - Stepper Input
+
+struct StepperInput: View {
+    let title: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let step: Int
+    
+    init(
+        _ title: String,
+        value: Binding<Int>,
+        range: ClosedRange<Int> = 0...999,
+        step: Int = 1
+    ) {
+        self.title = title
+        self._value = value
+        self.range = range
+        self.step = step
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+            Text(title)
+                .font(SpendLessFont.subheadline)
+                .foregroundStyle(Color.spendLessTextPrimary)
+            
+            HStack(spacing: SpendLessSpacing.md) {
+                // Decrement button
+                Button {
+                    if value - step >= range.lowerBound {
+                        value -= step
+                        HapticFeedback.buttonTap()
+                    }
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(value > range.lowerBound ? Color.spendLessPrimary : Color.spendLessTextMuted)
+                        .frame(width: 44, height: 44)
+                        .background(Color.spendLessBackgroundSecondary)
+                        .clipShape(Circle())
+                }
+                .disabled(value <= range.lowerBound)
+                
+                // Value display
+                Text("\(value)")
+                    .font(SpendLessFont.title2)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                    .frame(minWidth: 60)
+                    .multilineTextAlignment(.center)
+                
+                // Increment button
+                Button {
+                    if value + step <= range.upperBound {
+                        value += step
+                        HapticFeedback.buttonTap()
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(value < range.upperBound ? Color.spendLessPrimary : Color.spendLessTextMuted)
+                        .frame(width: 44, height: 44)
+                        .background(Color.spendLessBackgroundSecondary)
+                        .clipShape(Circle())
+                }
+                .disabled(value >= range.upperBound)
+            }
+            .padding(SpendLessSpacing.md)
+            .background(Color.spendLessBackgroundSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+        }
+    }
+}
+
+// MARK: - Compact Stepper Input (for inline use)
+
+struct CompactStepperInput: View {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    
+    init(value: Binding<Int>, range: ClosedRange<Int> = 0...999) {
+        self._value = value
+        self.range = range
+    }
+    
+    var body: some View {
+        HStack(spacing: SpendLessSpacing.sm) {
+            // Decrement button
+            Button {
+                if value > range.lowerBound {
+                    value -= 1
+                    HapticFeedback.buttonTap()
+                }
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(value > range.lowerBound ? Color.spendLessPrimary : Color.spendLessTextMuted)
+            }
+            .disabled(value <= range.lowerBound)
+            
+            // Value
+            Text("\(value)")
+                .font(SpendLessFont.headline)
+                .foregroundStyle(Color.spendLessTextPrimary)
+                .frame(minWidth: 30)
+                .multilineTextAlignment(.center)
+            
+            // Increment button
+            Button {
+                if value < range.upperBound {
+                    value += 1
+                    HapticFeedback.buttonTap()
+                }
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(value < range.upperBound ? Color.spendLessPrimary : Color.spendLessTextMuted)
+            }
+            .disabled(value >= range.upperBound)
+        }
+    }
+}
+
 // MARK: - Multi-line Text Field
 
 struct SpendLessTextEditor: View {
@@ -170,6 +292,29 @@ struct SpendLessTextEditor: View {
                     text: $longText,
                     placeholder: "Optional: Tell us why..."
                 )
+            }
+            .padding()
+            .background(Color.spendLessBackground)
+        }
+    }
+    
+    return PreviewWrapper()
+}
+
+#Preview("Stepper Input") {
+    struct PreviewWrapper: View {
+        @State private var quantity = 5
+        @State private var hours = 40
+        
+        var body: some View {
+            VStack(spacing: 20) {
+                StepperInput("Quantity", value: $quantity, range: 0...99)
+                StepperInput("Hours per week", value: $hours, range: 0...168, step: 5)
+                
+                HStack {
+                    Text("Compact:")
+                    CompactStepperInput(value: $quantity, range: 0...99)
+                }
             }
             .padding()
             .background(Color.spendLessBackground)

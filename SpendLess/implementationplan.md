@@ -47,14 +47,26 @@ SpendLess is an iOS app that helps users overcome compulsive shopping and impuls
 | ShieldConfiguration Extension | ✅ Complete | Custom shield configuration with dynamic content |
 | ShieldAction Extension | ✅ Complete | Handles shield button actions |
 
+### ✅ Shield Bypass Analytics & Temporary Access (Complete)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Shield Interaction Analytics | ✅ Complete | Comprehensive tracking of all shield appearances and user actions |
+| Temporary Access (10-min) | ✅ Complete | Users can unlock apps for 10 minutes with automatic restoration |
+| Live Activity Timer | ✅ Complete | Dynamic Island/Lock Screen countdown timer for active sessions |
+| Multi-Layer Restoration | ✅ Complete | DeviceActivityMonitor → Notification → Failsafe (app foreground) |
+| Notification System | ✅ Complete | Restoration notifications with deep linking to dashboard |
+| Analytics Dashboard | ✅ Complete | Settings integration with toggle, export, delete, session status |
+| Session Management | ✅ Complete | ShieldSessionManager coordinates restoration and Live Activities |
+
 ### 📋 Deferred to Later
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Notification Manager | 📋 Deferred | Waiting list reminders, streak celebrations |
+| Notification Manager (Waiting List) | 🔄 In Progress | Day 3/6 waiting list reminders with background actions, streak celebrations (shield restoration notifications ✅ complete) |
 | "Do I Really Need This?" Questionnaire | 📋 Deferred | Pro feature |
 | Sharing / Social Cards | 📋 Deferred | V1.1 |
-| Analytics Integration | 📋 Deferred | Mixpanel/Amplitude |
+| Analytics Integration | 📋 Deferred | Mixpanel/Amplitude (shield analytics ✅ complete) |
 | Shortcuts Automation Setup | 📋 Deferred | For rich intervention flows |
 
 ---
@@ -115,7 +127,9 @@ SpendLess/
 │   ├── GraveyardItem.swift
 │   ├── DarkPatternCard.swift
 │   ├── Streak.swift
-│   └── UserProfile.swift
+│   ├── UserProfile.swift
+│   ├── ShieldInteractionEvent.swift
+│   └── TemporaryAccessSession.swift
 ├── Views/
 │   ├── MainTabView.swift
 │   ├── Dashboard/
@@ -175,6 +189,10 @@ All models use SwiftData `@Model` macro for persistence:
 - **Streak** — Current/longest streak, grace period tracking
 - **UserProfile** — Triggers, difficulty mode, onboarding state
 
+**Analytics Models (Structs, stored in App Group UserDefaults):**
+- **ShieldInteractionEvent** — Tracks every shield appearance and user action (app name, timestamp, user action, interaction duration, streak, time of day, day of week)
+- **TemporaryAccessSession** — Tracks 10-minute access sessions (start/end times, restoration method, notification status)
+
 ### Enums (Implemented)
 
 - `ShoppingTrigger` — Behavioral triggers from onboarding
@@ -182,6 +200,7 @@ All models use SwiftData `@Model` macro for persistence:
 - `DifficultyMode` — gentle, firm, lockdown
 - `GraveyardSource` — waitingList, panicButton, blockIntercept, returned
 - `SpendRange` — Monthly spend estimates
+- `ShieldUserAction` — primaryButton, secondaryButton, dismissed (for analytics)
 
 ---
 
@@ -392,6 +411,7 @@ For full breathing exercises, item logging, questionnaires. Requires user setup 
 
 The shield is a **gateway**, not a full intervention UI. Keep it simple and redirect complex flows to the main app via Shortcuts.
 
+**Current Implementation:**
 ```
 ┌─────────────────────────────────────┐
 │                                     │
@@ -399,16 +419,27 @@ The shield is a **gateway**, not a full intervention UI. Keep it simple and redi
 │                                     │
 │           🛑 HOLD ON                │
 │                                     │
-│      Is this a need or a want?      │
+│  You've been shopping-free for X    │
+│  days. You've saved $Y so far.      │
+│                                     │
+│  Need access? You can unlock for    │
+│  10 minutes.                        │
 │                                     │
 │    ┌─────────────────────────────┐  │
-│    │     I need to think...      │  │  ← Primary: Dismiss, stay blocked
+│    │   Access for 10 min         │  │  ← Primary: Temporary access
 │    └─────────────────────────────┘  │
 │                                     │
-│         Let me in anyway            │     ← Secondary: Unlock for 15 min
+│         Stay Protected              │     ← Secondary: Dismiss, stay blocked
 │                                     │
 └─────────────────────────────────────┘
 ```
+
+**Features:**
+- ✅ Analytics tracking: All shield appearances logged with app name, timestamp, streak, days since last bypass
+- ✅ Temporary access: Primary button grants 10-minute unlock with automatic restoration
+- ✅ Live Activity timer: Shows countdown in Dynamic Island/Lock Screen during active session
+- ✅ Multi-layer restoration: DeviceActivityMonitor → Notification → App foreground failsafe
+- ✅ User action tracking: Logs whether user chose temporary access or stayed protected
 
 **What we CAN show via App Groups shared data:**
 - Custom title/subtitle text based on difficulty mode
@@ -623,14 +654,23 @@ Questionnaire flow — one question per screen:
 └─────────────────────────────────────┘
 ```
 
-### Reminder Notifications (Deferred)
+### Reminder Notifications (🔄 In Progress)
+
+**Simplified Strategy:** Only send notifications on **Day 3** and **Day 6**
 
 Schedule local notifications for waiting list items:
 
-- **Day 2:** "Still thinking about [item]? 5 days left on the clock."
-- **Day 4:** "Halfway there. Still want [item]?" (Deep link to item)
-- **Day 6:** "Tomorrow's the day. Still want [item]?"
-- **Day 7:** "Time's up for [item]! Decide: buy it or bury it?"
+- **Day 3:** Interactive notification with background actions
+  - Title: "Still want [item]?"
+  - Body: "You added this 3 days ago. Keep it on your list or bury it?"
+  - Actions: "Keep on List" | "Bury It" (handled in background, no app opening required)
+  - If "Keep on List": Cancels Day 6 notification, marks check-in
+  - If "Bury It": Cancels Day 6 notification, moves to graveyard, adds to savings
+  
+- **Day 6:** Informational notification
+  - Title: "[item] expires tomorrow"
+  - Body: "This item will be buried tomorrow if you don't decide."
+  - Deep link to waiting list item
 
 ### Actions
 
@@ -1053,28 +1093,62 @@ Generate shareable cards (PNG/Instagram stories format) for:
 
 ---
 
-## Notifications Strategy (Deferred)
+## Notifications Strategy (🔄 In Progress)
 
-### Types of Notifications
+### ✅ What's Already Implemented
 
-**Waiting List Reminders** (Core feature)
-- Day 2, 4, 6, 7 check-ins for each item
-- Deep link to specific item
+**Shield Restoration Notifications** ✅ Complete
+- 10-minute temporary access reminder
+- Action button to restore shield
+- Deep linking to dashboard
+
+**Notification Infrastructure** ✅ Complete
+- `NotificationManager` with permission request/check
+- Notification categories and actions
+- Background action handling
+- App Groups integration for data sharing
+
+**Onboarding Permission Request** ✅ Complete
+- Screen 14 requests notification permission
+- Only shows if Screen Time is authorized
+
+### ❌ What Still Needs Implementation
+
+**Waiting List Reminders** (Critical - Core Feature)
+- **Day 3 Notification:** Interactive with background actions
+  - "Keep on List" or "Bury It" actions (no app opening required)
+  - Actions handled in background, processed on next app launch
+  - Day 6 notification cancelled immediately when action taken
+- **Day 6 Notification:** Informational reminder
+  - "Item expires tomorrow" message
+  - Deep link to waiting list item
+- Schedule when items added to waiting list
+- Cancel when items buried/bought
+- Deep link handling: `spendless://waitinglist/{itemID}`
 
 **Streak Celebrations** (Engagement)
+- Check streak on app launch
+- Milestone notifications: 7, 14, 30, 60, 90 days
 - "🔥 7 day streak! You're on fire."
-- Milestone celebrations at 14, 30, 60, 90 days
+- Only send once per milestone
 
-**Weekly Summary** (Engagement)
+**Weekly Summary** (Engagement - Optional)
 - Sunday evening: "This week: X impulses resisted, $Y saved. You're Z% closer to [goal]."
 
-**Re-engagement** (Retention)
+**Re-engagement** (Retention - Optional)
 - If no app opens in 7 days: "Still on track? Your streak is at X days."
+
+**Notification Settings UI** (Required)
+- Add "Notifications" section in Settings
+- Show permission status
+- Toggles for: Waiting List Reminders, Streak Celebrations, Weekly Summary, Re-engagement
+- Link to iOS Settings if permission denied
 
 ### Implementation Notes
 - All notifications are local (no push server needed for v1)
-- Request notification permission after onboarding, not during
-- Allow granular control in Settings
+- ✅ Permission requested in onboarding (Screen 14)
+- ⏭️ Settings UI for granular control needed
+- Background actions work without opening app (no `.foreground` option)
 
 ---
 
@@ -1084,7 +1158,7 @@ Generate shareable cards (PNG/Instagram stories format) for:
 
 | Feature | Priority | Notes |
 |---------|----------|-------|
-| Notification Manager | High | Waiting list reminders are critical |
+| Notification Manager (Waiting List) | High | Day 3/6 reminders with background actions, streak celebrations, settings UI |
 | No-Goal Mode UI | Medium | Cash pile visualization for users without specific goals |
 | Relapse Handling Flow | Medium | Grace period logic, educational content |
 | Returns Logging | Low | Already in graveyard, just needs dedicated entry point |
@@ -1387,6 +1461,16 @@ From one sec app's documentation (https://tutorials.one-sec.app/en/articles/3036
 - Having Screen Time enabled on multiple devices can cause sync issues
 - "Block all" may ignore exemption lists — use iOS Settings > Screen Time > Always Allowed instead
 
+**iOS 17.4+ DeviceActivityMonitor Issues:**
+- `intervalDidStart` and `intervalDidEnd` callbacks may fail silently (known Apple bug affecting all apps using this framework)
+- **Workaround implemented:** Multi-layer restoration system with:
+  1. Primary: DeviceActivityMonitor callback (may fail on iOS 17.4+)
+  2. Backup: Local notification after 10 minutes (user taps to restore)
+  3. Failsafe: App foreground check (restores expired sessions when app opens)
+- Extension timers do not work: `DispatchQueue.asyncAfter` in extensions is killed when `completionHandler` is called
+- Cannot open main app from shield: ShieldActionResponse only supports `.none`, `.close`, `.defer` (no deep linking)
+- ApplicationToken opacity: Tokens may change between sessions; use `Application.localizedDisplayName` for analytics
+
 ---
 
 ## Appendix B: Screen Time API Reference
@@ -1629,6 +1713,38 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
    - Extensions connected and applying shields
    - Shield screens tested on blocked app open
 
+### ✅ Recently Completed
+
+**Shield Bypass Analytics & Temporary Access** ✅ **COMPLETE**
+- ✅ Comprehensive analytics tracking for all shield interactions
+- ✅ 10-minute temporary access feature with automatic restoration
+- ✅ Live Activity timer in Dynamic Island/Lock Screen
+- ✅ Multi-layer restoration system (DeviceActivityMonitor → Notification → Failsafe)
+- ✅ Notification system for restoration reminders
+- ✅ Analytics dashboard in Settings (toggle, export, delete, session status)
+- ✅ Session management with orphaned session detection
+- ✅ Extension-to-main-app data synchronization via App Groups
+
+**Key Files Created:**
+- `Models/ShieldInteractionEvent.swift` - Tracks shield appearances and user actions
+- `Models/TemporaryAccessSession.swift` - Tracks 10-minute access sessions
+- `Helpers/ShieldAnalytics.swift` - Shared analytics utility for App Group data
+- `Services/NotificationManager.swift` - Notification handling and restoration alerts
+- `Services/ShieldSessionManager.swift` - Coordinates restoration and Live Activities
+- `Services/AnalyticsManager.swift` - Processes and aggregates analytics data
+- `Services/ActivityManager.swift` - Manages Live Activity timers
+- `Widgets/TemporaryAccessActivity.swift` - ActivityKit widget for countdown timer
+
+**Key Files Modified:**
+- `ShieldConfigurationExtension/ShieldConfigurationExtension.swift` - Logs appearances, updated button labels
+- `ShieldActionExtension/ShieldActionExtension.swift` - Handles temporary access, creates sessions
+- `DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.swift` - Restores shields when interval ends
+- `App/SpendLessApp.swift` - Notification handling, session checks, deep linking
+- `Services/ScreenTimeManager.swift` - Added shield restoration method
+- `Views/Settings/SettingsView.swift` - Added analytics settings section
+- `Models/Enums.swift` - Added ShieldUserAction enum
+- `App/Constants.swift` - Added notification categories and DeviceActivity names
+
 ### Remaining V1 Tasks
 
 5. **Add Paywall & Subscription System** 🔄 **In Progress**
@@ -1653,10 +1769,19 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
    - 📝 Note: Event name is `campaign_trigger` (not `onboarding_complete` as originally planned)
      - Ensure Superwall dashboard has a paywall attached to the `campaign_trigger` event
 
-6. **Implement Notification System**
-   - Waiting list reminders (Day 2, 4, 6, 7)
-   - Streak celebration notifications
-   - Weekly summary
+6. **Implement Notification System** 🔄 **In Progress**
+   - ✅ Basic infrastructure complete (NotificationManager, permission request, shield restoration)
+   - ⏭️ **Waiting List Reminders (Critical):**
+     - Day 3: Interactive notification with "Keep on List" / "Bury It" actions (background handling, no app opening)
+     - Day 6: Informational "expires tomorrow" reminder
+     - Schedule when items added, cancel when buried/bought
+     - Deep link to specific waiting list items
+   - ⏭️ **Streak Celebrations:**
+     - Check on app launch, notify milestones (7, 14, 30, 60, 90 days)
+   - ⏭️ **Notification Settings UI:**
+     - Permission status, toggles for each notification type
+   - ⏭️ Weekly summary (optional)
+   - ⏭️ Re-engagement notifications (optional)
 
 7. **Add No-Goal Mode UI**
    - Cash pile visualization
@@ -1963,6 +2088,8 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
 #### Feature Usage
 - App blocking usage (shields triggered)
+- Shield interaction analytics (appearances, bypasses, stay protected actions)
+- Temporary access sessions (count, average duration, restoration method success rates)
 - Waiting list items created
 - Graveyard items buried
 - Panic button usage

@@ -398,7 +398,7 @@ enum RemovalReason: String, CaseIterable, Codable, Identifiable {
 }
 
 // MARK: - Purchase Feeling (Post-purchase reflection)
-
+// DEPRECATED: Use PurchaseReason instead
 enum PurchaseFeeling: String, CaseIterable, Codable, Identifiable {
     case genuineNeed = "genuineNeed"
     case stillImpulsive = "stillImpulsive"
@@ -419,6 +419,62 @@ enum PurchaseFeeling: String, CaseIterable, Codable, Identifiable {
         case .genuineNeed: return "✅"
         case .stillImpulsive: return "🤔"
         case .inBetween: return "🤷"
+        }
+    }
+}
+
+// MARK: - Purchase Reason (Why did you decide to purchase?)
+
+enum PurchaseReason: String, CaseIterable, Codable, Identifiable {
+    case supportsGoal = "supportsGoal"
+    case genuineNeed = "genuineNeed"
+    case wellReflected = "wellReflected"
+    case plannedBudgeted = "plannedBudgeted"
+    case addsRealValue = "addsRealValue"
+    case stillImpulsive = "stillImpulsive"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .supportsGoal: return "It supports my goal"
+        case .genuineNeed: return "It's a genuine need"
+        case .wellReflected: return "I've reflected on it and know I'll use it"
+        case .plannedBudgeted: return "It's planned and fits my budget"
+        case .addsRealValue: return "It adds real value to my life"
+        case .stillImpulsive: return "Still kind of impulsive"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .supportsGoal: return "This purchase aligns with my goals and values"
+        case .genuineNeed: return "I need this (replacement, essential item, etc.)"
+        case .wellReflected: return "After waiting, I'm confident I'll use it regularly"
+        case .plannedBudgeted: return "This was planned and I can afford it"
+        case .addsRealValue: return "This will genuinely improve my daily life"
+        case .stillImpulsive: return "I know it's somewhat impulsive but I want it"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .supportsGoal: return "🎯"
+        case .genuineNeed: return "✅"
+        case .wellReflected: return "💭"
+        case .plannedBudgeted: return "📋"
+        case .addsRealValue: return "✨"
+        case .stillImpulsive: return "🤔"
+        }
+    }
+    
+    /// Whether this reason is considered "aligned" with SpendLess values
+    var isAligned: Bool {
+        switch self {
+        case .supportsGoal, .genuineNeed, .wellReflected, .plannedBudgeted, .addsRealValue:
+            return true
+        case .stillImpulsive:
+            return false
         }
     }
 }

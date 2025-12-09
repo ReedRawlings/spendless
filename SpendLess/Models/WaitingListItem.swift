@@ -24,7 +24,7 @@ final class WaitingListItem {
     var reasonWantedRaw: String? // ReasonWanted raw value
     var reasonWantedNote: String? // Custom note when "Other" is selected
     var purchasedAt: Date? // Timestamp when item was bought (for analytics)
-    var purchaseReflectionRaw: String? // PurchaseFeeling raw value
+    var purchaseReflectionRaw: String? // PurchaseReason raw value (backward compatible with PurchaseFeeling)
     
     // Tools integration
     var pricePerWearEstimate: Int? // Estimated uses from Price Per Wear calculator
@@ -99,6 +99,26 @@ final class WaitingListItem {
         return ReasonWanted(rawValue: reasonWantedRaw)
     }
     
+    /// Purchase reflection reason (prefers PurchaseReason, falls back to PurchaseFeeling for backward compatibility)
+    var purchaseReason: PurchaseReason? {
+        guard let purchaseReflectionRaw else { return nil }
+        // Try PurchaseReason first
+        if let reason = PurchaseReason(rawValue: purchaseReflectionRaw) {
+            return reason
+        }
+        // Fall back to PurchaseFeeling for backward compatibility
+        if let feeling = PurchaseFeeling(rawValue: purchaseReflectionRaw) {
+            // Map old values to new ones
+            switch feeling {
+            case .genuineNeed: return .genuineNeed
+            case .stillImpulsive: return .stillImpulsive
+            case .inBetween: return .wellReflected
+            }
+        }
+        return nil
+    }
+    
+    /// Legacy property for backward compatibility
     var purchaseReflection: PurchaseFeeling? {
         guard let purchaseReflectionRaw else { return nil }
         return PurchaseFeeling(rawValue: purchaseReflectionRaw)

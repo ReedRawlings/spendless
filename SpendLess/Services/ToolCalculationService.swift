@@ -85,19 +85,148 @@ struct ToolCalculationService {
         return Int(ceil(NSDecimalNumber(decimal: price / targetCostPerUse).doubleValue))
     }
     
-    // MARK: - 30x Rule (V2)
+    // MARK: - 30x Rule
     
-    /// Evaluate 30x rule score
+    /// Evaluate 30x rule from three answers
     static func evaluate30xRule(
-        willUse30Times: Bool,
-        canMatch5Contexts: Bool,
-        hasSpace: Bool
+        usage: ThirtyXAnswer,
+        versatility: ThirtyXAnswer,
+        practicality: ThirtyXAnswer
     ) -> ThirtyXResult {
-        var score = 0
-        if willUse30Times { score += 1 }
-        if canMatch5Contexts { score += 1 }
-        if hasSpace { score += 1 }
-        return ThirtyXResult.from(score: score)
+        return ThirtyXResult.evaluate(
+            usage: usage,
+            versatility: versatility,
+            practicality: practicality
+        )
+    }
+    
+    /// Calculate cost per use at 30 uses
+    static func costPerUseAt30(price: Decimal) -> Decimal {
+        return price / 30
+    }
+    
+    // MARK: - Life Energy Calculator
+    
+    /// Calculate life energy hours for a given amount
+    /// - Parameters:
+    ///   - amount: The purchase amount
+    ///   - hourlyWage: User's true hourly wage
+    /// - Returns: Hours of life the purchase costs
+    static func lifeEnergyHours(amount: Decimal, hourlyWage: Decimal) -> Decimal {
+        guard hourlyWage > 0 else { return 0 }
+        return amount / hourlyWage
+    }
+    
+    /// Calculate true hourly wage from income and expenses
+    /// - Parameters:
+    ///   - takeHome: Take-home pay per paycheck (after taxes)
+    ///   - frequency: How often user is paid
+    ///   - hoursPerWeek: Total hours worked including commute, prep, etc.
+    ///   - monthlyExpenses: Work-related monthly expenses
+    /// - Returns: True hourly wage as Decimal
+    static func trueHourlyWage(
+        takeHome: Decimal,
+        frequency: PayFrequency,
+        hoursPerWeek: Int,
+        monthlyExpenses: Decimal
+    ) -> Decimal {
+        // Convert pay to monthly
+        let monthlyTakeHome = takeHome * frequency.monthlyMultiplier
+        
+        // Calculate monthly work hours (weeks per month average = 4.33)
+        let monthlyWorkHours = Decimal(hoursPerWeek) * Decimal(string: "4.33")!
+        
+        // Subtract work expenses
+        let monthlyNet = monthlyTakeHome - monthlyExpenses
+        
+        // Calculate true hourly wage
+        guard monthlyWorkHours > 0 else { return 0 }
+        return monthlyNet / monthlyWorkHours
+    }
+    
+    /// Format life energy hours for display
+    static func formatLifeEnergyHours(_ hours: Decimal) -> String {
+        let hoursDouble = NSDecimalNumber(decimal: hours).doubleValue
+        if hoursDouble < 1 {
+            let minutes = Int(hoursDouble * 60)
+            return "\(minutes) min"
+        } else if hoursDouble < 10 {
+            return String(format: "%.1f hrs", hoursDouble)
+        } else {
+            return "\(Int(hoursDouble)) hrs"
+        }
+    }
+    
+    /// Generate comparisons for life energy hours
+    static func lifeEnergyComparisons(hours: Decimal) -> [String] {
+        var results: [String] = []
+        let hoursDouble = NSDecimalNumber(decimal: hours).doubleValue
+        
+        if hoursDouble >= 1 {
+            results.append("\(Int(hoursDouble)) episodes of your favorite show")
+        }
+        if hoursDouble >= 2 {
+            results.append("\(Int(hoursDouble / 2)) movie nights")
+        }
+        if hoursDouble >= 4 {
+            results.append("Half a workday")
+        }
+        if hoursDouble >= 8 {
+            results.append("A full workday")
+        }
+        if hoursDouble >= 16 {
+            results.append("Two workdays")
+        }
+        if hoursDouble >= 40 {
+            results.append("A full work week")
+        }
+        
+        return Array(results.prefix(3))
+    }
+    
+    // MARK: - Spending Audit Calculations
+    
+    /// Calculate annualized value from total and years
+    static func annualizedValue(total: Decimal, years: Int) -> Decimal {
+        guard years > 0 else { return total }
+        return total / Decimal(years)
+    }
+    
+    /// Calculate usage percentage
+    static func usagePercentage(used: Int, total: Int) -> Int {
+        guard total > 0 else { return 0 }
+        return (used * 100) / total
+    }
+    
+    /// Generate value comparisons for spending audit
+    static func valueComparisons(amount: Decimal) -> [String] {
+        var results: [String] = []
+        let value = NSDecimalNumber(decimal: amount).doubleValue
+        
+        switch value {
+        case ..<100:
+            results.append("A nice dinner out")
+            results.append("A month of coffee")
+        case 100..<300:
+            results.append("A new phone case + accessories")
+            results.append("Several nice meals")
+        case 300..<500:
+            results.append("A weekend trip")
+            results.append("A new gadget")
+        case 500..<1000:
+            results.append("A vacation")
+            results.append("A month's car payment")
+        case 1000..<2000:
+            results.append("2 months of groceries")
+            results.append("A designer item")
+            results.append("A weekend getaway")
+        default:
+            results.append("A month's rent")
+            results.append("A significant investment")
+            results.append("Multiple vacations")
+        }
+        
+        return Array(results.prefix(3))
     }
     
     // MARK: - Age Helpers

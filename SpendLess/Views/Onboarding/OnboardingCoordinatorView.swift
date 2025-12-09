@@ -38,6 +38,7 @@ struct OnboardingCoordinatorView: View {
         case appSelection
         case websiteBlocking
         case selectionConfirmation
+        case notificationPermission
         case howItWorks
         case shortcutsSetup
         
@@ -106,7 +107,9 @@ struct OnboardingCoordinatorView: View {
         case .websiteBlocking:
             OnboardingWebsiteBlockingView { navigateTo(.selectionConfirmation) }
         case .selectionConfirmation:
-            OnboardingConfirmationView { navigateTo(.howItWorks) }
+            OnboardingConfirmationView { navigateTo(.notificationPermission) }
+        case .notificationPermission:
+            OnboardingNotificationPermissionView { navigateTo(.howItWorks) }
         case .howItWorks:
             OnboardingHowItWorksView { navigateTo(.shortcutsSetup) }
         case .shortcutsSetup:

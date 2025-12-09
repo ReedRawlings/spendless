@@ -42,6 +42,13 @@ final class UserProfile {
     // Tools - Opportunity Cost
     var birthYear: Int? // For opportunity cost calculator
     
+    // Tools - Life Energy Calculator
+    var trueHourlyWage: Decimal?
+    var takeHomePay: Decimal?
+    var payFrequencyRaw: String? // PayFrequency raw value
+    var hoursWorkedPerWeek: Int?
+    var monthlyWorkExpenses: Decimal?
+    
     // Lead Magnet / Email Collection
     var leadMagnetEmailCollected: Bool
     var leadMagnetEmailAddress: String?
@@ -71,6 +78,11 @@ final class UserProfile {
         self.dopamineMenuSelectedDefaultsRaw = []
         self.dopamineMenuCustomActivities = nil
         self.birthYear = nil
+        self.trueHourlyWage = nil
+        self.takeHomePay = nil
+        self.payFrequencyRaw = nil
+        self.hoursWorkedPerWeek = nil
+        self.monthlyWorkExpenses = nil
         self.leadMagnetEmailCollected = false
         self.leadMagnetEmailAddress = nil
         self.leadMagnetOptedIntoMarketing = false
@@ -139,6 +151,23 @@ final class UserProfile {
         return ToolCalculationService.ageFromBirthYear(birthYear)
     }
     
+    // MARK: - Life Energy Calculator
+    
+    var payFrequency: PayFrequency? {
+        get { payFrequencyRaw.flatMap { PayFrequency(rawValue: $0) } }
+        set { payFrequencyRaw = newValue?.rawValue }
+    }
+    
+    var hasConfiguredLifeEnergy: Bool {
+        trueHourlyWage != nil
+    }
+    
+    /// Calculate life energy hours for a given amount
+    func lifeEnergyHours(for amount: Decimal) -> Decimal? {
+        guard let wage = trueHourlyWage, wage > 0 else { return nil }
+        return amount / wage
+    }
+    
     // MARK: - Lead Magnet
     
     var leadMagnetSource: LeadMagnetSource? {
@@ -175,6 +204,33 @@ extension UserProfile {
     
     static var newProfile: UserProfile {
         UserProfile()
+    }
+}
+
+// MARK: - Pay Frequency Enum
+
+enum PayFrequency: String, CaseIterable, Codable, Identifiable {
+    case weekly = "weekly"
+    case biweekly = "biweekly"
+    case monthly = "monthly"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .weekly: return "Weekly"
+        case .biweekly: return "Biweekly"
+        case .monthly: return "Monthly"
+        }
+    }
+    
+    /// Multiplier to convert pay to monthly amount
+    var monthlyMultiplier: Decimal {
+        switch self {
+        case .weekly: return Decimal(string: "4.33") ?? 4.33
+        case .biweekly: return Decimal(string: "2.17") ?? 2.17
+        case .monthly: return 1
+        }
     }
 }
 

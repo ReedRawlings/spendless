@@ -88,4 +88,29 @@ enum AppConstants {
     
     /// Temporary access duration in minutes
     static let temporaryAccessDurationMinutes: Int = 10
+    
+    // MARK: - Waiting List Notifications
+    
+    /// Notification category identifier for waiting list check-ins (Day 3)
+    static let waitingListCheckinNotificationCategory = "WAITING_LIST_CHECKIN"
+    
+    /// Notification identifier prefix for waiting list notifications
+    static let waitingListNotificationPrefix = "waitingList"
+    
+    /// Notification action identifiers for waiting list
+    enum WaitingListNotificationActions {
+        static let keepOnList = "KEEP_ON_LIST"
+        static let buryIt = "BURY_IT"
+    }
+    
+    /// UserDefaults keys for notification preferences
+    enum NotificationPreferenceKeys {
+        static let waitingListRemindersEnabled = "waitingListRemindersEnabled"
+    }
+    
+    /// UserDefaults keys for pending waiting list actions (from background notifications)
+    enum PendingWaitingListActionKeys {
+        /// Prefix for pending action keys: pendingWaitingListAction-{itemID}
+        static let prefix = "pendingWaitingListAction"
+    }
 }

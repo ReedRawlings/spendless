@@ -112,7 +112,7 @@ struct PurchasedWaitingListItem: Codable, Identifiable {
     let amount: Decimal
     let addedAt: Date
     let purchasedAt: Date
-    let reflection: PurchaseFeeling?
+    let purchaseReasonRaw: String? // PurchaseReason raw value
     
     var daysWaited: Int {
         let calendar = Calendar.current
@@ -120,13 +120,29 @@ struct PurchasedWaitingListItem: Codable, Identifiable {
         return max(components.day ?? 0, 0)
     }
     
-    init(from item: WaitingListItem, reflection: PurchaseFeeling? = nil) {
+    var purchaseReason: PurchaseReason? {
+        guard let raw = purchaseReasonRaw else { return nil }
+        return PurchaseReason(rawValue: raw)
+    }
+    
+    /// Legacy property for backward compatibility
+    var reflection: PurchaseFeeling? {
+        // Try to map PurchaseReason back to PurchaseFeeling if needed
+        guard let reason = purchaseReason else { return nil }
+        switch reason {
+        case .genuineNeed: return .genuineNeed
+        case .stillImpulsive: return .stillImpulsive
+        case .supportsGoal, .wellReflected, .plannedBudgeted, .addsRealValue: return .genuineNeed
+        }
+    }
+    
+    init(from item: WaitingListItem, reason: PurchaseReason? = nil) {
         self.id = item.id
         self.name = item.name
         self.amount = item.amount
         self.addedAt = item.addedAt
-        self.purchasedAt = Date()
-        self.reflection = reflection
+        self.purchasedAt = item.purchasedAt ?? Date()
+        self.purchaseReasonRaw = reason?.rawValue ?? item.purchaseReason?.rawValue
     }
 }
 

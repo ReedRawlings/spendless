@@ -26,9 +26,8 @@ struct OnboardingWelcomeView: View {
                 Spacer()
                 
                 // Illustration
-                Image(systemName: "cart.badge.minus")
-                    .font(.system(size: 100))
-                    .foregroundStyle(Color.spendLessPrimary)
+                LottieAnimationView(animationName: "cart")
+                    .frame(height: 300)
                     .opacity(iconVisible ? 1 : 0)
                     .scaleEffect(iconVisible ? 1 : 0.8)
                     .animation(.spring(response: 0.5, dampingFraction: 0.7), value: iconVisible)

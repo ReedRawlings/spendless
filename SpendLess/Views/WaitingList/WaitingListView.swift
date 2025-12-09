@@ -18,10 +18,14 @@ struct WaitingListView: View {
     // Note: sourceRaw must match GraveyardSource.waitingList.rawValue ("waitingList")
     @Query(filter: #Predicate<GraveyardItem> { $0.sourceRaw == "waitingList" })
     private var buriedFromWaitingList: [GraveyardItem]
+    @Query private var profiles: [UserProfile]
 
     @State private var showAddSheet = false
     @State private var showCelebration = false
     @State private var celebrationAmount: Decimal = 0
+    
+    // Highlighted item from deep link
+    @State private var highlightedItemID: UUID?
 
     // Sheet state for bury/buy flows
     @State private var itemToBury: WaitingListItem?
@@ -65,6 +69,28 @@ struct WaitingListView: View {
         )
     }
     
+    private var profile: UserProfile? {
+        profiles.first
+    }
+    
+    private var totalRetirementValue: Decimal? {
+        let totalAmount: Decimal
+        let currentAge: Int
+        
+        if AppConstants.isScreenshotMode {
+            totalAmount = ScreenshotDataHelper.waitingListTotal
+            // Use a typical age for screenshot mode (e.g., 30 years old)
+            currentAge = 30
+        } else {
+            guard let birthYear = profile?.birthYear else { return nil }
+            currentAge = ToolCalculationService.ageFromBirthYear(birthYear)
+            totalAmount = items.reduce(Decimal.zero) { $0 + $1.amount }
+        }
+        
+        guard totalAmount > 0 else { return nil }
+        return ToolCalculationService.opportunityCost(amount: totalAmount, currentAge: currentAge)
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -94,9 +120,46 @@ struct WaitingListView: View {
                 }
             }
             .sheet(item: $itemToBuy) { item in
-                PurchaseReflectionSheet(item: item) { feeling in
-                    completeBuyItem(item, feeling: feeling)
+                PurchaseReflectionSheet(item: item) { reason in
+                    completeBuyItem(item, reason: reason)
                 }
+            }
+            .onAppear {
+                checkForPendingDeepLink()
+            }
+            .onChange(of: appState.pendingWaitingListItemID) { oldValue, newValue in
+                if newValue != nil {
+                    checkForPendingDeepLink()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Deep Link Handling
+    
+    private func checkForPendingDeepLink() {
+        // Check if we have a pending item ID from a deep link
+        guard let itemIDString = appState.pendingWaitingListItemID,
+              let itemID = UUID(uuidString: itemIDString) else {
+            return
+        }
+        
+        // Clear the pending ID
+        appState.pendingWaitingListItemID = nil
+        
+        // Check if the item exists
+        guard items.contains(where: { $0.id == itemID }) else {
+            print("[WaitingListView] Item \(itemIDString) not found")
+            return
+        }
+        
+        // Highlight the item briefly
+        highlightedItemID = itemID
+        
+        // Clear highlight after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation {
+                highlightedItemID = nil
             }
         }
     }
@@ -137,10 +200,19 @@ struct WaitingListView: View {
     // MARK: - Items List
     
     private var itemsList: some View {
-        ScrollView {
-            LazyVStack(spacing: SpendLessSpacing.md) {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: SpendLessSpacing.md) {
                 // Stats header (collapsible)
-                WaitingListStatsCard(stats: waitingListStats)
+                let totalAmount = AppConstants.isScreenshotMode 
+                    ? ScreenshotDataHelper.waitingListTotal
+                    : items.reduce(Decimal.zero) { $0 + $1.amount }
+                
+                WaitingListStatsCard(
+                    stats: waitingListStats,
+                    retirementValue: totalRetirementValue,
+                    currentAmount: totalAmount > 0 ? totalAmount : nil
+                )
                 
                 // Ready to decide section
                 if !expiredItems.isEmpty {
@@ -151,8 +223,10 @@ struct WaitingListView: View {
                                 goal: currentGoal,
                                 onBury: { buryItem(item) },
                                 onBuy: { buyItem(item) },
-                                onStillWantIt: { stillWantItem(item) }
+                                onStillWantIt: { stillWantItem(item) },
+                                isHighlighted: highlightedItemID == item.id
                             )
+                            .id(item.id)
                         }
                     } header: {
                         SectionHeader(title: "Ready to Decide", icon: "checkmark.circle")
@@ -167,9 +241,11 @@ struct WaitingListView: View {
                                 item: item,
                                 goal: currentGoal,
                                 onBury: { buryItem(item) },
-                                onBuy: nil,
-                                onStillWantIt: { stillWantItem(item) }
+                                onBuy: { buyItem(item) },
+                                onStillWantIt: { stillWantItem(item) },
+                                isHighlighted: highlightedItemID == item.id
                             )
+                            .id(item.id)
                         }
                     } header: {
                         SectionHeader(title: "Still Waiting", icon: "clock")
@@ -194,8 +270,16 @@ struct WaitingListView: View {
                     )
                 }
                 .padding(.top, SpendLessSpacing.sm)
+                }
+                .padding(SpendLessSpacing.md)
             }
-            .padding(SpendLessSpacing.md)
+            .onChange(of: highlightedItemID) { oldValue, newValue in
+                if let itemID = newValue {
+                    withAnimation {
+                        proxy.scrollTo(itemID, anchor: .center)
+                    }
+                }
+            }
         }
     }
     
@@ -207,6 +291,9 @@ struct WaitingListView: View {
     }
     
     private func completeBuryItem(_ item: WaitingListItem, reason: RemovalReason, note: String?) {
+        // Cancel any pending notifications for this item
+        NotificationManager.shared.cancelWaitingListNotifications(for: item.id)
+        
         // Create graveyard item with removal reason
         let graveyardItem = GraveyardItem(
             from: item,
@@ -240,9 +327,18 @@ struct WaitingListView: View {
         itemToBuy = item
     }
     
-    private func completeBuyItem(_ item: WaitingListItem, feeling: PurchaseFeeling?) {
+    private func completeBuyItem(_ item: WaitingListItem, reason: PurchaseReason?) {
+        // Cancel any pending notifications for this item
+        NotificationManager.shared.cancelWaitingListNotifications(for: item.id)
+        
+        // Store purchase reason in item before tracking
+        if let reason = reason {
+            item.purchaseReflectionRaw = reason.rawValue
+            item.purchasedAt = Date()
+        }
+        
         // Track the purchase for analytics
-        let purchasedItem = PurchasedWaitingListItem(from: item, reflection: feeling)
+        let purchasedItem = PurchasedWaitingListItem(from: item, reason: reason)
         PurchasedItemsStore.shared.add(purchasedItem)
         
         // Remove from waiting list - no judgment
@@ -298,6 +394,7 @@ struct WaitingListItemRow: View {
     let onBury: () -> Void
     let onBuy: (() -> Void)?
     let onStillWantIt: () -> Void
+    var isHighlighted: Bool = false
     
     @Query private var profiles: [UserProfile]
     
@@ -364,30 +461,34 @@ struct WaitingListItemRow: View {
             }
             
             // Tool insights (small, integrated)
-            if let costPerUse = item.calculatedCostPerUse, let uses = item.pricePerWearEstimate {
-                HStack(spacing: SpendLessSpacing.xs) {
-                    Text("👗")
-                        .font(.caption)
-                    Text("\(ToolCalculationService.formatCurrencyWithCents(costPerUse)) per use")
-                        .font(SpendLessFont.caption)
-                        .foregroundStyle(Color.spendLessTextSecondary)
-                    Text("(\(uses) uses)")
-                        .font(SpendLessFont.caption)
-                        .foregroundStyle(Color.spendLessTextMuted)
+            HStack(spacing: SpendLessSpacing.md) {
+                // Cost per use
+                if let costPerUse = item.calculatedCostPerUse, let uses = item.pricePerWearEstimate {
+                    HStack(spacing: SpendLessSpacing.xs) {
+                        Text("👗")
+                            .font(.caption)
+                        Text("\(ToolCalculationService.formatCurrencyWithCents(costPerUse)) per use")
+                            .font(SpendLessFont.caption)
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                        Text("(\(uses) uses)")
+                            .font(SpendLessFont.caption)
+                            .foregroundStyle(Color.spendLessTextMuted)
+                    }
                 }
-                .padding(.top, SpendLessSpacing.xxs)
-            }
-            
-            if let futureValue = opportunityCost {
-                HStack(spacing: SpendLessSpacing.xs) {
-                    Text("📈")
-                        .font(.caption)
-                    Text("This \(ToolCalculationService.formatCurrency(item.amount)) → \(ToolCalculationService.formatCurrency(futureValue)) by retirement")
-                        .font(SpendLessFont.caption)
-                        .foregroundStyle(Color.spendLessTextSecondary)
+                
+                // Life energy hours (if hourly wage is configured)
+                if let hourlyWage = profile?.trueHourlyWage, hourlyWage > 0 {
+                    let hours = ToolCalculationService.lifeEnergyHours(amount: item.amount, hourlyWage: hourlyWage)
+                    HStack(spacing: SpendLessSpacing.xs) {
+                        Text("⏱️")
+                            .font(.caption)
+                        Text("\(ToolCalculationService.formatLifeEnergyHours(hours)) of life")
+                            .font(SpendLessFont.caption)
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                    }
                 }
-                .padding(.top, SpendLessSpacing.xxs)
             }
+            .padding(.top, SpendLessSpacing.xxs)
             
             // Progress bar
             CountdownProgressBar(
@@ -405,8 +506,8 @@ struct WaitingListItemRow: View {
                     onBury()
                 }
                 
-                if let onBuy, item.isExpired {
-                    SmallSecondaryButton("Buy it") {
+                if let onBuy {
+                    SmallSecondaryButton("Buy it", icon: "cart") {
                         onBuy()
                     }
                 }
@@ -416,6 +517,11 @@ struct WaitingListItemRow: View {
         .background(Color.spendLessCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
         .spendLessShadow(SpendLessShadow.cardShadow)
+        .overlay(
+            RoundedRectangle(cornerRadius: SpendLessRadius.lg)
+                .strokeBorder(Color.spendLessPrimary, lineWidth: isHighlighted ? 3 : 0)
+        )
+        .animation(.easeInOut(duration: 0.3), value: isHighlighted)
     }
 
     private func formatPercentage(_ percentage: Double) -> String {
@@ -436,6 +542,7 @@ struct WaitingListItemRow: View {
 struct AddToWaitingListSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query private var profiles: [UserProfile]
     
     @State private var itemName = ""
     @State private var itemAmount: Decimal = 0
@@ -444,6 +551,17 @@ struct AddToWaitingListSheet: View {
     @State private var showReasonPicker = false
     @State private var showPricePerWear = false
     @State private var pricePerWearEstimate: Int?
+    
+    private var profile: UserProfile? {
+        profiles.first
+    }
+    
+    private var lifeEnergyHours: Decimal? {
+        guard let hourlyWage = profile?.trueHourlyWage, hourlyWage > 0, itemAmount > 0 else {
+            return nil
+        }
+        return ToolCalculationService.lifeEnergyHours(amount: itemAmount, hourlyWage: hourlyWage)
+    }
     
     var body: some View {
         NavigationStack {
@@ -474,6 +592,19 @@ struct AddToWaitingListSheet: View {
                                 title: "How much?",
                                 amount: $itemAmount
                             )
+                            
+                            // Life energy hours (if hourly wage is configured)
+                            if let hours = lifeEnergyHours {
+                                HStack(spacing: SpendLessSpacing.xs) {
+                                    Text("⏱️")
+                                        .font(.caption)
+                                    Text("\(ToolCalculationService.formatLifeEnergyHours(hours)) of life")
+                                        .font(SpendLessFont.caption)
+                                        .foregroundStyle(Color.spendLessTextSecondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.leading, SpendLessSpacing.md)
+                            }
                             
                             // Optional: Calculate price per wear
                             if itemAmount > 0 {
@@ -607,6 +738,13 @@ struct AddToWaitingListSheet: View {
         item.pricePerWearEstimate = pricePerWearEstimate
         modelContext.insert(item)
         try? modelContext.save()
+        
+        // Schedule Day 3 and Day 6 notifications
+        NotificationManager.shared.scheduleWaitingListNotifications(
+            itemID: item.id,
+            itemName: item.name,
+            addedAt: item.addedAt
+        )
         
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)

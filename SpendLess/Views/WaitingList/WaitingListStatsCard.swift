@@ -9,7 +9,15 @@ import SwiftUI
 
 struct WaitingListStatsCard: View {
     let stats: WaitingListStats
+    let retirementValue: Decimal?
+    let currentAmount: Decimal?
     @State private var isExpanded: Bool = true
+    
+    init(stats: WaitingListStats, retirementValue: Decimal? = nil, currentAmount: Decimal? = nil) {
+        self.stats = stats
+        self.retirementValue = retirementValue
+        self.currentAmount = currentAmount
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -77,6 +85,42 @@ struct WaitingListStatsCard: View {
                         }
                     }
                     .padding(.horizontal, SpendLessSpacing.md)
+                    
+                    // Retirement value (if available)
+                    if let retirementValue = retirementValue, let currentAmount = currentAmount {
+                        Divider()
+                            .padding(.horizontal, SpendLessSpacing.md)
+                        
+                        VStack(spacing: SpendLessSpacing.xs) {
+                            HStack(spacing: SpendLessSpacing.xs) {
+                                Text("📈")
+                                    .font(.caption)
+                                Text("If you invest this instead")
+                                    .font(SpendLessFont.caption)
+                                    .foregroundStyle(Color.spendLessTextSecondary)
+                            }
+                            
+                            HStack(alignment: .firstTextBaseline, spacing: SpendLessSpacing.xs) {
+                                Text(formatCurrency(currentAmount))
+                                    .font(SpendLessFont.title3)
+                                    .foregroundStyle(Color.spendLessTextPrimary)
+                                
+                                Image(systemName: "arrow.right")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.spendLessTextMuted)
+                                
+                                Text(formatCurrency(retirementValue))
+                                    .font(SpendLessFont.title3)
+                                    .foregroundStyle(Color.spendLessPrimary)
+                            }
+                            
+                            Text("by retirement")
+                                .font(SpendLessFont.caption)
+                                .foregroundStyle(Color.spendLessTextMuted)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, SpendLessSpacing.md)
+                    }
                     
                     // Wait time stats (if available)
                     if stats.averageWaitDaysBuy != nil || stats.averageWaitDaysBury != nil {

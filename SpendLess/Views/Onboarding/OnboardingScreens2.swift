@@ -304,24 +304,11 @@ struct OnboardingCommitmentView: View {
     // MARK: - Dynamic Positive Path Content
     
     private var positivePathText: String {
-        switch appState.onboardingGoalType {
-        case .emergency:
-            return "Real security. Real peace."
-        case .vacation:
-            return appState.onboardingGoalName.isEmpty ? "Actual adventures" : "Your \(appState.onboardingGoalName) trip"
-        case .debtFree:
-            return "Freedom from debt"
-        case .retirement:
-            return "Your future self, set"
-        case .downPayment:
-            return "Keys to your place"
-        case .car:
-            return "Your new car"
-        case .bigPurchase:
-            return appState.onboardingGoalName.isEmpty ? "What you actually want" : appState.onboardingGoalName
-        case .justStop:
-            return "More time enjoying life"
-        }
+        let displayName = getGoalDisplayName(
+            goalType: appState.onboardingGoalType,
+            goalName: appState.onboardingGoalName.isEmpty ? nil : appState.onboardingGoalName
+        )
+        return displayName
     }
     
     private var positivePathIcon: String {
@@ -601,7 +588,7 @@ struct OnboardingCommitmentView: View {
                         )
                         
                         VStack(spacing: SpendLessSpacing.sm) {
-                            ForEach(letterOptions.prefix(6)) { option in
+                            ForEach(letterOptions.prefix(4)) { option in
                                 Button {
                                     selectedLetterOption = option
                                     appState.onboardingFutureLetterText = option.text
@@ -1409,7 +1396,138 @@ struct OnboardingConfirmationView: View {
     }
 }
 
-// MARK: - Screen 14: How It Works
+// MARK: - Screen 14: Notification Permission
+
+struct OnboardingNotificationPermissionView: View {
+    let onContinue: () -> Void
+    
+    @State private var isRequestingPermission = false
+    private let authStatus = AuthorizationCenter.shared.authorizationStatus
+    private var isScreenTimeAuthorized: Bool {
+        authStatus == .approved
+    }
+    
+    var body: some View {
+        OnboardingContainer(step: .notificationPermission) {
+            VStack(spacing: SpendLessSpacing.lg) {
+                Spacer()
+                
+                // Check if Screen Time is authorized
+                if isScreenTimeAuthorized {
+                    // Show notification permission request UI
+                    notificationPermissionContent
+                } else {
+                    // Shield not accepted - just show continue button
+                    skipContent
+                }
+                
+                Spacer()
+                
+                // Button stack
+                VStack(spacing: SpendLessSpacing.md) {
+                    PrimaryButton(
+                        isScreenTimeAuthorized ? "Enable Notifications" : "Continue",
+                        icon: isScreenTimeAuthorized ? "bell.fill" : "arrow.right",
+                        isLoading: isRequestingPermission
+                    ) {
+                        if isScreenTimeAuthorized {
+                            requestNotificationPermission()
+                        } else {
+                            onContinue()
+                        }
+                    }
+                    
+                    // Show "Not right now" option only when Screen Time is authorized
+                    if isScreenTimeAuthorized {
+                        SecondaryButton("Not right now") {
+                            onContinue()
+                        }
+                    }
+                }
+                .padding(.horizontal, SpendLessSpacing.lg)
+                .padding(.bottom, SpendLessSpacing.xl)
+            }
+        }
+    }
+    
+    private var notificationPermissionContent: some View {
+        VStack(spacing: SpendLessSpacing.md) {
+            Image(systemName: "bell.circle.fill")
+                .font(.system(size: 80))
+                .foregroundStyle(Color.spendLessPrimary)
+            
+            VStack(spacing: SpendLessSpacing.sm) {
+                Text("Stay on track with notifications")
+                    .font(SpendLessFont.title2)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                    .multilineTextAlignment(.center)
+                
+                VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
+                    featureRow(icon: "clock.fill", text: "Remind you when temporary access ends")
+                    featureRow(icon: "hand.raised.fill", text: "Celebrate your progress and milestones")
+                    featureRow(icon: "sparkles", text: "Keep you motivated with timely updates")
+                }
+                .padding(.top, SpendLessSpacing.sm)
+                
+                Text("You can change this later in Settings.")
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextMuted)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, SpendLessSpacing.sm)
+            }
+            .padding(.horizontal, SpendLessSpacing.lg)
+        }
+    }
+    
+    private var skipContent: some View {
+        VStack(spacing: SpendLessSpacing.md) {
+            Image(systemName: "arrow.right.circle.fill")
+                .font(.system(size: 80))
+                .foregroundStyle(Color.spendLessPrimary)
+            
+            VStack(spacing: SpendLessSpacing.sm) {
+                Text("Almost there!")
+                    .font(SpendLessFont.title2)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                
+                Text("You're all set to start protecting your spending.")
+                    .font(SpendLessFont.body)
+                    .foregroundStyle(Color.spendLessTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, SpendLessSpacing.lg)
+            }
+        }
+    }
+    
+    private func featureRow(icon: String, text: String) -> some View {
+        HStack(spacing: SpendLessSpacing.sm) {
+            Image(systemName: icon)
+                .foregroundStyle(Color.spendLessSecondary)
+                .frame(width: 24)
+            Text(text)
+                .font(SpendLessFont.body)
+                .foregroundStyle(Color.spendLessTextPrimary)
+        }
+    }
+    
+    @MainActor
+    private func requestNotificationPermission() {
+        isRequestingPermission = true
+        
+        Task {
+            // Request permission - this will trigger the system dialog
+            // Must be called from main thread context
+            _ = await NotificationManager.shared.requestPermission()
+            
+            isRequestingPermission = false
+            // Continue regardless of whether permission was granted
+            // User can enable later in Settings if needed
+            onContinue()
+        }
+    }
+}
+
+// MARK: - Screen 15: How It Works
 
 struct OnboardingHowItWorksView: View {
     let onContinue: () -> Void
@@ -1438,7 +1556,17 @@ struct OnboardingHowItWorksView: View {
                             .tag(index)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .always))
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                
+                // Custom page indicator with black dots
+                HStack(spacing: SpendLessSpacing.xs) {
+                    ForEach(0..<slides.count, id: \.self) { index in
+                        Circle()
+                            .fill(index == currentSlide ? Color.spendLessTextPrimary : Color.spendLessTextPrimary.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .padding(.top, SpendLessSpacing.sm)
                 
                 Text("Most impulses don't survive 7 days.")
                     .font(SpendLessFont.bodyBold)

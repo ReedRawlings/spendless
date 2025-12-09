@@ -11,9 +11,9 @@ struct PurchaseReflectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     let item: WaitingListItem
-    let onConfirm: (PurchaseFeeling?) -> Void
+    let onConfirm: (PurchaseReason?) -> Void
     
-    @State private var selectedFeeling: PurchaseFeeling?
+    @State private var selectedReason: PurchaseReason?
     
     var body: some View {
         NavigationStack {
@@ -26,13 +26,20 @@ struct PurchaseReflectionSheet: View {
                         Text("🛍️")
                             .font(.system(size: 50))
                         
-                        Text("You waited \(item.daysWaited) days")
-                            .font(SpendLessFont.title2)
-                            .foregroundStyle(Color.spendLessPrimary)
+                        if item.isExpired {
+                            Text("You waited \(item.daysWaited) days")
+                                .font(SpendLessFont.title2)
+                                .foregroundStyle(Color.spendLessPrimary)
+                        } else {
+                            Text("You've waited \(item.daysWaited) days")
+                                .font(SpendLessFont.title2)
+                                .foregroundStyle(Color.spendLessPrimary)
+                        }
                         
-                        Text("Quick reflection before you go:")
+                        Text("What made you decide to purchase?")
                             .font(SpendLessFont.body)
                             .foregroundStyle(Color.spendLessTextSecondary)
+                            .multilineTextAlignment(.center)
                     }
                     .padding(.top, SpendLessSpacing.xl)
                     
@@ -52,24 +59,18 @@ struct PurchaseReflectionSheet: View {
                     }
                     .padding(.horizontal, SpendLessSpacing.md)
                     
-                    // Question
-                    Text("Was this...")
-                        .font(SpendLessFont.headline)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, SpendLessSpacing.md)
-                        .padding(.top, SpendLessSpacing.sm)
-                    
-                    // Feeling options
+                    // Reason options
                     VStack(spacing: SpendLessSpacing.sm) {
-                        ForEach(PurchaseFeeling.allCases) { feeling in
-                            FeelingOptionCard(
-                                title: feeling.displayName,
-                                icon: feeling.icon,
-                                isSelected: selectedFeeling == feeling
+                        ForEach(PurchaseReason.allCases) { reason in
+                            ReasonOptionCard(
+                                title: reason.displayName,
+                                description: reason.description,
+                                icon: reason.icon,
+                                isSelected: selectedReason == reason,
+                                isAligned: reason.isAligned
                             ) {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    selectedFeeling = feeling
+                                    selectedReason = reason
                                 }
                             }
                         }
@@ -80,10 +81,11 @@ struct PurchaseReflectionSheet: View {
                     
                     // Actions
                     VStack(spacing: SpendLessSpacing.sm) {
-                        PrimaryButton("Done", icon: "checkmark") {
-                            onConfirm(selectedFeeling)
+                        PrimaryButton("Continue", icon: "checkmark") {
+                            onConfirm(selectedReason)
                             dismiss()
                         }
+                        .disabled(selectedReason == nil)
                         
                         TextButton("Skip reflection") {
                             onConfirm(nil)
@@ -115,51 +117,68 @@ struct PurchaseReflectionSheet: View {
     }
 }
 
-// MARK: - Feeling Option Card
+// MARK: - Reason Option Card
 
-struct FeelingOptionCard: View {
+private struct ReasonOptionCard: View {
     let title: String
+    let description: String
     let icon: String
     let isSelected: Bool
+    let isAligned: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: SpendLessSpacing.md) {
-                Text(icon)
-                    .font(.title2)
-                
-                Text(title)
-                    .font(SpendLessFont.body)
-                    .foregroundStyle(Color.spendLessTextPrimary)
-                
-                Spacer()
-                
-                ZStack {
-                    Circle()
-                        .stroke(Color.spendLessTextMuted, lineWidth: 1.5)
-                        .frame(width: 24, height: 24)
-                        .opacity(isSelected ? 0 : 1)
+            VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                HStack(spacing: SpendLessSpacing.md) {
+                    Text(icon)
+                        .font(.title2)
                     
-                    if isSelected {
+                    Text(title)
+                        .font(SpendLessFont.bodyBold)
+                        .foregroundStyle(Color.spendLessTextPrimary)
+                    
+                    Spacer()
+                    
+                    ZStack {
                         Circle()
-                            .fill(Color.spendLessPrimary)
+                            .stroke(isAligned ? Color.spendLessSuccess : Color.spendLessTextMuted, lineWidth: 1.5)
                             .frame(width: 24, height: 24)
+                            .opacity(isSelected ? 0 : 1)
                         
-                        Image(systemName: "checkmark")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.white)
+                        if isSelected {
+                            Circle()
+                                .fill(isAligned ? Color.spendLessSuccess : Color.spendLessPrimary)
+                                .frame(width: 24, height: 24)
+                            
+                            Image(systemName: "checkmark")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.white)
+                        }
                     }
                 }
+                
+                Text(description)
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 40) // Align with icon
             }
             .padding(SpendLessSpacing.md)
             .background(
                 RoundedRectangle(cornerRadius: SpendLessRadius.md)
-                    .fill(isSelected ? Color.spendLessPrimaryLight.opacity(0.15) : Color.spendLessCardBackground)
+                    .fill(isSelected 
+                        ? (isAligned ? Color.spendLessSuccess.opacity(0.1) : Color.spendLessPrimaryLight.opacity(0.15))
+                        : Color.spendLessCardBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: SpendLessRadius.md)
-                    .strokeBorder(isSelected ? Color.spendLessPrimary : Color.clear, lineWidth: 2)
+                    .strokeBorder(
+                        isSelected 
+                            ? (isAligned ? Color.spendLessSuccess : Color.spendLessPrimary)
+                            : Color.clear, 
+                        lineWidth: 2
+                    )
             )
         }
         .buttonStyle(.plain)
@@ -171,8 +190,8 @@ struct FeelingOptionCard: View {
 #Preview {
     PurchaseReflectionSheet(
         item: WaitingListItem.sampleItems[1]
-    ) { feeling in
-        print("Selected: \(feeling?.displayName ?? "skipped")")
+    ) { reason in
+        print("Selected: \(reason?.displayName ?? "skipped")")
     }
 }
 

@@ -7,26 +7,47 @@
 
 import Foundation
 
+// MARK: - Goal Display Name Helper
+
+/// Returns the proper goal display name for commitment screens.
+/// Uses the goal type's default name rather than reason phrases.
+func getGoalDisplayName(goalType: GoalType, goalName: String?) -> String {
+    // Check if goalName looks like a reason phrase (contains common reason words)
+    // vs a real goal name. If it's a reason, use the goal type default instead.
+    if let name = goalName, !name.isEmpty {
+        let lowercased = name.lowercased()
+        // Common reason phrase patterns
+        let reasonPatterns = ["over", "experiences", "memories", "freedom", "security", "safety", "anxiety", "remorse", "purpose", "impulse"]
+        let isReasonPhrase = reasonPatterns.contains { lowercased.contains($0) }
+        
+        // If it's not a reason phrase, it's likely a real goal name
+        if !isReasonPhrase {
+            return name
+        }
+    }
+    
+    // Use goal type default names
+    switch goalType {
+    case .vacation: return "Dream Vacation"
+    case .emergency: return "Emergency Fund"
+    case .debtFree: return "Freedom from Debt"
+    case .downPayment: return "Down Payment"
+    case .car: return "New Car"
+    case .bigPurchase: return "Big Purchase"
+    case .retirement: return "Retirement"
+    case .justStop: return "Financial Freedom"
+    }
+}
+
 // MARK: - Commitment Text Generation
 
 func generateCommitmentText(goalType: GoalType, goalName: String?) -> String {
-    if let name = goalName, !name.isEmpty {
-        return "I choose \(name) over clutter.\n\nEvery dollar I don't waste brings me closer."
-    } else if goalType != .justStop {
-        let goalTypeName: String
-        switch goalType {
-        case .vacation: goalTypeName = "my dream vacation"
-        case .emergency: goalTypeName = "my emergency fund"
-        case .debtFree: goalTypeName = "freedom from debt"
-        case .downPayment: goalTypeName = "my down payment"
-        case .car: goalTypeName = "my car"
-        case .bigPurchase: goalTypeName = "what I actually need"
-        case .retirement: goalTypeName = "my retirement"
-        case .justStop: goalTypeName = "freedom"
-        }
-        return "I choose \(goalTypeName) over clutter.\n\nEvery dollar I don't waste brings me closer."
-    } else {
+    let displayName = getGoalDisplayName(goalType: goalType, goalName: goalName)
+    
+    if goalType == .justStop {
         return "I choose freedom over stuff.\n\nI will pause before I purchase."
+    } else {
+        return "I choose \(displayName) over clutter.\n\nEvery dollar I don't waste brings me closer."
     }
 }
 
@@ -83,11 +104,6 @@ func getFutureSelfLetterOptions(goalName: String? = nil) -> [FutureSelfLetterOpt
     return [
         // Motivation-focused
         FutureSelfLetterOption(
-            id: "motivation_1",
-            text: "Remember why you started. Every 'no' gets you closer to \(goalText).",
-            category: .motivation
-        ),
-        FutureSelfLetterOption(
             id: "motivation_2",
             text: "You're stronger than this urge. The feeling will pass.",
             category: .motivation
@@ -107,11 +123,6 @@ func getFutureSelfLetterOptions(goalName: String? = nil) -> [FutureSelfLetterOpt
         FutureSelfLetterOption(
             id: "reminder_2",
             text: "Sales come back. This feeling won't last.",
-            category: .reminder
-        ),
-        FutureSelfLetterOption(
-            id: "reminder_3",
-            text: "Nothing good comes from impulse shopping. Sleep on it.",
             category: .reminder
         ),
         
@@ -156,8 +167,7 @@ func getFutureSelfLetterOptions(goalName: String? = nil) -> [FutureSelfLetterOpt
 func generatePlaceholderText(triggers: Set<ShoppingTrigger>, goalName: String? = nil) -> String {
     // Use primary trigger (first trigger) for personalized placeholder
     guard let primaryTrigger = primaryTrigger(from: triggers) else {
-        let goalText = goalName ?? "your goal"
-        return "Remember why you started. Every 'no' gets you closer to \(goalText)."
+        return "You're stronger than this urge. The feeling will pass."
     }
     
     switch primaryTrigger {

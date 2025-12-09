@@ -26,6 +26,7 @@ final class AppState {
     
     // MARK: - Deep Linking
     var pendingDeepLink: String? = nil
+    var pendingWaitingListItemID: String? = nil
     
     // MARK: - Subscription State
     var subscriptionService = SubscriptionService.shared

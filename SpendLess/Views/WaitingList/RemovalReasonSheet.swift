@@ -137,7 +137,7 @@ struct RemovalReasonSheet: View {
 
 // MARK: - Reason Option Card
 
-struct ReasonOptionCard: View {
+private struct ReasonOptionCard: View {
     let title: String
     let icon: String
     let isSelected: Bool

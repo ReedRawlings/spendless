@@ -17,10 +17,10 @@ struct BreathingExercise: View {
     @State private var isActive = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
-    // 4-7-8 breathing pattern
+    // 4-4-4 breathing pattern
     private let inhaleTime: TimeInterval = 4
-    private let holdTime: TimeInterval = 7
-    private let exhaleTime: TimeInterval = 8
+    private let holdTime: TimeInterval = 4
+    private let exhaleTime: TimeInterval = 4
     
     init(duration: TimeInterval = 60, onComplete: @escaping () -> Void) {
         self.duration = duration
@@ -172,11 +172,19 @@ struct QuickBreathingExercise: View {
     let onComplete: () -> Void
     
     @State private var breathCount = 0
+    @State private var phase: QuickBreathingPhase = .inhale
     @State private var circleScale: CGFloat = 0.5
-    @State private var isAnimating = false
+    @State private var secondsRemaining = 4
+    @State private var isActive = true
+    @State private var countdownTimer: Timer?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     private let totalBreaths = 3
+    
+    // 4-4-4 breathing pattern
+    private let inhaleTime: TimeInterval = 4
+    private let holdTime: TimeInterval = 4
+    private let exhaleTime: TimeInterval = 4
     
     var body: some View {
         VStack(spacing: SpendLessSpacing.lg) {
@@ -192,40 +200,105 @@ struct QuickBreathingExercise: View {
                 Circle()
                     .fill(Color.spendLessPrimary.opacity(0.5))
                     .frame(width: 150 * circleScale, height: 150 * circleScale)
+                
+                VStack(spacing: SpendLessSpacing.xs) {
+                    Text(phase.instruction)
+                        .font(SpendLessFont.body)
+                        .foregroundStyle(Color.spendLessTextPrimary)
+                    
+                    Text("\(secondsRemaining)")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.spendLessTextSecondary)
+                        .monospacedDigit()
+                }
             }
-            
-            Text(isAnimating ? "Breathe out" : "Breathe in")
-                .font(SpendLessFont.body)
-                .foregroundStyle(Color.spendLessTextSecondary)
         }
         .onAppear {
             startBreathing()
         }
+        .onDisappear {
+            isActive = false
+            countdownTimer?.invalidate()
+            countdownTimer = nil
+        }
     }
     
     private func startBreathing() {
-        guard breathCount < totalBreaths else {
-            onComplete()
+        guard isActive && breathCount < totalBreaths else {
+            if breathCount >= totalBreaths {
+                onComplete()
+            }
             return
         }
         
-        // Inhale
-        isAnimating = false
-        withAnimation(.easeInOut(duration: reduceMotion ? 0.3 : 2)) {
-            circleScale = 1.0
+        // Start with inhale
+        phase = .inhale
+        secondsRemaining = reduceMotion ? 1 : 4
+        animateCircle(scale: 1.0, duration: reduceMotion ? 0.3 : inhaleTime) {
+            guard self.isActive else { return }
+            
+            // Hold
+            self.phase = .hold
+            self.secondsRemaining = self.reduceMotion ? 1 : 4
+            DispatchQueue.main.asyncAfter(deadline: .now() + (self.reduceMotion ? 0.5 : self.holdTime)) {
+                guard self.isActive else { return }
+                
+                // Exhale
+                self.phase = .exhale
+                self.secondsRemaining = self.reduceMotion ? 1 : 4
+                self.animateCircle(scale: 0.5, duration: self.reduceMotion ? 0.3 : self.exhaleTime) {
+                    // Breath complete
+                    self.breathCount += 1
+                    self.startBreathing()
+                }
+            }
         }
+    }
+    
+    private func animateCircle(scale: CGFloat, duration: TimeInterval, completion: @escaping () -> Void) {
+        // Cancel any existing timer
+        countdownTimer?.invalidate()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0.5 : 2)) {
-            // Exhale
-            self.isAnimating = true
-            withAnimation(.easeInOut(duration: self.reduceMotion ? 0.3 : 2)) {
-                self.circleScale = 0.5
+        // Start countdown
+        let totalSeconds = Int(duration)
+        secondsRemaining = totalSeconds
+        
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+            guard self.isActive else {
+                timer.invalidate()
+                return
             }
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + (self.reduceMotion ? 0.5 : 2)) {
-                self.breathCount += 1
-                self.startBreathing()
+            if self.secondsRemaining > 0 {
+                self.secondsRemaining -= 1
+            } else {
+                timer.invalidate()
+                self.countdownTimer = nil
             }
+        }
+        
+        withAnimation(.easeInOut(duration: duration)) {
+            circleScale = scale
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            self.countdownTimer?.invalidate()
+            self.countdownTimer = nil
+            completion()
+        }
+    }
+}
+
+enum QuickBreathingPhase {
+    case inhale
+    case hold
+    case exhale
+    
+    var instruction: String {
+        switch self {
+        case .inhale: return "Breathe in..."
+        case .hold: return "Hold..."
+        case .exhale: return "Breathe out..."
         }
     }
 }

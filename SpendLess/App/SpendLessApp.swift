@@ -113,19 +113,7 @@ struct SpendLessApp: App {
         // Set up notification delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
         
-        // Request notification permission on first launch
-        Task { @MainActor in
-            await Self.requestNotificationPermissionIfNeeded()
-        }
-    }
-    
-    // MARK: - Notification Permission
-    
-    private static func requestNotificationPermissionIfNeeded() async {
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        if settings.authorizationStatus == .notDetermined {
-            _ = await NotificationManager.shared.requestPermission()
-        }
+        // Notification permission will be requested during onboarding after shield acceptance
     }
     
     // MARK: - Body
@@ -176,8 +164,16 @@ struct SpendLessApp: App {
             
         case "dashboard":
             // Navigate to dashboard (from notification)
-            // TODO: Navigation design needs to be finalized - currently just sets a flag
             appState.pendingDeepLink = "dashboard"
+            
+        case "waitinglist":
+            // Navigate to waiting list with specific item: spendless://waitinglist/{itemID}
+            // Extract item ID from path
+            let pathComponents = url.pathComponents.filter { $0 != "/" }
+            if let itemIDString = pathComponents.first {
+                appState.pendingWaitingListItemID = itemIDString
+            }
+            appState.pendingDeepLink = "waitinglist"
             
         default:
             break
@@ -282,6 +278,9 @@ struct RootView: View {
                 // Process pending email submissions
                 processPendingEmailSubmissions()
                 
+                // Process pending waiting list notification actions
+                processPendingWaitingListActions()
+                
                 // Check for expired sessions and handle restoration
                 Task { @MainActor in
                     ShieldSessionManager.shared.checkSessions()
@@ -300,6 +299,8 @@ struct RootView: View {
                 ShieldSessionManager.shared.checkSessions()
                 // Process any pending events from extensions
                 processExtensionEvents()
+                // Process pending waiting list notification actions
+                processPendingWaitingListActions()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
@@ -386,8 +387,16 @@ struct RootView: View {
             
         case "dashboard":
             // Navigate to dashboard (from notification)
-            // TODO: Navigation design needs to be finalized - currently just sets a flag
             appState.pendingDeepLink = "dashboard"
+            
+        case "waitinglist":
+            // Navigate to waiting list with specific item: spendless://waitinglist/{itemID}
+            // Extract item ID from path
+            let pathComponents = url.pathComponents.filter { $0 != "/" }
+            if let itemIDString = pathComponents.first {
+                appState.pendingWaitingListItemID = itemIDString
+            }
+            appState.pendingDeepLink = "waitinglist"
             
         default:
             break
@@ -419,6 +428,77 @@ struct RootView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Pending Waiting List Actions
+    
+    /// Process any pending waiting list actions from notification background actions
+    private func processPendingWaitingListActions() {
+        let pendingActions = NotificationManager.shared.getAllPendingWaitingListActions()
+        
+        guard !pendingActions.isEmpty else { return }
+        
+        print("[RootView] Processing \(pendingActions.count) pending waiting list actions")
+        
+        // Fetch all waiting list items
+        let descriptor = FetchDescriptor<WaitingListItem>()
+        guard let items = try? modelContext.fetch(descriptor) else {
+            print("[RootView] Failed to fetch waiting list items")
+            return
+        }
+        
+        // Fetch active goal for adding savings
+        let goalDescriptor = FetchDescriptor<UserGoal>(predicate: #Predicate { $0.isActive })
+        let goals = try? modelContext.fetch(goalDescriptor)
+        let currentGoal = goals?.first
+        
+        for (itemIDString, action) in pendingActions {
+            guard let itemID = UUID(uuidString: itemIDString),
+                  let item = items.first(where: { $0.id == itemID }) else {
+                // Item not found, clear the action
+                NotificationManager.shared.clearPendingWaitingListAction(for: itemIDString)
+                print("[RootView] Item \(itemIDString) not found, clearing action")
+                continue
+            }
+            
+            switch action {
+            case "keepOnList":
+                // Record a check-in
+                item.recordCheckin()
+                print("[RootView] Recorded check-in for '\(item.name)'")
+                
+            case "buryIt":
+                // Cancel notifications
+                NotificationManager.shared.cancelWaitingListNotifications(for: item.id)
+                
+                // Create graveyard item
+                let graveyardItem = GraveyardItem(
+                    from: item,
+                    source: .waitingList,
+                    removalReason: .urgePassed,
+                    removalReasonNote: "Buried via notification"
+                )
+                modelContext.insert(graveyardItem)
+                
+                // Update goal
+                if let goal = currentGoal {
+                    goal.addSavings(item.amount)
+                }
+                
+                // Delete waiting list item
+                modelContext.delete(item)
+                print("[RootView] Buried '\(item.name)' from notification action")
+                
+            default:
+                print("[RootView] Unknown action '\(action)' for item \(itemIDString)")
+            }
+            
+            // Clear the processed action
+            NotificationManager.shared.clearPendingWaitingListAction(for: itemIDString)
+        }
+        
+        // Save all changes
+        try? modelContext.save()
     }
 }
 

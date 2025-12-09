@@ -44,6 +44,8 @@ struct ToolsListView: View {
                 OpportunityCostView()
             case .pricePerWear:
                 PricePerWearView()
+            case .lifeEnergyCalculator:
+                LifeEnergyCalculatorView()
             case .thirtyXRule:
                 ThirtyXRuleView()
             case .spendingAudit:
