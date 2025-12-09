@@ -53,7 +53,7 @@ enum AppConstants {
     /// Set to true to enable screenshot demo mode with fake/seeded data for App Store screenshots
     /// IMPORTANT: Set to false before shipping to production
     /// This flag injects optimized ASO keywords and demo data into views
-    static let isScreenshotMode = true
+    static let isScreenshotMode = false
     
     // MARK: - ConvertKit Configuration
     
