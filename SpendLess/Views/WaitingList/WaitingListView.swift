@@ -310,9 +310,13 @@ struct WaitingListView: View {
         
         // Delete waiting list item
         modelContext.delete(item)
-        
-        try? modelContext.save()
-        
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save after burying item: \(error.localizedDescription)")
+        }
+
         // Show celebration
         celebrationAmount = item.amount
         showCelebration = true
@@ -343,8 +347,12 @@ struct WaitingListView: View {
         
         // Remove from waiting list - no judgment
         modelContext.delete(item)
-        try? modelContext.save()
-        
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save after purchase: \(error.localizedDescription)")
+        }
+
         // Light haptic
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
@@ -357,9 +365,13 @@ struct WaitingListView: View {
         if item.checkinCount >= 3 && !item.isExpired {
             item.extendWaitingPeriod(days: 2)
         }
-        
-        try? modelContext.save()
-        
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save after check-in: \(error.localizedDescription)")
+        }
+
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
     }
@@ -737,8 +749,12 @@ struct AddToWaitingListSheet: View {
         )
         item.pricePerWearEstimate = pricePerWearEstimate
         modelContext.insert(item)
-        try? modelContext.save()
-        
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save new waiting list item: \(error.localizedDescription)")
+        }
+
         // Schedule Day 3 and Day 6 notifications
         NotificationManager.shared.scheduleWaitingListNotifications(
             itemID: item.id,

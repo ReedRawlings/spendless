@@ -109,8 +109,12 @@ nonisolated class ShieldActionExtension: ShieldActionDelegate {
     // MARK: - Helpers
     
     private func addToSavings(_ amount: Double) {
-        let currentSaved = sharedDefaults?.double(forKey: "totalSaved") ?? 0
-        sharedDefaults?.set(currentSaved + amount, forKey: "totalSaved")
+        // Read as String to preserve Decimal precision (with fallback for legacy Double values)
+        let currentString = sharedDefaults?.string(forKey: "totalSaved") ?? "0"
+        let current = Decimal(string: currentString) ?? Decimal(sharedDefaults?.double(forKey: "totalSaved") ?? 0)
+        let newAmount = current + Decimal(amount)
+        // Store as String to preserve precision
+        sharedDefaults?.set("\(newAmount)", forKey: "totalSaved")
     }
     
     private func logIntercept(outcome: String) {

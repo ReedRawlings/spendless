@@ -25,7 +25,9 @@ nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         
         // Load user's streak and savings from shared defaults
         let currentStreak = sharedDefaults?.integer(forKey: "currentStreak") ?? 0
-        let totalSaved = sharedDefaults?.double(forKey: "totalSaved") ?? 0
+        // Read as String for precision (with fallback for legacy Double values)
+        let totalSavedString = sharedDefaults?.string(forKey: "totalSaved") ?? "0"
+        let totalSaved = Decimal(string: totalSavedString) ?? Decimal(sharedDefaults?.double(forKey: "totalSaved") ?? 0)
         let futureLetterText = sharedDefaults?.string(forKey: "futureLetterText")
         
         // Log shield appearance for analytics
@@ -36,7 +38,7 @@ nonisolated class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         if let letterText = futureLetterText, !letterText.isEmpty {
             subtitleText = letterText
         } else if currentStreak > 0 && totalSaved > 0 {
-            subtitleText = "You've been shopping-free for \(currentStreak) days.\nYou've saved $\(Int(totalSaved)) so far.\n\nNeed access? You can unlock for 10 minutes."
+            subtitleText = "You've been shopping-free for \(currentStreak) days.\nYou've saved $\(NSDecimalNumber(decimal: totalSaved).intValue) so far.\n\nNeed access? You can unlock for 10 minutes."
         } else if currentStreak > 0 {
             subtitleText = "You've been shopping-free for \(currentStreak) days.\n\nNeed access? You can unlock for 10 minutes."
         } else {

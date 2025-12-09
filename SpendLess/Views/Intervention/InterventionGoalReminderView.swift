@@ -18,7 +18,10 @@ struct InterventionGoalReminderView: View {
     }
 
     private var savedAmount: Double {
-        UserDefaults(suiteName: AppConstants.appGroupID)?.double(forKey: "savedAmount") ?? 0
+        // Read as String for precision (with fallback for legacy Double values)
+        let defaults = UserDefaults(suiteName: AppConstants.appGroupID)
+        let savedString = defaults?.string(forKey: "savedAmount") ?? "0"
+        return Double(savedString) ?? defaults?.double(forKey: "savedAmount") ?? 0
     }
 
     private var targetAmount: Double {

@@ -316,8 +316,12 @@ final class InterventionManager {
     // MARK: - Private Helpers
     
     private func addToSavings(amount: Decimal) {
-        let current = sharedDefaults?.double(forKey: "savedAmount") ?? 0
-        sharedDefaults?.set(current + NSDecimalNumber(decimal: amount).doubleValue, forKey: "savedAmount")
+        // Read as String to preserve Decimal precision
+        let currentString = sharedDefaults?.string(forKey: "savedAmount") ?? "0"
+        let current = Decimal(string: currentString) ?? 0
+        let newAmount = current + amount
+        // Store as String to preserve precision
+        sharedDefaults?.set("\(newAmount)", forKey: "savedAmount")
     }
     
     private func incrementResistCount() {
@@ -331,8 +335,9 @@ final class InterventionManager {
         sharedDefaults?.integer(forKey: "resistCount") ?? 0
     }
     
-    var savedAmount: Double {
-        sharedDefaults?.double(forKey: "savedAmount") ?? 0
+    var savedAmount: Decimal {
+        let string = sharedDefaults?.string(forKey: "savedAmount") ?? "0"
+        return Decimal(string: string) ?? 0
     }
     
     var goalName: String {
@@ -349,7 +354,8 @@ final class InterventionManager {
     
     var progress: Double {
         guard targetAmount > 0 else { return 0 }
-        return min(savedAmount / targetAmount, 1.0)
+        let savedDouble = NSDecimalNumber(decimal: savedAmount).doubleValue
+        return min(savedDouble / targetAmount, 1.0)
     }
     
     // MARK: - HALT Check Result Persistence
