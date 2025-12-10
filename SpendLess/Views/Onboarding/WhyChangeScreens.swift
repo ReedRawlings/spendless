@@ -8,6 +8,38 @@
 
 import SwiftUI
 
+// MARK: - Psychology Intro Screen
+
+struct PsychologyIntroView: View {
+    let onContinue: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.spendLessSecondary
+                .ignoresSafeArea()
+
+            VStack(spacing: SpendLessSpacing.xl) {
+                Spacer()
+
+                Text("The Psychology of Shopping")
+                    .font(.custom("Snell Roundhand", size: 48))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, SpendLessSpacing.xl)
+
+                Spacer()
+
+                WhyChangeNextButton {
+                    onContinue()
+                }
+                .padding(.horizontal, SpendLessSpacing.lg)
+                .padding(.bottom, SpendLessSpacing.xl)
+            }
+        }
+        .navigationBarBackButtonHidden(false)
+    }
+}
+
 // MARK: - Shared Screen Template
 
 struct WhyChangeScreen: View {

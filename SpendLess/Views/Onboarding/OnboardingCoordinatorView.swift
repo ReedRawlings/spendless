@@ -20,6 +20,8 @@ struct OnboardingCoordinatorView: View {
         case behaviors
         case timing
         case problemApps
+        // Psychology intro
+        case psychologyIntro
         // Why Change screens (emotional journey: pain → hope)
         case whyChange1
         case whyChange2
@@ -66,9 +68,11 @@ struct OnboardingCoordinatorView: View {
         case .behaviors:
             OnboardingBehaviorsView { navigateTo(.timing) }
         case .timing:
-            OnboardingTimingView { navigateTo(.whyChange1) } // Skip problemApps screen
+            OnboardingTimingView { navigateTo(.psychologyIntro) }
         case .problemApps:
-            OnboardingProblemAppsView { navigateTo(.whyChange1) } // Disabled but kept for future use
+            OnboardingProblemAppsView { navigateTo(.psychologyIntro) } // Disabled but kept for future use
+        case .psychologyIntro:
+            PsychologyIntroView { navigateTo(.whyChange1) }
         // Why Change screens
         case .whyChange1:
             WhyChange1View { navigateTo(.whyChange2) }
