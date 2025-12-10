@@ -64,9 +64,9 @@ struct OnboardingCoordinatorView: View {
         case .welcome:
             OnboardingWelcomeView { navigateTo(.behaviors) }
         case .behaviors:
-            OnboardingBehaviorsView { navigateTo(.timing) }
+            OnboardingBehaviorsView { navigateTo(.problemApps) } // Skip timing screen for now
         case .timing:
-            OnboardingTimingView { navigateTo(.problemApps) }
+            OnboardingTimingView { navigateTo(.problemApps) } // Disabled but kept for future use
         case .problemApps:
             OnboardingProblemAppsView { navigateTo(.whyChange1) }
         // Why Change screens
