@@ -258,12 +258,12 @@ struct WhyChange4View: View {
     
     private func whyChange4Body() -> AttributedString {
         var text = AttributedString("That trip. That debt paid off. That breathing room. ")
-        
+
         var bold = AttributedString("Future you wants those things.")
         bold.font = .system(size: 17, weight: .semibold, design: .rounded)
-        
-        let end = AttributedString(" But every impulse buy steals from her. She's not abstract—she's you, soon.")
-        
+
+        let end = AttributedString(" But every impulse buy steals from them. They're not abstract—they're you, soon.")
+
         text.append(bold)
         text.append(end)
         return text
