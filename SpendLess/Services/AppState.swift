@@ -44,6 +44,7 @@ final class AppState {
     var onboardingSignatureData: Data?
     var onboardingFutureLetterText: String?
     var onboardingCommitmentDate: Date?
+    var onboardingBlockShoppingWebsites: Bool = false
     
     // MARK: - Initialization
     private init() {
@@ -109,6 +110,7 @@ final class AppState {
         onboardingSignatureData = nil
         onboardingFutureLetterText = nil
         onboardingCommitmentDate = nil
+        onboardingBlockShoppingWebsites = false
     }
     
     // MARK: - Celebrations

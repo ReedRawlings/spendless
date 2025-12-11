@@ -1298,10 +1298,11 @@ struct OnboardingAppSelectionView: View {
 // MARK: - Screen 12: Website Blocking
 
 struct OnboardingWebsiteBlockingView: View {
+    @Environment(AppState.self) private var appState
     let onContinue: () -> Void
-    
-    @State private var blockAllShopping = false
-    
+
+    @State private var blockAllShopping = true  // Default to recommended option
+
     var body: some View {
         OnboardingContainer(step: .websiteBlocking) {
             VStack(spacing: SpendLessSpacing.lg) {
@@ -1309,7 +1310,7 @@ struct OnboardingWebsiteBlockingView: View {
                     Text("What about shopping in Safari?")
                         .font(SpendLessFont.title2)
                         .foregroundStyle(Color.spendLessTextPrimary)
-                    
+
                     Text("You can also shop through websites. Want to block those too?")
                         .font(SpendLessFont.body)
                         .foregroundStyle(Color.spendLessTextSecondary)
@@ -1317,7 +1318,7 @@ struct OnboardingWebsiteBlockingView: View {
                 }
                 .padding(.top, SpendLessSpacing.xl)
                 .padding(.horizontal, SpendLessSpacing.lg)
-                
+
                 VStack(spacing: SpendLessSpacing.sm) {
                     SelectionCard(
                         title: "Block all shopping websites",
@@ -1329,7 +1330,7 @@ struct OnboardingWebsiteBlockingView: View {
                         let generator = UIImpactFeedbackGenerator(style: .light)
                         generator.impactOccurred()
                     }
-                    
+
                     SelectionCard(
                         title: "Skip for now",
                         subtitle: "You can enable this later",
@@ -1342,10 +1343,12 @@ struct OnboardingWebsiteBlockingView: View {
                     }
                 }
                 .padding(.horizontal, SpendLessSpacing.md)
-                
+
                 Spacer()
-                
+
                 PrimaryButton("Continue") {
+                    // Save the selection to AppState
+                    appState.onboardingBlockShoppingWebsites = blockAllShopping
                     onContinue()
                 }
                 .padding(.horizontal, SpendLessSpacing.lg)
