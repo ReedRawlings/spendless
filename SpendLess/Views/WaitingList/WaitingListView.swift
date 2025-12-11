@@ -561,18 +561,10 @@ struct AddToWaitingListSheet: View {
     @State private var selectedReason: ReasonWanted?
     @State private var otherReasonNote = ""
     @State private var showReasonPicker = false
-    @State private var showPricePerWear = false
-    @State private var pricePerWearEstimate: Int?
+    @State private var numberOfWears: String = ""
     
     private var profile: UserProfile? {
         profiles.first
-    }
-    
-    private var lifeEnergyHours: Decimal? {
-        guard let hourlyWage = profile?.trueHourlyWage, hourlyWage > 0, itemAmount > 0 else {
-            return nil
-        }
-        return ToolCalculationService.lifeEnergyHours(amount: itemAmount, hourlyWage: hourlyWage)
     }
     
     var body: some View {
@@ -600,49 +592,34 @@ struct AddToWaitingListSheet: View {
                                 placeholder: "e.g., Wireless earbuds"
                             )
                             
-                            CurrencyTextField(
-                                title: "How much?",
-                                amount: $itemAmount
-                            )
-                            
-                            // Life energy hours (if hourly wage is configured)
-                            if let hours = lifeEnergyHours {
-                                HStack(spacing: SpendLessSpacing.xs) {
-                                    Text("⏱️")
-                                        .font(.caption)
-                                    Text("\(ToolCalculationService.formatLifeEnergyHours(hours)) of life")
-                                        .font(SpendLessFont.caption)
-                                        .foregroundStyle(Color.spendLessTextSecondary)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.leading, SpendLessSpacing.md)
-                            }
-                            
-                            // Optional: Calculate price per wear
-                            if itemAmount > 0 {
-                                Button {
-                                    showPricePerWear = true
-                                } label: {
-                                    HStack {
-                                        Text("👗")
-                                        Text("Calculate price per wear?")
-                                            .font(SpendLessFont.body)
-                                            .foregroundStyle(Color.spendLessPrimary)
-                                        Spacer()
-                                        if pricePerWearEstimate != nil {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundStyle(Color.spendLessSuccess)
-                                        } else {
-                                            Image(systemName: "chevron.right")
-                                                .foregroundStyle(Color.spendLessTextMuted)
-                                                .font(.caption)
+                            // Price and number of wears in a horizontal layout
+                            HStack(spacing: SpendLessSpacing.md) {
+                                CurrencyTextField(
+                                    title: "How much?",
+                                    amount: $itemAmount
+                                )
+                                
+                                // Number of wears field
+                                VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                                    Text("Number of wears?")
+                                        .font(SpendLessFont.subheadline)
+                                        .foregroundStyle(Color.spendLessTextPrimary)
+                                    
+                                    TextField("e.g., 50", text: $numberOfWears)
+                                        .font(SpendLessFont.title3)
+                                        .foregroundStyle(Color.spendLessTextPrimary)
+                                        .keyboardType(.numberPad)
+                                        .padding(SpendLessSpacing.md)
+                                        .background(Color.spendLessBackgroundSecondary)
+                                        .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                                        .onChange(of: numberOfWears) { _, newValue in
+                                            // Filter to only numbers
+                                            let filtered = newValue.filter { $0.isNumber }
+                                            if filtered != newValue {
+                                                numberOfWears = filtered
+                                            }
                                         }
-                                    }
-                                    .padding(SpendLessSpacing.md)
-                                    .background(Color.spendLessCardBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
                                 }
-                                .buttonStyle(.plain)
                             }
                             
                             // Why do you want this? picker
@@ -716,6 +693,7 @@ struct AddToWaitingListSheet: View {
                     )
                 }
             }
+            .hideKeyboardOnTap()
             .navigationTitle("Add Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -729,14 +707,6 @@ struct AddToWaitingListSheet: View {
                 ReasonWantedPicker(selectedReason: $selectedReason)
                     .presentationDetents([.medium])
             }
-            .fullScreenCover(isPresented: $showPricePerWear) {
-                NavigationStack {
-                    PricePerWearView(initialPrice: itemAmount) { estimate in
-                        pricePerWearEstimate = estimate
-                        showPricePerWear = false
-                    }
-                }
-            }
         }
     }
     
@@ -747,7 +717,10 @@ struct AddToWaitingListSheet: View {
             reasonWanted: selectedReason,
             reasonWantedNote: selectedReason == .other ? otherReasonNote : nil
         )
-        item.pricePerWearEstimate = pricePerWearEstimate
+        // Set price per wear estimate if number of wears was entered
+        if let wears = Int(numberOfWears), wears > 0 {
+            item.pricePerWearEstimate = wears
+        }
         modelContext.insert(item)
         do {
             try modelContext.save()

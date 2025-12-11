@@ -35,20 +35,6 @@ enum AppConstants {
         Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_API_KEY") as? String ?? "YOUR_REVENUECAT_API_KEY_HERE"
     }
 
-    // MARK: - Superwall Configuration
-
-    /// Superwall API Key - reads from Info.plist (populated by xcconfig)
-    static var superwallAPIKey: String {
-        Bundle.main.object(forInfoDictionaryKey: "SUPERWALL_API_KEY") as? String ?? "YOUR_SUPERWALL_API_KEY_HERE"
-    }
-    
-    // MARK: - Debug Configuration
-    
-    /// Set to true to use RevenueCat's built-in PaywallView instead of Superwall
-    /// Useful for testing purchase flow before Superwall dashboard is configured
-    /// Set to false for production or when Superwall is fully configured
-    static let useRevenueCatPaywallForTesting = false
-    
     // MARK: - Screenshot Mode Configuration
     
     /// Set to true to enable screenshot demo mode with fake/seeded data for App Store screenshots

@@ -43,11 +43,17 @@ final class UserProfile {
     var birthYear: Int? // For opportunity cost calculator
     
     // Tools - Life Energy Calculator
-    var trueHourlyWage: Decimal?
     var takeHomePay: Decimal?
     var payFrequencyRaw: String? // PayFrequency raw value
     var hoursWorkedPerWeek: Int?
-    var monthlyWorkExpenses: Decimal?
+    
+    // Cost of living (monthly estimates)
+    var monthlyHousing: Decimal?
+    var monthlyFood: Decimal?
+    var monthlyUtilities: Decimal?
+    var monthlyTransportation: Decimal?
+    var monthlyInsurance: Decimal?
+    var monthlyDebt: Decimal?
     
     // Lead Magnet / Email Collection
     var leadMagnetEmailCollected: Bool
@@ -78,11 +84,15 @@ final class UserProfile {
         self.dopamineMenuSelectedDefaultsRaw = []
         self.dopamineMenuCustomActivities = nil
         self.birthYear = nil
-        self.trueHourlyWage = nil
         self.takeHomePay = nil
         self.payFrequencyRaw = nil
         self.hoursWorkedPerWeek = nil
-        self.monthlyWorkExpenses = nil
+        self.monthlyHousing = nil
+        self.monthlyFood = nil
+        self.monthlyUtilities = nil
+        self.monthlyTransportation = nil
+        self.monthlyInsurance = nil
+        self.monthlyDebt = nil
         self.leadMagnetEmailCollected = false
         self.leadMagnetEmailAddress = nil
         self.leadMagnetOptedIntoMarketing = false
@@ -158,8 +168,39 @@ final class UserProfile {
         set { payFrequencyRaw = newValue?.rawValue }
     }
     
+    /// Monthly take-home pay (calculated from paycheck and frequency)
+    var monthlyTakeHome: Decimal? {
+        guard let pay = takeHomePay, let freq = payFrequency else { return nil }
+        return pay * freq.monthlyMultiplier
+    }
+    
+    /// Monthly work hours (calculated from hours per week)
+    var monthlyWorkHours: Decimal? {
+        guard let hours = hoursWorkedPerWeek else { return nil }
+        return Decimal(hours) * Decimal(4.33)
+    }
+    
+    /// True hourly wage (discretionary income per hour after cost of living)
+    var trueHourlyWage: Decimal? {
+        guard let income = monthlyTakeHome,
+              let hours = monthlyWorkHours else { return nil }
+        
+        let housing = monthlyHousing ?? 0
+        let food = monthlyFood ?? 0
+        let utilities = monthlyUtilities ?? 0
+        let transport = monthlyTransportation ?? 0
+        let insurance = monthlyInsurance ?? 0
+        let debt = monthlyDebt ?? 0
+        let costOfLiving = housing + food + utilities + transport + insurance + debt
+        
+        let discretionary = income - costOfLiving
+        guard discretionary > 0 else { return nil }
+        
+        return discretionary / hours
+    }
+    
     var hasConfiguredLifeEnergy: Bool {
-        trueHourlyWage != nil
+        takeHomePay != nil && payFrequency != nil && hoursWorkedPerWeek != nil
     }
     
     /// Calculate life energy hours for a given amount

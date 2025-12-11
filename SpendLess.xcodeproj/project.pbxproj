@@ -13,7 +13,6 @@
 		74290D012EDE90A00069BFB2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74290D002EDE90A00069BFB2 /* SwiftUI.framework */; };
 		74290D102EDE90A10069BFB2 /* PanicButtonWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 74290CFD2EDE90A00069BFB2 /* PanicButtonWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		74290D1D2EDEB4B80069BFB2 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 74290D1C2EDEB4B80069BFB2 /* Lottie */; };
-		744B2D1D2EE4B46300D93479 /* SuperwallKit in Frameworks */ = {isa = PBXBuildFile; productRef = 744B2D1C2EE4B46300D93479 /* SuperwallKit */; };
 		744B6C0F2EDE2AEF00804AB6 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 744B6C0E2EDE2AEF00804AB6 /* DeviceActivity.framework */; };
 		744B6C172EDE2AEF00804AB6 /* DeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 744B6C0C2EDE2AEF00804AB6 /* DeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		744B6C232EDE2B1C00804AB6 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 744B6C222EDE2B1C00804AB6 /* ManagedSettings.framework */; };
@@ -173,7 +172,6 @@
 				740A7B102EE4036B00C872C9 /* RevenueCat in Frameworks */,
 				740A7B112EE4036B00C872CA /* RevenueCatUI in Frameworks */,
 				74290D1D2EDEB4B80069BFB2 /* Lottie in Frameworks */,
-				744B2D1D2EE4B46300D93479 /* SuperwallKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,7 +291,6 @@
 				74290D1C2EDEB4B80069BFB2 /* Lottie */,
 				740A7B0F2EE4036B00C872C9 /* RevenueCat */,
 				740A7B0F2EE4036B00C872CA /* RevenueCatUI */,
-				744B2D1C2EE4B46300D93479 /* SuperwallKit */,
 			);
 			productName = SpendLess;
 			productReference = 744B6B922EDD59E600804AB6 /* SpendLess.app */;
@@ -404,7 +401,6 @@
 			packageReferences = (
 				74290D1B2EDEB4B80069BFB2 /* XCRemoteSwiftPackageReference "lottie-ios" */,
 				740A7B0E2EE4036B00C872C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
-				744B2D1B2EE4B46300D93479 /* XCRemoteSwiftPackageReference "Superwall-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 744B6B932EDD59E600804AB6 /* Products */;
@@ -1062,14 +1058,6 @@
 				minimumVersion = 4.5.2;
 			};
 		};
-		744B2D1B2EE4B46300D93479 /* XCRemoteSwiftPackageReference "Superwall-iOS" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/superwall/Superwall-iOS";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.10.6;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1087,11 +1075,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 74290D1B2EDEB4B80069BFB2 /* XCRemoteSwiftPackageReference "lottie-ios" */;
 			productName = Lottie;
-		};
-		744B2D1C2EE4B46300D93479 /* SuperwallKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 744B2D1B2EE4B46300D93479 /* XCRemoteSwiftPackageReference "Superwall-iOS" */;
-			productName = SuperwallKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -42,6 +42,9 @@ class SubscriptionService: NSObject {
     /// Error state
     var lastError: Error?
     
+    /// Whether Purchases has been configured
+    private var isConfigured: Bool = false
+    
     // MARK: - Subscription Status
     
     enum SubscriptionStatus {
@@ -65,6 +68,19 @@ class SubscriptionService: NSObject {
     /// Configure RevenueCat with API key
     /// Call this in app initialization
     func configure(apiKey: String) {
+        // Validate API key
+        guard !apiKey.isEmpty && apiKey != "YOUR_REVENUECAT_API_KEY_HERE" else {
+            print("⚠️ RevenueCat API key not configured. Please add your API key to Constants.swift")
+            print("⚠️ Purchases will not be configured. Some features may not work.")
+            return
+        }
+        
+        // Prevent double configuration
+        guard !isConfigured else {
+            print("⚠️ RevenueCat already configured. Skipping.")
+            return
+        }
+        
         // Detect Test Store vs Production
         let isTestStore = apiKey.hasPrefix("test_")
         let environment = isTestStore ? "Test Store" : "Production"
@@ -76,6 +92,7 @@ class SubscriptionService: NSObject {
         
         Purchases.logLevel = .debug // Change to .info or .warn for production
         Purchases.configure(withAPIKey: apiKey)
+        isConfigured = true
         
         // Set delegate AFTER configuration
         Purchases.shared.delegate = self
@@ -91,11 +108,19 @@ class SubscriptionService: NSObject {
         // Status will be checked lazily when needed (e.g., when Settings view appears)
     }
     
+    /// Check if Purchases is configured before accessing it
+    private func ensureConfigured() throws {
+        guard isConfigured else {
+            throw SubscriptionError.notConfigured
+        }
+    }
+    
     /// Verify Test Store setup and log configuration status
     func verifyTestStoreSetup() async {
         print("🔍 Verifying Test Store Setup...")
         
         do {
+            try ensureConfigured()
             // Attempt to fetch offerings
             let offerings = try await Purchases.shared.offerings()
             
@@ -168,6 +193,7 @@ class SubscriptionService: NSObject {
     func checkSubscriptionStatus() async {
         print("🔍 Checking subscription status...")
         do {
+            try ensureConfigured()
             print("   📡 Fetching customerInfo from RevenueCat...")
             // Add timeout to prevent hanging
             let customerInfo = try await withTimeout(seconds: 10) {
@@ -256,6 +282,7 @@ class SubscriptionService: NSObject {
     
     /// Get available packages (monthly, annual, etc.)
     func getAvailablePackages() async throws -> [Package] {
+        try ensureConfigured()
         print("📦 Fetching available packages from Test Store...")
         
         let offerings = try await Purchases.shared.offerings()
@@ -286,6 +313,7 @@ class SubscriptionService: NSObject {
     
     /// Purchase a package
     func purchase(_ package: Package) async throws -> CustomerInfo {
+        try ensureConfigured()
         print("💳 Starting purchase flow...")
         print("   Package: \(package.identifier)")
         print("   Product ID: \(package.storeProduct.productIdentifier)")
@@ -325,6 +353,7 @@ class SubscriptionService: NSObject {
     
     /// Restore purchases
     func restorePurchases() async throws {
+        try ensureConfigured()
         print("🔄 Restoring purchases...")
         let customerInfo = try await Purchases.shared.restorePurchases()
         self.customerInfo = customerInfo
@@ -342,6 +371,7 @@ class SubscriptionService: NSObject {
     
     /// Check if user can make purchases
     var canMakePurchases: Bool {
+        guard isConfigured else { return false }
         return Purchases.canMakePayments()
     }
     
@@ -381,11 +411,6 @@ extension SubscriptionService: PurchasesDelegate {
             }
             
             self.updateSubscriptionState(from: customerInfo)
-            
-            // Update Superwall subscription status when RevenueCat status changes
-            if SuperwallService.shared.isConfigured {
-                SuperwallService.shared.updateSuperwallSubscriptionStatus()
-            }
         }
     }
 }
@@ -396,6 +421,7 @@ enum SubscriptionError: LocalizedError {
     case noOfferingAvailable
     case purchaseFailed(String)
     case restoreFailed(String)
+    case notConfigured
     
     var errorDescription: String? {
         switch self {
@@ -405,6 +431,8 @@ enum SubscriptionError: LocalizedError {
             return "Purchase failed: \(message)"
         case .restoreFailed(let message):
             return "Restore failed: \(message)"
+        case .notConfigured:
+            return "RevenueCat has not been configured. Please configure your API key in Constants.swift"
         }
     }
 }

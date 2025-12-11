@@ -12,7 +12,6 @@ import FamilyControls
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
-    @Environment(SuperwallService.self) private var superwallService
     @Environment(\.scenePhase) private var scenePhase
     
     @Query private var profiles: [UserProfile]
@@ -26,23 +25,24 @@ struct SettingsView: View {
     @State private var showResetOnboardingConfirmation = false
     @State private var showDeleteAnalyticsConfirmation = false
     @State private var showEditGoal = false
+    @State private var showPaywall = false
     
     // Collapsible section states - organized by group
     // Core Features
-    @State private var isBlockingExpanded = true
-    @State private var isGoalExpanded = true
-    @State private var isSavingsExpanded = true
+    @State private var isBlockingExpanded = false
+    @State private var isGoalExpanded = false
+    @State private var isSavingsExpanded = false
     // Tools & Interventions
-    @State private var isToolsExpanded = true
-    @State private var isInterventionsExpanded = true
+    @State private var isToolsExpanded = false
+    @State private var isInterventionsExpanded = false
     // Account
-    @State private var isSubscriptionExpanded = true
-    @State private var isCommitmentExpanded = true
+    @State private var isSubscriptionExpanded = false
+    @State private var isCommitmentExpanded = false
     // Privacy & Notifications
     @State private var isAnalyticsExpanded = false
     @State private var isNotificationsExpanded = false
     // Help & Support
-    @State private var isResourcesExpanded = true
+    @State private var isResourcesExpanded = false
     @State private var isAboutExpanded = false
 
     private var profile: UserProfile? {
@@ -191,7 +191,7 @@ struct SettingsView: View {
                                 }
                             } else {
                                 Button {
-                                    superwallService.register(event: "campaign_trigger")
+                                    showPaywall = true
                                 } label: {
                                     Label("Upgrade to Pro", systemImage: "star.fill")
                                         .foregroundStyle(Color.spendLessPrimary)
@@ -423,6 +423,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showEditGoal) {
                 EditGoalSheet(goal: currentGoal)
+            }
+            .sheet(isPresented: $showPaywall) {
+                SpendLessPaywallView()
             }
             .alert("Reset Savings?", isPresented: $showResetConfirmation) {
                 Button("Cancel", role: .cancel) {}

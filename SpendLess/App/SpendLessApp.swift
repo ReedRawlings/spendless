@@ -79,10 +79,6 @@ struct SpendLessApp: App {
     
     @State private var subscriptionService = SubscriptionService.shared
     
-    // MARK: - Superwall Service
-    
-    @State private var superwallService = SuperwallService.shared
-    
     // MARK: - Session Manager
     
     @State private var sessionManager = ShieldSessionManager.shared
@@ -94,21 +90,8 @@ struct SpendLessApp: App {
     // MARK: - Initialization
     
     init() {
-        // Configure RevenueCat
-        // Note: Make sure to replace the API key in Constants.swift with your actual key
-        if AppConstants.revenueCatAPIKey != "YOUR_REVENUECAT_API_KEY_HERE" {
-            subscriptionService.configure(apiKey: AppConstants.revenueCatAPIKey)
-        } else {
-            print("⚠️ RevenueCat API key not configured. Please add your API key to Constants.swift")
-        }
-        
-        // Store Superwall API key (lazy configuration - won't trigger StoreKit on launch)
-        // Superwall will be configured when first paywall is requested
-        if AppConstants.superwallAPIKey != "YOUR_SUPERWALL_API_KEY_HERE" {
-            superwallService.setAPIKey(AppConstants.superwallAPIKey)
-        } else {
-            print("⚠️ Superwall API key not configured. Please add your API key to Constants.swift")
-        }
+        // Configure RevenueCat - always call configure, it will validate the key internally
+        subscriptionService.configure(apiKey: AppConstants.revenueCatAPIKey)
         
         // Set up notification delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
@@ -124,7 +107,6 @@ struct SpendLessApp: App {
                 .environment(appState)
                 .environment(interventionManager)
                 .environment(subscriptionService)
-                .environment(superwallService)
                 .onOpenURL { url in
                     handleDeepLink(url)
                 }
@@ -188,16 +170,11 @@ struct RootView: View {
     @Environment(AppState.self) private var appState
     @Environment(InterventionManager.self) private var interventionManager
     @Environment(SubscriptionService.self) private var subscriptionService
-    @Environment(SuperwallService.self) private var superwallService
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     
-    /// State for showing RevenueCat paywall (when using fallback mode)
-    @State private var showRevenueCatPaywall = false {
-        didSet {
-            print("📱 showRevenueCatPaywall changed to: \(showRevenueCatPaywall)")
-        }
-    }
+    /// State for showing RevenueCat paywall
+    @State private var showRevenueCatPaywall = false
     
     var body: some View {
         ZStack {
@@ -223,47 +200,23 @@ struct RootView: View {
         }
         .onChange(of: appState.shouldShowPaywallAfterOnboarding) { oldValue, newValue in
             if newValue && !oldValue {
-                print("🎯 Onboarding Complete - Paywall Trigger Flow")
-                print(String(repeating: "=", count: 50))
+                print("🎯 Onboarding Complete - Showing Paywall")
                 
-                // Check if using Test Store
-                let apiKey = AppConstants.revenueCatAPIKey
-                let isTestStore = apiKey.hasPrefix("test_")
-                print("   RevenueCat Environment: \(isTestStore ? "Test Store ✅" : "Production")")
-                print("   API Key: \(apiKey.prefix(10))...\(apiKey.suffix(4))")
-                print("   Paywall Mode: \(AppConstants.useRevenueCatPaywallForTesting ? "RevenueCat (Testing)" : "Superwall")")
-                    
-                // Trigger paywall immediately - let Superwall handle subscription checks
                 Task { @MainActor in
-                    print("   ⏳ Waiting 0.5 seconds for onboarding transition...")
+                    // Wait for onboarding transition to complete
                     try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                     
-                    print("   🚀 Triggering paywall NOW")
-                    print("   Paywall Mode: \(AppConstants.useRevenueCatPaywallForTesting ? "RevenueCat (Testing)" : "Superwall")")
-                    
-                    // Choose paywall based on configuration
-                    if AppConstants.useRevenueCatPaywallForTesting {
-                        print("   📱 Using RevenueCat PaywallView for testing")
-                        print("   🚀 Setting showRevenueCatPaywall = true")
-                        showRevenueCatPaywall = true
-                        print("   ✅ showRevenueCatPaywall set to: \(showRevenueCatPaywall)")
-                    } else {
-                        print("   📱 Triggering Superwall paywall via 'campaign_trigger' event")
-                        print("   Note: Superwall will check subscription status and show/hide accordingly")
-                        print("   🚀 Calling superwallService.register(event: 'campaign_trigger')")
-                            superwallService.register(event: "campaign_trigger")
-                        print("   ✅ Superwall register() called")
-                    }
+                    // Show RevenueCat paywall
+                    showRevenueCatPaywall = true
                     
                     // Check subscription status in background (for logging only)
                     Task {
                         await subscriptionService.checkSubscriptionStatus()
-                        print("   📊 Background subscription check: hasProAccess = \(subscriptionService.hasProAccess)")
+                        print("📊 Subscription check: hasProAccess = \(subscriptionService.hasProAccess)")
                     }
                     
-                    print(String(repeating: "=", count: 50))
-                        appState.markPaywallShownAfterOnboarding()
-                        appState.shouldShowPaywallAfterOnboarding = false
+                    appState.markPaywallShownAfterOnboarding()
+                    appState.shouldShowPaywallAfterOnboarding = false
                 }
             }
         }

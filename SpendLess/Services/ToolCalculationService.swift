@@ -117,31 +117,47 @@ struct ToolCalculationService {
         return amount / hourlyWage
     }
     
-    /// Calculate true hourly wage from income and expenses
+    /// Calculate true hourly wage (discretionary hourly wage after cost of living)
     /// - Parameters:
     ///   - takeHome: Take-home pay per paycheck (after taxes)
     ///   - frequency: How often user is paid
-    ///   - hoursPerWeek: Total hours worked including commute, prep, etc.
-    ///   - monthlyExpenses: Work-related monthly expenses
-    /// - Returns: True hourly wage as Decimal
+    ///   - hoursPerWeek: Total hours worked per week
+    ///   - housing: Monthly housing costs (rent/mortgage)
+    ///   - food: Monthly food & groceries
+    ///   - utilities: Monthly utilities & phone
+    ///   - transportation: Monthly transportation costs
+    ///   - insurance: Monthly insurance costs
+    ///   - debt: Monthly debt payments
+    /// - Returns: True hourly wage (discretionary income per hour) as Decimal, or nil if discretionary <= 0
     static func trueHourlyWage(
         takeHome: Decimal,
         frequency: PayFrequency,
         hoursPerWeek: Int,
-        monthlyExpenses: Decimal
-    ) -> Decimal {
+        housing: Decimal = 0,
+        food: Decimal = 0,
+        utilities: Decimal = 0,
+        transportation: Decimal = 0,
+        insurance: Decimal = 0,
+        debt: Decimal = 0
+    ) -> Decimal? {
         // Convert pay to monthly
         let monthlyTakeHome = takeHome * frequency.monthlyMultiplier
         
         // Calculate monthly work hours (weeks per month average = 4.33)
         let monthlyWorkHours = Decimal(hoursPerWeek) * Decimal(string: "4.33")!
+        guard monthlyWorkHours > 0 else { return nil }
         
-        // Subtract work expenses
-        let monthlyNet = monthlyTakeHome - monthlyExpenses
+        // Calculate cost of living
+        let costOfLiving = housing + food + utilities + transportation + insurance + debt
         
-        // Calculate true hourly wage
-        guard monthlyWorkHours > 0 else { return 0 }
-        return monthlyNet / monthlyWorkHours
+        // Calculate discretionary income
+        let discretionary = monthlyTakeHome - costOfLiving
+        
+        // Return nil if discretionary income is zero or negative
+        guard discretionary > 0 else { return nil }
+        
+        // Calculate true hourly wage (discretionary per hour)
+        return discretionary / monthlyWorkHours
     }
     
     /// Format life energy hours for display
