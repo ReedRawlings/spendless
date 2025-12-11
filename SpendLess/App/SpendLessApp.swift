@@ -231,39 +231,23 @@ struct RootView: View {
                 let isTestStore = apiKey.hasPrefix("test_")
                 print("   RevenueCat Environment: \(isTestStore ? "Test Store ✅" : "Production")")
                 print("   API Key: \(apiKey.prefix(10))...\(apiKey.suffix(4))")
-                print("   Paywall Mode: \(AppConstants.useRevenueCatPaywallForTesting ? "RevenueCat (Testing)" : "Superwall")")
-                    
-                // Trigger paywall immediately - let Superwall handle subscription checks
+                print("   Paywall Mode: \(AppConstants.useRevenueCatPaywall ? "RevenueCat" : "Superwall")")
+
+                // Trigger paywall after brief delay for transition animation
                 Task { @MainActor in
-                    print("   ⏳ Waiting 0.5 seconds for onboarding transition...")
                     try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                    
-                    print("   🚀 Triggering paywall NOW")
-                    print("   Paywall Mode: \(AppConstants.useRevenueCatPaywallForTesting ? "RevenueCat (Testing)" : "Superwall")")
-                    
+
                     // Choose paywall based on configuration
-                    if AppConstants.useRevenueCatPaywallForTesting {
-                        print("   📱 Using RevenueCat PaywallView for testing")
-                        print("   🚀 Setting showRevenueCatPaywall = true")
+                    if AppConstants.useRevenueCatPaywall {
+                        print("   📱 Using RevenueCat PaywallView")
                         showRevenueCatPaywall = true
-                        print("   ✅ showRevenueCatPaywall set to: \(showRevenueCatPaywall)")
                     } else {
-                        print("   📱 Triggering Superwall paywall via 'campaign_trigger' event")
-                        print("   Note: Superwall will check subscription status and show/hide accordingly")
-                        print("   🚀 Calling superwallService.register(event: 'campaign_trigger')")
-                            superwallService.register(event: "campaign_trigger")
-                        print("   ✅ Superwall register() called")
+                        print("   📱 Triggering Superwall paywall")
+                        superwallService.register(event: "campaign_trigger")
                     }
-                    
-                    // Check subscription status in background (for logging only)
-                    Task {
-                        await subscriptionService.checkSubscriptionStatus()
-                        print("   📊 Background subscription check: hasProAccess = \(subscriptionService.hasProAccess)")
-                    }
-                    
-                    print(String(repeating: "=", count: 50))
-                        appState.markPaywallShownAfterOnboarding()
-                        appState.shouldShowPaywallAfterOnboarding = false
+
+                    appState.markPaywallShownAfterOnboarding()
+                    appState.shouldShowPaywallAfterOnboarding = false
                 }
             }
         }

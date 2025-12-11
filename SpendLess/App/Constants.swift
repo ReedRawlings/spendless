@@ -42,12 +42,10 @@ enum AppConstants {
         Bundle.main.object(forInfoDictionaryKey: "SUPERWALL_API_KEY") as? String ?? "YOUR_SUPERWALL_API_KEY_HERE"
     }
     
-    // MARK: - Debug Configuration
-    
+    // MARK: - Paywall Configuration
+
     /// Set to true to use RevenueCat's built-in PaywallView instead of Superwall
-    /// Useful for testing purchase flow before Superwall dashboard is configured
-    /// Set to false for production or when Superwall is fully configured
-    static let useRevenueCatPaywallForTesting = false
+    static let useRevenueCatPaywall = true
     
     // MARK: - Screenshot Mode Configuration
     

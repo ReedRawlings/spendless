@@ -10,7 +10,6 @@ import SwiftData
 
 struct OnboardingCoordinatorView: View {
     @Environment(AppState.self) private var appState
-    @Environment(SuperwallService.self) private var superwallService
     @Environment(\.modelContext) private var modelContext
 
     @State private var currentStep: OnboardingStep = .welcome
@@ -128,12 +127,6 @@ struct OnboardingCoordinatorView: View {
     private func navigateTo(_ step: OnboardingStep) {
         currentStep = step
         navigationPath.append(step)
-
-        // Pre-configure Superwall when user reaches commitment step
-        // This gives the SDK time to initialize before the paywall is shown at the end
-        if step == .commitment {
-            superwallService.preconfigure()
-        }
     }
     
     private func completeOnboarding() {
