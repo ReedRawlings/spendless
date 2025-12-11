@@ -8,6 +8,38 @@
 
 import SwiftUI
 
+// MARK: - Psychology Intro Screen
+
+struct PsychologyIntroView: View {
+    let onContinue: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.spendLessSecondary
+                .ignoresSafeArea()
+
+            VStack(spacing: SpendLessSpacing.xl) {
+                Spacer()
+
+                Text("The Psychology of Shopping")
+                    .font(.custom("Snell Roundhand", size: 48))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, SpendLessSpacing.xl)
+
+                Spacer()
+
+                WhyChangeNextButton {
+                    onContinue()
+                }
+                .padding(.horizontal, SpendLessSpacing.lg)
+                .padding(.bottom, SpendLessSpacing.xl)
+            }
+        }
+        .navigationBarBackButtonHidden(false)
+    }
+}
+
 // MARK: - Shared Screen Template
 
 struct WhyChangeScreen: View {
@@ -226,12 +258,12 @@ struct WhyChange4View: View {
     
     private func whyChange4Body() -> AttributedString {
         var text = AttributedString("That trip. That debt paid off. That breathing room. ")
-        
+
         var bold = AttributedString("Future you wants those things.")
         bold.font = .system(size: 17, weight: .semibold, design: .rounded)
-        
-        let end = AttributedString(" But every impulse buy steals from her. She's not abstract—she's you, soon.")
-        
+
+        let end = AttributedString(" But every impulse buy steals from them. They're not abstract—they're you, soon.")
+
         text.append(bold)
         text.append(end)
         return text

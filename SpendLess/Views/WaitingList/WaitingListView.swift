@@ -27,9 +27,10 @@ struct WaitingListView: View {
     // Highlighted item from deep link
     @State private var highlightedItemID: UUID?
 
-    // Sheet state for bury/buy flows
+    // Sheet state for bury/buy/edit flows
     @State private var itemToBury: WaitingListItem?
     @State private var itemToBuy: WaitingListItem?
+    @State private var itemToEdit: WaitingListItem?
 
     private var currentGoal: UserGoal? {
         activeGoals.first
@@ -123,6 +124,9 @@ struct WaitingListView: View {
                 PurchaseReflectionSheet(item: item) { reason in
                     completeBuyItem(item, reason: reason)
                 }
+            }
+            .sheet(item: $itemToEdit) { item in
+                EditWaitingListItemSheet(item: item)
             }
             .onAppear {
                 checkForPendingDeepLink()
@@ -224,6 +228,7 @@ struct WaitingListView: View {
                                 onBury: { buryItem(item) },
                                 onBuy: { buyItem(item) },
                                 onStillWantIt: { stillWantItem(item) },
+                                onEdit: { itemToEdit = item },
                                 isHighlighted: highlightedItemID == item.id
                             )
                             .id(item.id)
@@ -243,6 +248,7 @@ struct WaitingListView: View {
                                 onBury: { buryItem(item) },
                                 onBuy: { buyItem(item) },
                                 onStillWantIt: { stillWantItem(item) },
+                                onEdit: { itemToEdit = item },
                                 isHighlighted: highlightedItemID == item.id
                             )
                             .id(item.id)
@@ -406,6 +412,7 @@ struct WaitingListItemRow: View {
     let onBury: () -> Void
     let onBuy: (() -> Void)?
     let onStillWantIt: () -> Void
+    let onEdit: () -> Void
     var isHighlighted: Bool = false
     
     @Query private var profiles: [UserProfile]
@@ -534,6 +541,10 @@ struct WaitingListItemRow: View {
                 .strokeBorder(Color.spendLessPrimary, lineWidth: isHighlighted ? 3 : 0)
         )
         .animation(.easeInOut(duration: 0.3), value: isHighlighted)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onEdit()
+        }
     }
 
     private func formatPercentage(_ percentage: Double) -> String {
@@ -738,6 +749,231 @@ struct AddToWaitingListSheet: View {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         
+        dismiss()
+    }
+}
+
+// MARK: - Edit Waiting List Item Sheet
+
+struct EditWaitingListItemSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query private var profiles: [UserProfile]
+
+    let item: WaitingListItem
+
+    @State private var itemName: String
+    @State private var itemAmount: Decimal
+    @State private var selectedReason: ReasonWanted?
+    @State private var otherReasonNote: String
+    @State private var showReasonPicker = false
+    @State private var showPricePerWear = false
+    @State private var pricePerWearEstimate: Int?
+
+    init(item: WaitingListItem) {
+        self.item = item
+        _itemName = State(initialValue: item.name)
+        _itemAmount = State(initialValue: item.amount)
+        _selectedReason = State(initialValue: item.reasonWanted)
+        _otherReasonNote = State(initialValue: item.reasonWantedNote ?? "")
+        _pricePerWearEstimate = State(initialValue: item.pricePerWearEstimate)
+    }
+
+    private var profile: UserProfile? {
+        profiles.first
+    }
+
+    private var lifeEnergyHours: Decimal? {
+        guard let hourlyWage = profile?.trueHourlyWage, hourlyWage > 0, itemAmount > 0 else {
+            return nil
+        }
+        return ToolCalculationService.lifeEnergyHours(amount: itemAmount, hourlyWage: hourlyWage)
+    }
+
+    private var hasChanges: Bool {
+        itemName != item.name ||
+        itemAmount != item.amount ||
+        selectedReason != item.reasonWanted ||
+        otherReasonNote != (item.reasonWantedNote ?? "") ||
+        pricePerWearEstimate != item.pricePerWearEstimate
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.spendLessBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: SpendLessSpacing.lg) {
+                        VStack(spacing: SpendLessSpacing.xs) {
+                            Text("Edit Item")
+                                .font(SpendLessFont.title2)
+                                .foregroundStyle(Color.spendLessTextPrimary)
+
+                            Text("Update your waiting list item")
+                                .font(SpendLessFont.body)
+                                .foregroundStyle(Color.spendLessTextSecondary)
+                        }
+                        .padding(.top, SpendLessSpacing.lg)
+
+                        VStack(spacing: SpendLessSpacing.md) {
+                            SpendLessTextField(
+                                "What is it?",
+                                text: $itemName,
+                                placeholder: "e.g., Wireless earbuds"
+                            )
+
+                            CurrencyTextField(
+                                title: "How much?",
+                                amount: $itemAmount
+                            )
+
+                            // Life energy hours (if hourly wage is configured)
+                            if let hours = lifeEnergyHours {
+                                HStack(spacing: SpendLessSpacing.xs) {
+                                    Text("⏱️")
+                                        .font(.caption)
+                                    Text("\(ToolCalculationService.formatLifeEnergyHours(hours)) of life")
+                                        .font(SpendLessFont.caption)
+                                        .foregroundStyle(Color.spendLessTextSecondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.leading, SpendLessSpacing.md)
+                            }
+
+                            // Optional: Calculate price per wear
+                            if itemAmount > 0 {
+                                Button {
+                                    showPricePerWear = true
+                                } label: {
+                                    HStack {
+                                        Text("👗")
+                                        Text("Calculate price per wear?")
+                                            .font(SpendLessFont.body)
+                                            .foregroundStyle(Color.spendLessPrimary)
+                                        Spacer()
+                                        if pricePerWearEstimate != nil {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundStyle(Color.spendLessSuccess)
+                                        } else {
+                                            Image(systemName: "chevron.right")
+                                                .foregroundStyle(Color.spendLessTextMuted)
+                                                .font(.caption)
+                                        }
+                                    }
+                                    .padding(SpendLessSpacing.md)
+                                    .background(Color.spendLessCardBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            // Why do you want this? picker
+                            VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                                Text("Why do you want it? (optional)")
+                                    .font(SpendLessFont.caption)
+                                    .foregroundStyle(Color.spendLessTextMuted)
+
+                                Button {
+                                    showReasonPicker = true
+                                } label: {
+                                    HStack {
+                                        if let reason = selectedReason {
+                                            Text(reason.icon)
+                                            Text(reason.displayName)
+                                                .foregroundStyle(Color.spendLessTextPrimary)
+                                        } else {
+                                            Text("Select a reason...")
+                                                .foregroundStyle(Color.spendLessTextMuted)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.down")
+                                            .foregroundStyle(Color.spendLessTextMuted)
+                                    }
+                                    .font(SpendLessFont.body)
+                                    .padding(SpendLessSpacing.md)
+                                    .background(Color.spendLessCardBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            // Other reason note (if "Other" selected)
+                            if selectedReason == .other {
+                                SpendLessTextField(
+                                    "Tell us more",
+                                    text: $otherReasonNote,
+                                    placeholder: "What's the reason?"
+                                )
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
+                        }
+                        .padding(.horizontal, SpendLessSpacing.md)
+
+                        Spacer(minLength: SpendLessSpacing.xl)
+                    }
+                }
+                .scrollDismissesKeyboard(.interactively)
+
+                // Bottom action area
+                VStack {
+                    Spacer()
+
+                    VStack(spacing: SpendLessSpacing.sm) {
+                        PrimaryButton("Save Changes", icon: "checkmark") {
+                            saveChanges()
+                        }
+                        .disabled(itemName.isEmpty || itemAmount <= 0 || !hasChanges)
+                    }
+                    .padding(.horizontal, SpendLessSpacing.md)
+                    .padding(.bottom, SpendLessSpacing.xl)
+                    .padding(.top, SpendLessSpacing.sm)
+                    .background(
+                        Color.spendLessBackground
+                            .shadow(color: .black.opacity(0.05), radius: 10, y: -5)
+                    )
+                }
+            }
+            .navigationTitle("Edit Item")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(isPresented: $showReasonPicker) {
+                ReasonWantedPicker(selectedReason: $selectedReason)
+                    .presentationDetents([.medium])
+            }
+            .fullScreenCover(isPresented: $showPricePerWear) {
+                NavigationStack {
+                    PricePerWearView(initialPrice: itemAmount) { estimate in
+                        pricePerWearEstimate = estimate
+                        showPricePerWear = false
+                    }
+                }
+            }
+        }
+    }
+
+    private func saveChanges() {
+        item.name = itemName
+        item.amount = itemAmount
+        item.reasonWantedRaw = selectedReason?.rawValue
+        item.reasonWantedNote = selectedReason == .other ? otherReasonNote : nil
+        item.pricePerWearEstimate = pricePerWearEstimate
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save waiting list item changes: \(error.localizedDescription)")
+        }
+
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+
         dismiss()
     }
 }
