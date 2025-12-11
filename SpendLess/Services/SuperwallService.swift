@@ -43,22 +43,40 @@ final class SuperwallService {
     /// This triggers StoreKit, so we defer it until necessary
     private func configureIfNeeded() {
         guard !isConfigured, let apiKey = apiKey else { return }
-        
+
         // Configure Superwall with RevenueCat adapter
         let adapter = RevenueCatAdapter()
         Superwall.configure(
             apiKey: apiKey,
             purchaseController: adapter
         )
-        
+
         // Set delegate
         Superwall.shared.delegate = self
-        
+
         // Set initial subscription status based on current RevenueCat state
         updateSuperwallSubscriptionStatus()
-        
+
         isConfigured = true
         print("✅ Superwall configured successfully")
+    }
+
+    /// Pre-configure Superwall in the background without showing a paywall.
+    /// Call this early in onboarding so the SDK is ready when the paywall is needed.
+    func preconfigure() {
+        guard !isConfigured, apiKey != nil else {
+            if isConfigured {
+                print("📱 Superwall: Already configured, skipping preconfigure")
+            }
+            return
+        }
+
+        print("📱 Superwall: Pre-configuring SDK in background...")
+
+        Task { @MainActor in
+            configureIfNeeded()
+            print("📱 Superwall: Pre-configuration complete - SDK is ready for paywall")
+        }
     }
     
     /// Update Superwall's subscription status based on RevenueCat state
