@@ -96,7 +96,7 @@ struct OnboardingBehaviorsView: View {
         OnboardingContainer(step: .behaviors) {
             VStack(spacing: SpendLessSpacing.md) {
                 VStack(spacing: SpendLessSpacing.xs) {
-                    Text("Which of these sounds like you?")
+                    Text("When do you feel like shopping the most?")
                         .font(SpendLessFont.title2)
                         .foregroundStyle(Color.spendLessTextPrimary)
                     

@@ -59,9 +59,9 @@ enum ShoppingTiming: String, CaseIterable, Codable, Identifiable {
     
     var icon: String {
         switch self {
-        case .lateNight: return "moon.stars"
-        case .workBreaks: return "cup.and.saucer"
-        case .payday: return "banknote"
+        case .lateNight: return "🌙"
+        case .workBreaks: return "☕"
+        case .payday: return "💵"
         }
     }
 }
