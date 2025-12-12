@@ -73,7 +73,7 @@ struct WhyChangeScreen: View {
                 
                 // Body with bold phrases
                 Text(bodyText)
-                    .font(.system(size: 17, weight: .regular, design: .rounded))
+                    .font(.system(size: 19, weight: .regular, design: .rounded))
                     .foregroundColor(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -173,7 +173,7 @@ struct WhyChange1View: View {
         var text = AttributedString("You felt the rush browsing. The thrill of finding it. Then you bought it and... nothing. The high ")
         
         var bold = AttributedString("disappears the moment you click purchase")
-        bold.font = .system(size: 17, weight: .semibold, design: .rounded)
+        bold.font = .system(size: 19, weight: .semibold, design: .rounded)
         
         let end = AttributedString(". So you chase the next one.")
         
@@ -202,7 +202,7 @@ struct WhyChange2View: View {
         var text = AttributedString("You're shopping because you're ")
         
         var bold1 = AttributedString("bored, stressed, or lonely")
-        bold1.font = .system(size: 17, weight: .semibold, design: .rounded)
+        bold1.font = .system(size: 19, weight: .semibold, design: .rounded)
         
         let mid = AttributedString("—and your brain learned this is the fastest fix. But it's treating the symptom, not the cause.")
         
@@ -231,7 +231,7 @@ struct WhyChange3View: View {
         var text = AttributedString("One-click buying. \"Only 3 left!\" Fake countdown timers. These aren't features—they're ")
         
         var bold = AttributedString("traps built by psychologists")
-        bold.font = .system(size: 17, weight: .semibold, design: .rounded)
+        bold.font = .system(size: 19, weight: .semibold, design: .rounded)
         
         let end = AttributedString(" to bypass your rational mind.")
         
@@ -260,7 +260,7 @@ struct WhyChange4View: View {
         var text = AttributedString("That trip. That debt paid off. That breathing room. ")
 
         var bold = AttributedString("Future you wants those things.")
-        bold.font = .system(size: 17, weight: .semibold, design: .rounded)
+        bold.font = .system(size: 19, weight: .semibold, design: .rounded)
 
         let end = AttributedString(" But every impulse buy steals from them. They're not abstract—they're you, soon.")
 
@@ -289,12 +289,12 @@ struct WhyChange5View: View {
         var text = AttributedString("It's a ")
         
         var bold1 = AttributedString("dopamine problem")
-        bold1.font = .system(size: 17, weight: .semibold, design: .rounded)
-        
+        bold1.font = .system(size: 19, weight: .semibold, design: .rounded)
+
         let mid = AttributedString(", not a character flaw. And dopamine systems can heal. By pausing before purchases, you can rewire the cycle and start ")
-        
+
         var bold2 = AttributedString("wanting less")
-        bold2.font = .system(size: 17, weight: .semibold, design: .rounded)
+        bold2.font = .system(size: 19, weight: .semibold, design: .rounded)
         
         let end = AttributedString(".")
         
