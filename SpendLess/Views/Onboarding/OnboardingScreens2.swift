@@ -804,7 +804,7 @@ struct OnboardingCommitmentView: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(height: 100)
-                                    .frame(maxWidth: .infinity)
+                                    .frame(maxWidth: .infinity, alignment: .center)
                             }
                             
                             Text("Signed on \(formatCommitmentDate(date))")
