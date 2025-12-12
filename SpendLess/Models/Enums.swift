@@ -125,9 +125,15 @@ enum SpendRange: String, CaseIterable, Codable, Identifiable {
         return monthlyEstimate * 12
     }
     
-    /// 10-year projection
+    /// 10-year projection with 3% annual growth (invested savings)
     var decadeEstimate: Decimal {
-        return monthlyEstimate * 12 * 10
+        let yearly = monthlyEstimate * 12
+        let rate = Decimal(string: "1.03")!
+        var total = Decimal(0)
+        for _ in 1...10 {
+            total = total * rate + yearly
+        }
+        return total
     }
 }
 
