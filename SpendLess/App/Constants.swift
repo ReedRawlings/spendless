@@ -42,16 +42,13 @@ enum AppConstants {
     /// This flag injects optimized ASO keywords and demo data into views
     static let isScreenshotMode = false
     
-    // MARK: - ConvertKit Configuration
+    // MARK: - MailerLite Configuration
 
-    /// ConvertKit API Key - reads from Info.plist (populated by xcconfig)
-    static var convertKitAPIKey: String {
-        Bundle.main.object(forInfoDictionaryKey: "CONVERTKIT_API_KEY") as? String ?? "YOUR_CONVERTKIT_API_KEY_HERE"
-    }
-
-    /// ConvertKit Form ID - reads from Info.plist (populated by xcconfig)
-    static var convertKitFormID: String {
-        Bundle.main.object(forInfoDictionaryKey: "CONVERTKIT_FORM_ID") as? String ?? "YOUR_CONVERTKIT_FORM_ID_HERE"
+    /// Cloudflare Worker endpoint for MailerLite subscription
+    /// The Worker proxies requests to MailerLite API, keeping the API key secure server-side
+    static var mailerLiteWorkerURL: String {
+        // Can be overridden via Info.plist with MAILERLITE_WORKER_URL key
+        Bundle.main.object(forInfoDictionaryKey: "MAILERLITE_WORKER_URL") as? String ?? "https://mailerlitetoken.rawlingreed.workers.dev"
     }
     
     // MARK: - Shield & Temporary Access

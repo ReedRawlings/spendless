@@ -1,8 +1,8 @@
 //
-//  ConvertKitService.swift
+//  MailerLiteService.swift
 //  SpendLess
 //
-//  Service for submitting emails to ConvertKit for lead magnet
+//  Service for submitting emails to MailerLite for lead magnet
 //
 
 import Foundation
@@ -27,21 +27,27 @@ enum EmailSubmissionError: LocalizedError {
     }
 }
 
+struct EmailResponse: Codable {
+    let success: Bool
+    let error: String?
+}
+
 @Observable
-final class ConvertKitService {
-    static let shared = ConvertKitService()
+final class MailerLiteService {
+    static let shared = MailerLiteService()
     
-    private let apiKey: String
-    private let formId: String
-    private let baseURL = "https://api.convertkit.com/v3/forms"
+    /// Cloudflare Worker endpoint - proxies requests to MailerLite API
+    private let workerURL: String
+    
+    /// MailerLite Group ID for app subscribers
+    private let groupId = "173692205558400340"
     
     private init() {
-        // Get from Constants - will be set by app configuration
-        self.apiKey = AppConstants.convertKitAPIKey
-        self.formId = AppConstants.convertKitFormID
+        // Get from Constants - Cloudflare Worker endpoint
+        self.workerURL = AppConstants.mailerLiteWorkerURL
     }
     
-    /// Submit email to ConvertKit for lead magnet PDF delivery
+    /// Submit email to MailerLite via Cloudflare Worker for lead magnet PDF delivery
     /// - Parameters:
     ///   - email: User's email address
     ///   - optedIntoMarketing: Whether user opted into marketing emails
@@ -57,8 +63,7 @@ final class ConvertKitService {
             throw EmailSubmissionError.invalidEmail
         }
         
-        let endpoint = "\(baseURL)/\(formId)/subscribe"
-        guard let url = URL(string: endpoint) else {
+        guard let url = URL(string: workerURL) else {
             throw EmailSubmissionError.serverError
         }
         
@@ -66,37 +71,40 @@ final class ConvertKitService {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // Build tags array
-        var tags = ["spendless-pdf-lead"]
-        if optedIntoMarketing {
-            tags.append("marketing-opted-in")
-        }
-        
+        // Build request body matching Cloudflare Worker interface
         let body: [String: Any] = [
-            "api_key": apiKey,
             "email": email,
-            "tags": tags,
-            "fields": [
-                "source": source.rawValue
-            ]
+            "group_id": groupId,
+            "source": source.rawValue,
+            "marketing_opted_in": optedIntoMarketing
         ]
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw EmailSubmissionError.serverError
             }
             
-            // ConvertKit returns 200 for success
+            // Check HTTP status code
             guard httpResponse.statusCode == 200 else {
-                print("❌ ConvertKit API error: Status \(httpResponse.statusCode)")
+                print("❌ MailerLite Worker error: Status \(httpResponse.statusCode)")
+                throw EmailSubmissionError.serverError
+            }
+            
+            // Decode and check response
+            let result = try JSONDecoder().decode(EmailResponse.self, from: data)
+            if !result.success {
+                print("❌ MailerLite Worker returned error: \(result.error ?? "Unknown error")")
                 throw EmailSubmissionError.serverError
             }
         } catch let error as EmailSubmissionError {
             throw error
+        } catch let decodingError as DecodingError {
+            print("❌ Failed to decode response: \(decodingError)")
+            throw EmailSubmissionError.serverError
         } catch {
             // Network errors
             if (error as NSError).code == NSURLErrorNotConnectedToInternet ||
@@ -162,4 +170,3 @@ final class PendingSubmissionsStore {
         UserDefaults.standard.removeObject(forKey: key)
     }
 }
-

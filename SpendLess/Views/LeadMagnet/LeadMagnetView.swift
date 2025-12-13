@@ -185,8 +185,8 @@ struct LeadMagnetView: View {
         
         Task {
             do {
-                // Submit to ConvertKit
-                try await ConvertKitService.shared.submitEmailForPDF(
+                // Submit to MailerLite
+                try await MailerLiteService.shared.submitEmailForPDF(
                     email: email,
                     optedIntoMarketing: optedIntoMarketing,
                     source: source

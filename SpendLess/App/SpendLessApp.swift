@@ -365,7 +365,7 @@ struct RootView: View {
         Task {
             for submission in pending {
                 do {
-                    try await ConvertKitService.shared.submitEmailForPDF(
+                    try await MailerLiteService.shared.submitEmailForPDF(
                         email: submission.email,
                         optedIntoMarketing: submission.optedIntoMarketing,
                         source: submission.source

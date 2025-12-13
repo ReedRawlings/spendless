@@ -13,8 +13,7 @@ This directory contains configuration files for API keys. **Never commit actual 
 2. Edit each file and replace the placeholder values with your actual API keys:
    - `REVENUECAT_API_KEY`: Get from [RevenueCat Dashboard](https://app.revenuecat.com)
    - `SUPERWALL_API_KEY`: Get from [Superwall Dashboard](https://superwall.com/dashboard)
-   - `CONVERTKIT_API_KEY`: Get from [ConvertKit Settings](https://app.convertkit.com/account_settings/developer_settings)
-   - `CONVERTKIT_FORM_ID`: Get from your ConvertKit form settings
+   - `MAILERLITE_WORKER_URL`: Set to your deployed Cloudflare Worker endpoint URL (e.g., `https://spendless-email.your-subdomain.workers.dev`)
 
 3. In Xcode:
    - Go to Project → Info → Configurations
@@ -27,10 +26,8 @@ This directory contains configuration files for API keys. **Never commit actual 
    <string>$(REVENUECAT_API_KEY)</string>
    <key>SUPERWALL_API_KEY</key>
    <string>$(SUPERWALL_API_KEY)</string>
-   <key>CONVERTKIT_API_KEY</key>
-   <string>$(CONVERTKIT_API_KEY)</string>
-   <key>CONVERTKIT_FORM_ID</key>
-   <string>$(CONVERTKIT_FORM_ID)</string>
+   <key>MAILERLITE_WORKER_URL</key>
+   <string>$(MAILERLITE_WORKER_URL)</string>
    ```
 
 ## Security Notes
