@@ -427,11 +427,12 @@ struct OnboardingCommitmentView: View {
                                             Text(strength.title)
                                                 .font(SpendLessFont.bodyBold)
                                                 .foregroundStyle(Color.spendLessTextPrimary)
-                                            
+
                                             Text(strength.description)
                                                 .font(SpendLessFont.body)
                                                 .foregroundStyle(Color.spendLessTextSecondary)
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                     .opacity(showStrengths ? 1 : 0)
                                     .offset(y: showStrengths ? 0 : 10)
@@ -467,11 +468,12 @@ struct OnboardingCommitmentView: View {
                                             Text(focusArea.title)
                                                 .font(SpendLessFont.bodyBold)
                                                 .foregroundStyle(Color.spendLessTextPrimary)
-                                            
+
                                             Text(focusArea.description)
                                                 .font(SpendLessFont.body)
                                                 .foregroundStyle(Color.spendLessTextSecondary)
                                         }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                     .background(Color.spendLessSecondary.opacity(0.05))
                                     .opacity(showFocusAreas ? 1 : 0)
@@ -498,11 +500,12 @@ struct OnboardingCommitmentView: View {
                                             .font(SpendLessFont.bodyBold)
                                             .foregroundStyle(Color.spendLessTextPrimary)
                                     }
-                                    
+
                                     Text("At your pace—resisting just \(prediction.resistanceRate) of impulses—you could reach your goal in ~\(prediction.daysToGoal) days.")
                                         .font(SpendLessFont.body)
                                         .foregroundStyle(Color.spendLessTextSecondary)
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .background(Color.spendLessPrimary.opacity(0.1))
                             .overlay(
@@ -524,11 +527,12 @@ struct OnboardingCommitmentView: View {
                                             .font(SpendLessFont.bodyBold)
                                             .foregroundStyle(Color.spendLessTextPrimary)
                                     }
-                                    
+
                                     Text("Every dollar you keep is a win. Let's start counting.")
                                         .font(SpendLessFont.body)
                                         .foregroundStyle(Color.spendLessTextSecondary)
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .background(Color.spendLessPrimary.opacity(0.1))
                             .overlay(
@@ -551,11 +555,12 @@ struct OnboardingCommitmentView: View {
                                             .font(SpendLessFont.bodyBold)
                                             .foregroundStyle(Color.spendLessTextPrimary)
                                     }
-                                    
+
                                     Text("At your pace, you'll make real progress within your first month.")
                                         .font(SpendLessFont.body)
                                         .foregroundStyle(Color.spendLessTextSecondary)
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .background(Color.spendLessPrimary.opacity(0.1))
                             .overlay(
@@ -804,7 +809,7 @@ struct OnboardingCommitmentView: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(height: 100)
-                                    .frame(maxWidth: .infinity)
+                                    .frame(maxWidth: .infinity, alignment: .center)
                             }
                             
                             Text("Signed on \(formatCommitmentDate(date))")
