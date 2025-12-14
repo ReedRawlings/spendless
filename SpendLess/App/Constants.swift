@@ -31,8 +31,22 @@ enum AppConstants {
     /// RevenueCat API Key - reads from Info.plist (populated by xcconfig)
     /// Setup: Copy Config/Template.xcconfig to Config/Debug.xcconfig and Config/Release.xcconfig
     /// Add your keys there. The xcconfig files are gitignored.
+    /// Note: For better security, use REVENUECAT_WORKER_URL to fetch the key from a Cloudflare Worker
     static var revenueCatAPIKey: String {
         Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_API_KEY") as? String ?? "YOUR_REVENUECAT_API_KEY_HERE"
+    }
+    
+    /// Cloudflare Worker endpoint for RevenueCat API key
+    /// The Worker returns the RevenueCat API key, keeping it secure server-side
+    /// If set, the app will fetch the API key from this endpoint instead of using the direct key
+    static var revenueCatWorkerURL: String? {
+        // Can be overridden via Info.plist with REVENUECAT_WORKER_URL key
+        let url = Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_WORKER_URL") as? String ?? "https://revenuecat-key.rawlingreed.workers.dev"
+        // Return nil if it's the placeholder value
+        if url != "YOUR_CLOUDFLARE_WORKER_URL_HERE" && !url.isEmpty {
+            return url
+        }
+        return nil
     }
 
     // MARK: - Screenshot Mode Configuration

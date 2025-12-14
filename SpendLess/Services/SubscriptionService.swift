@@ -18,6 +18,9 @@ class SubscriptionService: NSObject {
     /// Entitlement identifier configured in RevenueCat dashboard
     static let entitlementIdentifier = "Future Selves Pro"
     
+    /// Offering identifier for SpendLess subscription
+    static let offeringIdentifier = "ofrngaaa4b9888c"
+    
     // MARK: - Singleton
     
     static let shared = SubscriptionService()
@@ -66,8 +69,34 @@ class SubscriptionService: NSObject {
     // MARK: - Configuration
     
     /// Configure RevenueCat with API key
+    /// If a Cloudflare Worker URL is configured, fetches the API key from the worker first
+    /// Otherwise, uses the provided API key directly
     /// Call this in app initialization
     func configure(apiKey: String) {
+        // Check if we should fetch from Cloudflare Worker
+        if let workerURL = AppConstants.revenueCatWorkerURL {
+            print("🔐 Fetching RevenueCat API key from Cloudflare Worker...")
+            Task {
+                do {
+                    let fetchedKey = try await fetchAPIKeyFromWorker(workerURL: workerURL)
+                    await configureWithKey(fetchedKey)
+                } catch {
+                    print("⚠️ Failed to fetch API key from worker: \(error)")
+                    print("⚠️ Falling back to direct API key...")
+                    // Fall back to direct key if worker fetch fails
+                    await configureWithKey(apiKey)
+                }
+            }
+        } else {
+            // Use direct API key
+            Task {
+                await configureWithKey(apiKey)
+            }
+        }
+    }
+    
+    /// Internal method to configure RevenueCat with a specific API key
+    private func configureWithKey(_ apiKey: String) {
         // Validate API key
         guard !apiKey.isEmpty && apiKey != "YOUR_REVENUECAT_API_KEY_HERE" else {
             print("⚠️ RevenueCat API key not configured. Please add your API key to Constants.swift")
@@ -108,6 +137,44 @@ class SubscriptionService: NSObject {
         // Status will be checked lazily when needed (e.g., when Settings view appears)
     }
     
+    /// Fetch RevenueCat API key from Cloudflare Worker
+    /// - Parameter workerURL: The Cloudflare Worker endpoint URL
+    /// - Returns: The API key string
+    private func fetchAPIKeyFromWorker(workerURL: String) async throws -> String {
+        guard let url = URL(string: workerURL) else {
+            throw SubscriptionError.invalidWorkerURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SubscriptionError.serverError
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            print("❌ RevenueCat Worker error: Status \(httpResponse.statusCode)")
+            throw SubscriptionError.serverError
+        }
+        
+        // Parse response - expect JSON with "api_key" field
+        struct APIKeyResponse: Codable {
+            let api_key: String
+        }
+        
+        do {
+            let result = try JSONDecoder().decode(APIKeyResponse.self, from: data)
+            print("✅ Successfully fetched API key from Cloudflare Worker")
+            return result.api_key
+        } catch {
+            print("❌ Failed to decode API key response: \(error)")
+            throw SubscriptionError.serverError
+        }
+    }
+    
     /// Check if Purchases is configured before accessing it
     private func ensureConfigured() throws {
         guard isConfigured else {
@@ -124,21 +191,21 @@ class SubscriptionService: NSObject {
             // Attempt to fetch offerings
             let offerings = try await Purchases.shared.offerings()
             
-            if let currentOffering = offerings.current {
-                print("✅ Current Offering Found: \(currentOffering.identifier)")
-                print("   Available Packages: \(currentOffering.availablePackages.count)")
+            if let offering = offerings.offering(identifier: Self.offeringIdentifier) {
+                print("✅ Offering 'SpendLess' Found: \(offering.identifier)")
+                print("   Available Packages: \(offering.availablePackages.count)")
                 
-                for (index, package) in currentOffering.availablePackages.enumerated() {
+                for (index, package) in offering.availablePackages.enumerated() {
                     print("   Package \(index + 1):")
                     print("     Identifier: \(package.identifier)")
                     print("     Product ID: \(package.storeProduct.productIdentifier)")
                     print("     Localized Price: \(package.storeProduct.localizedPriceString)")
                 }
             } else {
-                print("⚠️ No current offering found. Make sure:")
-                print("   1. An offering named 'default' exists in RevenueCat dashboard")
-                print("   2. The offering is set as 'Current Offering'")
-                print("   3. Test products are added to the offering")
+                print("⚠️ Offering '\(Self.offeringIdentifier)' not found. Make sure:")
+                print("   1. The offering ID '\(Self.offeringIdentifier)' exists in RevenueCat dashboard")
+                print("   2. Products are added to the offering")
+                print("   Available offerings: \(offerings.all.keys.joined(separator: ", "))")
             }
             
             // Check entitlement identifier
@@ -290,17 +357,17 @@ class SubscriptionService: NSObject {
         print("   Total Offerings: \(offerings.all.count)")
         print("   Offering Keys: \(offerings.all.keys.joined(separator: ", "))")
         
-        guard let currentOffering = offerings.current else {
-            print("❌ No current offering found!")
+        guard let offering = offerings.offering(identifier: Self.offeringIdentifier) else {
+            print("❌ Offering '\(Self.offeringIdentifier)' not found!")
             print("   Available offerings: \(offerings.all.keys.joined(separator: ", "))")
-            print("   Make sure an offering is set as 'Current Offering' in RevenueCat dashboard")
+            print("   Make sure the offering ID '\(Self.offeringIdentifier)' exists in RevenueCat dashboard")
             throw SubscriptionError.noOfferingAvailable
         }
         
-        print("✅ Current Offering: \(currentOffering.identifier)")
-        print("   Available Packages: \(currentOffering.availablePackages.count)")
+        print("✅ Offering 'SpendLess': \(offering.identifier)")
+        print("   Available Packages: \(offering.availablePackages.count)")
         
-        for (index, package) in currentOffering.availablePackages.enumerated() {
+        for (index, package) in offering.availablePackages.enumerated() {
             print("   Package \(index + 1):")
             print("     Identifier: \(package.identifier)")
             print("     Product ID: \(package.storeProduct.productIdentifier)")
@@ -308,7 +375,7 @@ class SubscriptionService: NSObject {
             print("     Localized Price: \(package.storeProduct.localizedPriceString)")
         }
         
-        return currentOffering.availablePackages
+        return offering.availablePackages
     }
     
     /// Purchase a package
@@ -422,6 +489,8 @@ enum SubscriptionError: LocalizedError {
     case purchaseFailed(String)
     case restoreFailed(String)
     case notConfigured
+    case invalidWorkerURL
+    case serverError
     
     var errorDescription: String? {
         switch self {
@@ -433,6 +502,10 @@ enum SubscriptionError: LocalizedError {
             return "Restore failed: \(message)"
         case .notConfigured:
             return "RevenueCat has not been configured. Please configure your API key in Constants.swift"
+        case .invalidWorkerURL:
+            return "Invalid Cloudflare Worker URL"
+        case .serverError:
+            return "Server error while fetching API key"
         }
     }
 }
