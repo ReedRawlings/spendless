@@ -67,31 +67,28 @@ class SubscriptionService: NSObject {
     }
     
     // MARK: - Configuration
-    
+
     /// Configure RevenueCat with API key
     /// If a Cloudflare Worker URL is configured, fetches the API key from the worker first
     /// Otherwise, uses the provided API key directly
     /// Call this in app initialization
-    func configure(apiKey: String) {
+    /// - Note: This method is async to ensure configuration completes before returning
+    func configure(apiKey: String) async {
         // Check if we should fetch from Cloudflare Worker
         if let workerURL = AppConstants.revenueCatWorkerURL {
             print("🔐 Fetching RevenueCat API key from Cloudflare Worker...")
-            Task {
-                do {
-                    let fetchedKey = try await fetchAPIKeyFromWorker(workerURL: workerURL)
-                    await configureWithKey(fetchedKey)
-                } catch {
-                    print("⚠️ Failed to fetch API key from worker: \(error)")
-                    print("⚠️ Falling back to direct API key...")
-                    // Fall back to direct key if worker fetch fails
-                    await configureWithKey(apiKey)
-                }
+            do {
+                let fetchedKey = try await fetchAPIKeyFromWorker(workerURL: workerURL)
+                configureWithKey(fetchedKey)
+            } catch {
+                print("⚠️ Failed to fetch API key from worker: \(error)")
+                print("⚠️ Falling back to direct API key...")
+                // Fall back to direct key if worker fetch fails
+                configureWithKey(apiKey)
             }
         } else {
             // Use direct API key
-            Task {
-                await configureWithKey(apiKey)
-            }
+            configureWithKey(apiKey)
         }
     }
     
@@ -119,7 +116,11 @@ class SubscriptionService: NSObject {
         print("   API Key: \(apiKey.prefix(10))...\(apiKey.suffix(4))")
         print("   Entitlement Identifier: \(Self.entitlementIdentifier)")
         
-        Purchases.logLevel = .debug // Change to .info or .warn for production
+        #if DEBUG
+        Purchases.logLevel = .debug
+        #else
+        Purchases.logLevel = .warn
+        #endif
         Purchases.configure(withAPIKey: apiKey)
         isConfigured = true
         
@@ -321,7 +322,8 @@ class SubscriptionService: NSObject {
         // Determine subscription status
         if hasProAccess {
             if let entitlement = entitlement {
-                isInTrial = entitlement.willRenew && entitlement.periodType == .trial
+                // Check if user is in trial period (regardless of auto-renew status)
+                isInTrial = entitlement.periodType == .trial
             } else {
                 isInTrial = false
             }
