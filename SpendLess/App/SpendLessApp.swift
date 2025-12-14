@@ -88,14 +88,23 @@ struct SpendLessApp: App {
     @State private var notificationManager = NotificationManager.shared
     
     // MARK: - Initialization
-    
+
     init() {
-        // Configure RevenueCat - always call configure, it will validate the key internally
-        subscriptionService.configure(apiKey: AppConstants.revenueCatAPIKey)
-        
         // Set up notification delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
-        
+
+        // Configure RevenueCat asynchronously
+        // The async configure method ensures proper initialization before any subscription checks
+        Task { @MainActor in
+            await subscriptionService.configure(apiKey: AppConstants.revenueCatAPIKey)
+
+            // For returning users, check subscription status immediately after configuration
+            // This ensures Pro features are available right away
+            if UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.hasCompletedOnboarding) {
+                await subscriptionService.checkSubscriptionStatus()
+            }
+        }
+
         // Notification permission will be requested during onboarding after shield acceptance
     }
     
