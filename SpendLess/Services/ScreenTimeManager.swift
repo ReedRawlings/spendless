@@ -80,15 +80,18 @@ final class ScreenTimeManager: ScreenTimeManaging {
         print("  - Application tokens: \(selection.applicationTokens.count)")
         print("  - Category tokens: \(selection.categoryTokens.count)")
         print("  - Web domain tokens: \(selection.webDomainTokens.count)")
-        
+
         self.selection = selection
         updateBlockedAppCount()
-        
+
         print("[ScreenTimeManager] 📊 Updated blockedAppCount: \(blockedAppCount)")
-        
+
         saveSelection()
         saveState()
-        
+
+        // Apply shields immediately so changes take effect
+        applyShields()
+
         // Force UI update on main thread
         Task { @MainActor in
             // This ensures @Observable updates propagate
