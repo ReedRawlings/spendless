@@ -103,6 +103,7 @@ struct LifeEnergyCalculatorView: View {
                 resultsView
             }
         }
+        .hideKeyboardOnTap()
         .navigationTitle(currentStep == .setupPrompt ? "Life Energy Calculator" : "")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -279,7 +280,7 @@ struct LifeEnergyCalculatorView: View {
             }
         }
     }
-    
+
     // MARK: - Screen 3: Cost of Living
     
     private var costOfLivingView: some View {
@@ -361,7 +362,7 @@ struct LifeEnergyCalculatorView: View {
             }
         }
     }
-    
+
     // MARK: - Screen 4: Results
     
     private var resultsView: some View {
