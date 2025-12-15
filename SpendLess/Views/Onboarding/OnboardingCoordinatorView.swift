@@ -2,7 +2,7 @@
 //  OnboardingCoordinatorView.swift
 //  SpendLess
 //
-//  Onboarding flow coordinator - 23 screens (includes 5 Why Change screens)
+//  Onboarding flow coordinator - 24 screens (includes 5 Why Change screens)
 //
 
 import SwiftUI
@@ -34,6 +34,7 @@ struct OnboardingCoordinatorView: View {
         case goalSelection
         case goalDetails
         case desiredOutcomes
+        case waitlistIntro
         case commitment
         case leadMagnet
         case permissionExplanation
@@ -93,7 +94,9 @@ struct OnboardingCoordinatorView: View {
         case .goalDetails:
             OnboardingGoalDetailsView { navigateTo(.desiredOutcomes) }
         case .desiredOutcomes:
-            OnboardingDesiredOutcomesView { navigateTo(.commitment) }
+            OnboardingDesiredOutcomesView { navigateTo(.waitlistIntro) }
+        case .waitlistIntro:
+            OnboardingWaitlistIntroView { navigateTo(.commitment) }
         case .commitment:
             OnboardingCommitmentView { navigateTo(.leadMagnet) }
         case .leadMagnet:

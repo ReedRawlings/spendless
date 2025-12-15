@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 // MARK: - Screen 1: Welcome
 
@@ -799,9 +800,165 @@ struct OnboardingDesiredOutcomesView: View {
         } else {
             appState.onboardingDesiredOutcomes.insert(outcome)
         }
-        
+
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
+    }
+}
+
+// MARK: - Screen 10: Waitlist Introduction
+
+struct OnboardingWaitlistIntroView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
+    let onContinue: () -> Void
+
+    @State private var itemName = ""
+    @State private var itemAmount: Decimal = 0
+    @State private var showExamples = true
+    @State private var hasAddedItem = false
+
+    private let exampleItems = [
+        ("New sneakers", Decimal(120)),
+        ("Wireless earbuds", Decimal(79)),
+        ("Kitchen gadget", Decimal(45)),
+        ("That thing on sale", Decimal(35))
+    ]
+
+    var body: some View {
+        OnboardingContainer(step: .waitlistIntro) {
+            VStack(spacing: SpendLessSpacing.lg) {
+                VStack(spacing: SpendLessSpacing.sm) {
+                    Text("⏳")
+                        .font(.system(size: 50))
+
+                    Text("The 7-Day Test")
+                        .font(SpendLessFont.title2)
+                        .foregroundStyle(Color.spendLessTextPrimary)
+
+                    Text("When you want to buy something, add it here instead. If you still want it in 7 days, buy it guilt-free. Most things don't survive the wait.")
+                        .font(SpendLessFont.body)
+                        .foregroundStyle(Color.spendLessTextSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, SpendLessSpacing.lg)
+                .padding(.horizontal, SpendLessSpacing.md)
+
+                if hasAddedItem {
+                    // Success state
+                    VStack(spacing: SpendLessSpacing.md) {
+                        Text("✅")
+                            .font(.system(size: 40))
+
+                        Text("Added to your waitlist!")
+                            .font(SpendLessFont.headline)
+                            .foregroundStyle(Color.spendLessTextPrimary)
+
+                        Text("You'll see it in your Waiting List after setup.")
+                            .font(SpendLessFont.body)
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(SpendLessSpacing.lg)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.spendLessSuccess.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
+                    .padding(.horizontal, SpendLessSpacing.md)
+                } else {
+                    // Input form
+                    VStack(spacing: SpendLessSpacing.md) {
+                        Text("Try it now — what's something you've been tempted to buy?")
+                            .font(SpendLessFont.subheadline)
+                            .foregroundStyle(Color.spendLessTextPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        SpendLessTextField(
+                            "What is it?",
+                            text: $itemName,
+                            placeholder: "e.g., Wireless earbuds"
+                        )
+
+                        CurrencyTextField(
+                            title: "How much?",
+                            amount: $itemAmount
+                        )
+
+                        // Quick examples
+                        if showExamples && itemName.isEmpty {
+                            VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                                Text("Or pick an example:")
+                                    .font(SpendLessFont.caption)
+                                    .foregroundStyle(Color.spendLessTextMuted)
+
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: SpendLessSpacing.sm) {
+                                        ForEach(exampleItems, id: \.0) { name, amount in
+                                            Button {
+                                                itemName = name
+                                                itemAmount = amount
+                                                HapticFeedback.lightSuccess()
+                                            } label: {
+                                                Text(name)
+                                                    .font(SpendLessFont.caption)
+                                                    .foregroundStyle(Color.spendLessPrimary)
+                                                    .padding(.horizontal, SpendLessSpacing.sm)
+                                                    .padding(.vertical, SpendLessSpacing.xs)
+                                                    .background(Color.spendLessPrimaryLight.opacity(0.15))
+                                                    .clipShape(Capsule())
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, SpendLessSpacing.md)
+                }
+
+                Spacer()
+
+                VStack(spacing: SpendLessSpacing.sm) {
+                    if !hasAddedItem {
+                        PrimaryButton("Add to Waitlist", icon: "plus") {
+                            addItemToWaitlist()
+                        }
+                        .disabled(itemName.isEmpty || itemAmount <= 0)
+                        .padding(.horizontal, SpendLessSpacing.lg)
+
+                        Button("Skip for now") {
+                            onContinue()
+                        }
+                        .font(SpendLessFont.body)
+                        .foregroundStyle(Color.spendLessTextMuted)
+                        .padding(.bottom, SpendLessSpacing.md)
+                    } else {
+                        PrimaryButton("Continue") {
+                            onContinue()
+                        }
+                        .padding(.horizontal, SpendLessSpacing.lg)
+                        .padding(.bottom, SpendLessSpacing.xl)
+                    }
+                }
+            }
+        }
+        .hideKeyboardOnTap()
+    }
+
+    private func addItemToWaitlist() {
+        let item = WaitingListItem(
+            name: itemName,
+            amount: itemAmount
+        )
+        modelContext.insert(item)
+
+        do {
+            try modelContext.save()
+            hasAddedItem = true
+            HapticFeedback.heavySuccess()
+        } catch {
+            print("❌ Failed to save onboarding waitlist item: \(error.localizedDescription)")
+        }
     }
 }
 
