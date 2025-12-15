@@ -4,6 +4,7 @@
 //
 //  5 emotional onboarding screens that communicate the cost of compulsive shopping
 //  Emotional journey: Pain (terracotta) → Hope (sage green)
+//  Also includes intro screens: Psychology intro and Waitlist explanation
 //
 
 import SwiftUI
@@ -26,6 +27,47 @@ struct PsychologyIntroView: View {
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, SpendLessSpacing.xl)
+
+                Spacer()
+
+                WhyChangeNextButton {
+                    onContinue()
+                }
+                .padding(.horizontal, SpendLessSpacing.lg)
+                .padding(.bottom, SpendLessSpacing.xl)
+            }
+        }
+        .navigationBarBackButtonHidden(false)
+    }
+}
+
+// MARK: - Waitlist Explanation Screen
+
+struct WaitlistExplanationView: View {
+    let onContinue: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.spendLessSecondary
+                .ignoresSafeArea()
+
+            VStack(spacing: SpendLessSpacing.xl) {
+                Spacer()
+
+                VStack(spacing: SpendLessSpacing.lg) {
+                    Text("Waitlist vs Wishlist")
+                        .font(.custom("Snell Roundhand", size: 48))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, SpendLessSpacing.xl)
+
+                    Text("Our next slide will have you start your waitlist. A tool designed to help you understand the impact of a purchase and give you a way to recognize if what you want is really worth the trouble.")
+                        .font(.system(size: 19, weight: .regular, design: .rounded))
+                        .foregroundColor(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .padding(.horizontal, SpendLessSpacing.xl)
+                }
 
                 Spacer()
 
@@ -326,5 +368,9 @@ struct WhyChange5View: View {
 
 #Preview("WhyChange5 - Brain Reset") {
     WhyChange5View {}
+}
+
+#Preview("Waitlist Explanation") {
+    WaitlistExplanationView {}
 }
 
