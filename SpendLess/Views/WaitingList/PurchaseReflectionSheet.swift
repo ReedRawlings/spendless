@@ -20,52 +20,47 @@ struct PurchaseReflectionSheet: View {
             ZStack {
                 Color.spendLessBackground.ignoresSafeArea()
                 
-                VStack(spacing: SpendLessSpacing.lg) {
+                VStack(spacing: SpendLessSpacing.sm) {
                     // Header
-                    VStack(spacing: SpendLessSpacing.sm) {
-                        Text("🛍️")
-                            .font(.system(size: 50))
-                        
+                    VStack(spacing: SpendLessSpacing.xs) {
                         if item.isExpired {
                             Text("You waited \(item.daysWaited) days")
-                                .font(SpendLessFont.title2)
+                                .font(SpendLessFont.headline)
                                 .foregroundStyle(Color.spendLessPrimary)
                         } else {
                             Text("You've waited \(item.daysWaited) days")
-                                .font(SpendLessFont.title2)
+                                .font(SpendLessFont.headline)
                                 .foregroundStyle(Color.spendLessPrimary)
                         }
-                        
+
                         Text("What made you decide to purchase?")
                             .font(SpendLessFont.body)
                             .foregroundStyle(Color.spendLessTextSecondary)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, SpendLessSpacing.xl)
-                    
+                    .padding(.top, SpendLessSpacing.md)
+
                     // Item being purchased
                     Card {
                         HStack {
                             Text(item.name)
                                 .font(SpendLessFont.bodyBold)
                                 .foregroundStyle(Color.spendLessTextPrimary)
-                            
+
                             Spacer()
-                            
+
                             Text(formatCurrency(item.amount))
                                 .font(SpendLessFont.headline)
                                 .foregroundStyle(Color.spendLessPrimary)
                         }
                     }
-                    .padding(.horizontal, SpendLessSpacing.md)
-                    
+                    .padding(.horizontal, SpendLessSpacing.sm)
+
                     // Reason options
-                    VStack(spacing: SpendLessSpacing.sm) {
+                    VStack(spacing: SpendLessSpacing.xs) {
                         ForEach(PurchaseReason.allCases) { reason in
                             ReasonOptionCard(
                                 title: reason.displayName,
-                                description: reason.description,
-                                icon: reason.icon,
                                 isSelected: selectedReason == reason,
                                 isAligned: reason.isAligned
                             ) {
@@ -75,25 +70,25 @@ struct PurchaseReflectionSheet: View {
                             }
                         }
                     }
-                    .padding(.horizontal, SpendLessSpacing.md)
-                    
+                    .padding(.horizontal, SpendLessSpacing.sm)
+
                     Spacer()
-                    
+
                     // Actions
-                    VStack(spacing: SpendLessSpacing.sm) {
+                    VStack(spacing: SpendLessSpacing.xs) {
                         PrimaryButton("Continue", icon: "checkmark") {
                             onConfirm(selectedReason)
                             dismiss()
                         }
                         .disabled(selectedReason == nil)
-                        
+
                         TextButton("Skip reflection") {
                             onConfirm(nil)
                             dismiss()
                         }
                     }
-                    .padding(.horizontal, SpendLessSpacing.md)
-                    .padding(.bottom, SpendLessSpacing.xl)
+                    .padding(.horizontal, SpendLessSpacing.sm)
+                    .padding(.bottom, SpendLessSpacing.md)
                 }
             }
             .navigationTitle("Buying \(item.name)")
@@ -121,62 +116,52 @@ struct PurchaseReflectionSheet: View {
 
 private struct ReasonOptionCard: View {
     let title: String
-    let description: String
-    let icon: String
     let isSelected: Bool
     let isAligned: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
-                HStack(spacing: SpendLessSpacing.md) {
-                    Text(icon)
-                        .font(.title2)
-                    
-                    Text(title)
-                        .font(SpendLessFont.bodyBold)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                    
-                    Spacer()
-                    
-                    ZStack {
+            HStack(spacing: SpendLessSpacing.sm) {
+                Text(title)
+                    .font(SpendLessFont.body)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer()
+
+                ZStack {
+                    Circle()
+                        .stroke(isAligned ? Color.spendLessSuccess : Color.spendLessTextMuted, lineWidth: 1.5)
+                        .frame(width: 22, height: 22)
+                        .opacity(isSelected ? 0 : 1)
+
+                    if isSelected {
                         Circle()
-                            .stroke(isAligned ? Color.spendLessSuccess : Color.spendLessTextMuted, lineWidth: 1.5)
-                            .frame(width: 24, height: 24)
-                            .opacity(isSelected ? 0 : 1)
-                        
-                        if isSelected {
-                            Circle()
-                                .fill(isAligned ? Color.spendLessSuccess : Color.spendLessPrimary)
-                                .frame(width: 24, height: 24)
-                            
-                            Image(systemName: "checkmark")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.white)
-                        }
+                            .fill(isAligned ? Color.spendLessSuccess : Color.spendLessPrimary)
+                            .frame(width: 22, height: 22)
+
+                        Image(systemName: "checkmark")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
                     }
                 }
-                
-                Text(description)
-                    .font(SpendLessFont.caption)
-                    .foregroundStyle(Color.spendLessTextSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, 40) // Align with icon
             }
-            .padding(SpendLessSpacing.md)
+            .padding(.horizontal, SpendLessSpacing.sm)
+            .padding(.vertical, SpendLessSpacing.sm)
             .background(
                 RoundedRectangle(cornerRadius: SpendLessRadius.md)
-                    .fill(isSelected 
+                    .fill(isSelected
                         ? (isAligned ? Color.spendLessSuccess.opacity(0.1) : Color.spendLessPrimaryLight.opacity(0.15))
                         : Color.spendLessCardBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: SpendLessRadius.md)
                     .strokeBorder(
-                        isSelected 
+                        isSelected
                             ? (isAligned ? Color.spendLessSuccess : Color.spendLessPrimary)
-                            : Color.clear, 
+                            : Color.clear,
                         lineWidth: 2
                     )
             )
