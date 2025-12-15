@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 // MARK: - Screen 1: Welcome
 
@@ -799,9 +800,214 @@ struct OnboardingDesiredOutcomesView: View {
         } else {
             appState.onboardingDesiredOutcomes.insert(outcome)
         }
-        
+
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
     }
 }
+
+// MARK: - Screen 10: Waitlist Introduction
+
+struct OnboardingWaitlistIntroView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
+    let onContinue: () -> Void
+
+    @State private var itemName = ""
+    @State private var itemAmount: Decimal = 0
+    @State private var selectedReason: ReasonWanted?
+    @State private var otherReasonNote = ""
+    @State private var numberOfWears: String = ""
+    @State private var showReasonPicker = false
+    @State private var hasAddedItem = false
+
+    var body: some View {
+        OnboardingContainer(step: .waitlistIntro) {
+            ZStack {
+                ScrollView {
+                    VStack(spacing: SpendLessSpacing.lg) {
+                        VStack(spacing: SpendLessSpacing.xs) {
+                            Text("What did you resist?")
+                                .font(SpendLessFont.title2)
+                                .foregroundStyle(Color.spendLessTextPrimary)
+
+                            Text("When you want to buy something, add it here instead. The waitlist helps you understand the real cost of your purchases.")
+                                .font(SpendLessFont.body)
+                                .foregroundStyle(Color.spendLessTextSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.top, SpendLessSpacing.lg)
+
+                        if hasAddedItem {
+                            // Success state
+                            VStack(spacing: SpendLessSpacing.md) {
+                                Text("✅")
+                                    .font(.system(size: 40))
+
+                                Text("Added to your waitlist!")
+                                    .font(SpendLessFont.headline)
+                                    .foregroundStyle(Color.spendLessTextPrimary)
+
+                                Text("You'll see it in your Waiting List after setup.")
+                                    .font(SpendLessFont.body)
+                                    .foregroundStyle(Color.spendLessTextSecondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(SpendLessSpacing.lg)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.spendLessSuccess.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
+                        } else {
+                            // Input form - matches AddToWaitingListSheet
+                            VStack(spacing: SpendLessSpacing.md) {
+                                SpendLessTextField(
+                                    "What is it?",
+                                    text: $itemName,
+                                    placeholder: "e.g., Wireless earbuds"
+                                )
+
+                                // Price and number of wears in a horizontal layout
+                                HStack(spacing: SpendLessSpacing.md) {
+                                    CurrencyTextField(
+                                        title: "How much?",
+                                        amount: $itemAmount
+                                    )
+
+                                    // Number of wears field
+                                    VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                                        Text("Number of wears?")
+                                            .font(SpendLessFont.subheadline)
+                                            .foregroundStyle(Color.spendLessTextPrimary)
+
+                                        TextField("e.g., 50", text: $numberOfWears)
+                                            .font(SpendLessFont.title3)
+                                            .foregroundStyle(Color.spendLessTextPrimary)
+                                            .keyboardType(.numberPad)
+                                            .padding(SpendLessSpacing.md)
+                                            .background(Color.spendLessBackgroundSecondary)
+                                            .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                                            .onChange(of: numberOfWears) { _, newValue in
+                                                let filtered = newValue.filter { $0.isNumber }
+                                                if filtered != newValue {
+                                                    numberOfWears = filtered
+                                                }
+                                            }
+                                    }
+                                }
+
+                                // Why do you want this? picker
+                                VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                                    Text("Why do you want it? (optional)")
+                                        .font(SpendLessFont.caption)
+                                        .foregroundStyle(Color.spendLessTextMuted)
+
+                                    Button {
+                                        showReasonPicker = true
+                                    } label: {
+                                        HStack {
+                                            if let reason = selectedReason {
+                                                Text(reason.icon)
+                                                Text(reason.displayName)
+                                                    .foregroundStyle(Color.spendLessTextPrimary)
+                                            } else {
+                                                Text("Select a reason...")
+                                                    .foregroundStyle(Color.spendLessTextMuted)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "chevron.down")
+                                                .foregroundStyle(Color.spendLessTextMuted)
+                                        }
+                                        .font(SpendLessFont.body)
+                                        .padding(SpendLessSpacing.md)
+                                        .background(Color.spendLessCardBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+
+                                // Other reason note (if "Other" selected)
+                                if selectedReason == .other {
+                                    SpendLessTextField(
+                                        "Tell us more",
+                                        text: $otherReasonNote,
+                                        placeholder: "What's the reason?"
+                                    )
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                                }
+                            }
+                        }
+
+                        // Spacer to push content up and leave room for bottom buttons
+                        Spacer(minLength: 120)
+                    }
+                    .padding(.horizontal, SpendLessSpacing.md)
+                }
+                .scrollDismissesKeyboard(.interactively)
+
+                // Bottom action area
+                VStack {
+                    Spacer()
+
+                    VStack(spacing: SpendLessSpacing.sm) {
+                        if !hasAddedItem {
+                            Text("If you still want it in 7 days, you can buy it guilt-free.")
+                                .font(SpendLessFont.caption)
+                                .foregroundStyle(Color.spendLessTextMuted)
+                                .multilineTextAlignment(.center)
+
+                            PrimaryButton("Add to Waiting List", icon: "clock") {
+                                addItemToWaitlist()
+                            }
+                            .disabled(itemName.isEmpty || itemAmount <= 0)
+
+                            Button("Skip for now") {
+                                onContinue()
+                            }
+                            .font(SpendLessFont.body)
+                            .foregroundStyle(Color.spendLessTextMuted)
+                        } else {
+                            PrimaryButton("Continue") {
+                                onContinue()
+                            }
+                        }
+                    }
+                    .padding(.horizontal, SpendLessSpacing.lg)
+                    .padding(.bottom, SpendLessSpacing.xl)
+                    .padding(.top, SpendLessSpacing.sm)
+                    .background(
+                        Color.spendLessBackground
+                            .shadow(color: .black.opacity(0.05), radius: 10, y: -5)
+                    )
+                }
+            }
+        }
+        .sheet(isPresented: $showReasonPicker) {
+            ReasonWantedPicker(selectedReason: $selectedReason)
+                .presentationDetents([.medium])
+        }
+    }
+
+    private func addItemToWaitlist() {
+        let item = WaitingListItem(
+            name: itemName,
+            amount: itemAmount,
+            reasonWanted: selectedReason,
+            reasonWantedNote: selectedReason == .other ? otherReasonNote : nil
+        )
+        // Set price per wear estimate if number of wears was entered
+        if let wears = Int(numberOfWears), wears > 0 {
+            item.pricePerWearEstimate = wears
+        }
+        modelContext.insert(item)
+
+        do {
+            try modelContext.save()
+            hasAddedItem = true
+            HapticFeedback.heavySuccess()
+        } catch {
+            print("❌ Failed to save onboarding waitlist item: \(error.localizedDescription)")
+        }
+    }
+}
+
 
