@@ -367,132 +367,129 @@ struct LifeEnergyCalculatorView: View {
     
     private var resultsView: some View {
         ScrollView {
-            VStack(spacing: SpendLessSpacing.xl) {
+            VStack(spacing: SpendLessSpacing.md) {
                 // Title
                 Text("Life Energy Calculator")
                     .font(SpendLessFont.title2)
                     .foregroundStyle(Color.spendLessTextPrimary)
-                    .padding(.top, SpendLessSpacing.md)
-                
+                    .padding(.top, SpendLessSpacing.sm)
+
                 // True hourly wage
-                VStack(spacing: SpendLessSpacing.sm) {
+                VStack(spacing: SpendLessSpacing.xs) {
                     Text("Your true hourly wage")
                         .font(SpendLessFont.body)
                         .foregroundStyle(Color.spendLessTextSecondary)
-                    
+
                     if let wage = calculatedHourlyWage {
                         Text(ToolCalculationService.formatCurrencyWithCents(wage))
-                            .font(.system(size: 48, weight: .bold))
+                            .font(.system(size: 40, weight: .bold))
                             .foregroundStyle(Color.spendLessPrimary)
                     } else {
                         Text("$0.00")
-                            .font(.system(size: 48, weight: .bold))
+                            .font(.system(size: 40, weight: .bold))
                             .foregroundStyle(Color.spendLessTextMuted)
                     }
                 }
-                
+
                 Divider()
-                    .padding(.horizontal, SpendLessSpacing.xl)
-                
+                    .padding(.horizontal, SpendLessSpacing.md)
+
                 // Breakdown
-                VStack(spacing: SpendLessSpacing.sm) {
+                VStack(spacing: SpendLessSpacing.xs) {
                     BreakdownRow(
                         label: "Monthly take-home",
                         value: ToolCalculationService.formatCurrency(monthlyTakeHome)
                     )
-                    
+
                     BreakdownRow(
                         label: "Cost of living",
                         value: "-" + ToolCalculationService.formatCurrency(monthlyCostOfLiving)
                     )
-                    
+
                     Divider()
-                        .padding(.vertical, SpendLessSpacing.xs)
-                    
+
                     BreakdownRow(
                         label: "Discretionary income",
                         value: ToolCalculationService.formatCurrency(monthlyDiscretionary),
                         isHighlighted: true
                     )
-                    
+
                     BreakdownRow(
                         label: "Hours worked",
                         value: String(format: "%.0f", NSDecimalNumber(decimal: monthlyWorkHours).doubleValue)
                     )
                 }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
+                .padding(.horizontal, SpendLessSpacing.md)
+
                 Divider()
-                    .padding(.horizontal, SpendLessSpacing.xl)
-                
+                    .padding(.horizontal, SpendLessSpacing.md)
+
                 // Insights
-                VStack(spacing: SpendLessSpacing.md) {
+                VStack(spacing: SpendLessSpacing.sm) {
                     // Show warning if all cost of living fields are empty
                     if monthlyCostOfLiving == 0 && monthlyTakeHome > 0 {
                         WarningBanner(
                             message: "Add your expenses for a more accurate number",
                             type: .warning
                         )
-                        .padding(.horizontal, SpendLessSpacing.lg)
                     }
-                    
+
                     if hasNegativeDiscretionary {
                         WarningBanner(
                             message: "Your essentials currently match or exceed your income. Every non-essential purchase goes on credit.",
                             type: .error
                         )
-                        .padding(.horizontal, SpendLessSpacing.lg)
                     } else if let wage = calculatedHourlyWage, let minutes = minutesPerDollar {
-                        VStack(spacing: SpendLessSpacing.sm) {
+                        VStack(spacing: SpendLessSpacing.xs) {
                             Text("Every dollar you spend on non-essentials costs you")
-                                .font(SpendLessFont.body)
+                                .font(SpendLessFont.caption)
                                 .foregroundStyle(Color.spendLessTextSecondary)
                                 .multilineTextAlignment(.center)
-                            
+
                             Text("\(Int(NSDecimalNumber(decimal: minutes).doubleValue)) minutes of work.")
                                 .font(SpendLessFont.bodyBold)
                                 .foregroundStyle(Color.spendLessTextPrimary)
                                 .multilineTextAlignment(.center)
-                            
+
                             // Example: $150 jacket
                             let jacketHours = ToolCalculationService.lifeEnergyHours(
                                 amount: 150,
                                 hourlyWage: wage
                             )
-                            
+
                             Text("That $150 jacket?")
-                                .font(SpendLessFont.body)
+                                .font(SpendLessFont.caption)
                                 .foregroundStyle(Color.spendLessTextSecondary)
-                            
+
                             Text("\(Int(NSDecimalNumber(decimal: jacketHours).doubleValue)) hours of your life.")
                                 .font(SpendLessFont.bodyBold)
                                 .foregroundStyle(Color.spendLessTextPrimary)
                         }
-                        .padding(SpendLessSpacing.lg)
+                        .padding(SpendLessSpacing.md)
                         .background(Color.spendLessCardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
                     }
                 }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
+                .padding(.horizontal, SpendLessSpacing.md)
+
                 Divider()
-                    .padding(.horizontal, SpendLessSpacing.xl)
-                
+                    .padding(.horizontal, SpendLessSpacing.md)
+
                 // Action buttons
-                VStack(spacing: SpendLessSpacing.sm) {
+                VStack(spacing: SpendLessSpacing.xs) {
                     SecondaryButton("Recalculate", icon: "arrow.counterclockwise") {
                         currentStep = .income
                         HapticFeedback.buttonTap()
                     }
-                    
+
                     PrimaryButton("Save", icon: "checkmark") {
                         saveConfiguration()
                         HapticFeedback.buttonTap()
                         dismiss()
                     }
                 }
-                .padding(.horizontal, SpendLessSpacing.md)
-                .padding(.bottom, SpendLessSpacing.xl)
+                .padding(.horizontal, SpendLessSpacing.sm)
+                .padding(.bottom, SpendLessSpacing.md)
             }
         }
         .navigationBarBackButtonHidden(true)
