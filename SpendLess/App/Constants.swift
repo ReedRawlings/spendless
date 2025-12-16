@@ -26,27 +26,17 @@ enum AppConstants {
         static let totalSaved = "totalSaved"
     }
     
-    // MARK: - RevenueCat Configuration
-
-    /// RevenueCat API Key - reads from Info.plist (populated by xcconfig)
-    /// Setup: Copy Config/Template.xcconfig to Config/Debug.xcconfig and Config/Release.xcconfig
-    /// Add your keys there. The xcconfig files are gitignored.
-    /// Note: For better security, use REVENUECAT_WORKER_URL to fetch the key from a Cloudflare Worker
-    static var revenueCatAPIKey: String {
-        Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_API_KEY") as? String ?? "YOUR_REVENUECAT_API_KEY_HERE"
-    }
+    // MARK: - StoreKit Product Identifiers
     
-    /// Cloudflare Worker endpoint for RevenueCat API key
-    /// The Worker returns the RevenueCat API key, keeping it secure server-side
-    /// If set, the app will fetch the API key from this endpoint instead of using the direct key
-    static var revenueCatWorkerURL: String? {
-        // Can be overridden via Info.plist with REVENUECAT_WORKER_URL key
-        let url = Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_WORKER_URL") as? String ?? "https://revenuecat-key.rawlingreed.workers.dev"
-        // Return nil if it's the placeholder value
-        if url != "YOUR_CLOUDFLARE_WORKER_URL_HERE" && !url.isEmpty {
-            return url
-        }
-        return nil
+    /// Product identifiers for App Store subscriptions
+    enum ProductIdentifiers {
+        /// Monthly subscription with 4-day trial ($6.99/month)
+        static let monthly = "monthly_699_4daytrial"
+        /// Annual subscription with 4-day trial ($19.99/year)
+        static let annual = "monthly_1999_4daytrial"
+        
+        /// All product identifiers for fetching from App Store
+        static let all: Set<String> = [monthly, annual]
     }
 
     // MARK: - Screenshot Mode Configuration

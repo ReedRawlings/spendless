@@ -93,15 +93,17 @@ struct SpendLessApp: App {
         // Set up notification delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
 
-        // Configure RevenueCat asynchronously
+        // Configure StoreKit 2 asynchronously
         // The async configure method ensures proper initialization before any subscription checks
+        // Use the shared instance directly here to avoid capturing `self` in an escaping closure
         Task { @MainActor in
-            await subscriptionService.configure(apiKey: AppConstants.revenueCatAPIKey)
+            let service = SubscriptionService.shared
+            await service.configure()
 
             // For returning users, check subscription status immediately after configuration
             // This ensures Pro features are available right away
             if UserDefaults.standard.bool(forKey: AppConstants.UserDefaultsKeys.hasCompletedOnboarding) {
-                await subscriptionService.checkSubscriptionStatus()
+                await service.checkSubscriptionStatus()
             }
         }
 
@@ -182,8 +184,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     
-    /// State for showing RevenueCat paywall
-    @State private var showRevenueCatPaywall = false
+    /// State for showing paywall
+    @State private var showPaywall = false
     
     var body: some View {
         ZStack {
@@ -204,7 +206,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: interventionManager.isShowingIntervention)
-        .sheet(isPresented: $showRevenueCatPaywall) {
+        .sheet(isPresented: $showPaywall) {
             SpendLessPaywallView()
         }
         .onChange(of: appState.shouldShowPaywallAfterOnboarding) { oldValue, newValue in
@@ -215,8 +217,8 @@ struct RootView: View {
                     // Wait for onboarding transition to complete
                     try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                     
-                    // Show RevenueCat paywall
-                    showRevenueCatPaywall = true
+                    // Show paywall
+                    showPaywall = true
                     
                     // Check subscription status in background (for logging only)
                     Task {

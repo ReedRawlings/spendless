@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		740A7B102EE4036B00C872C9 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 740A7B0F2EE4036B00C872C9 /* RevenueCat */; };
-		740A7B112EE4036B00C872CA /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 740A7B0F2EE4036B00C872CA /* RevenueCatUI */; };
 		74290CFF2EDE90A00069BFB2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74290CFE2EDE90A00069BFB2 /* WidgetKit.framework */; };
 		74290D012EDE90A00069BFB2 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74290D002EDE90A00069BFB2 /* SwiftUI.framework */; };
 		74290D102EDE90A10069BFB2 /* PanicButtonWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 74290CFD2EDE90A00069BFB2 /* PanicButtonWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -169,8 +167,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				740A7B102EE4036B00C872C9 /* RevenueCat in Frameworks */,
-				740A7B112EE4036B00C872CA /* RevenueCatUI in Frameworks */,
 				74290D1D2EDEB4B80069BFB2 /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -289,8 +285,6 @@
 			name = SpendLess;
 			packageProductDependencies = (
 				74290D1C2EDEB4B80069BFB2 /* Lottie */,
-				740A7B0F2EE4036B00C872C9 /* RevenueCat */,
-				740A7B0F2EE4036B00C872CA /* RevenueCatUI */,
 			);
 			productName = SpendLess;
 			productReference = 744B6B922EDD59E600804AB6 /* SpendLess.app */;
@@ -400,7 +394,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				74290D1B2EDEB4B80069BFB2 /* XCRemoteSwiftPackageReference "lottie-ios" */,
-				740A7B0E2EE4036B00C872C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 744B6B932EDD59E600804AB6 /* Products */;
@@ -1042,14 +1035,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		740A7B0E2EE4036B00C872C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.49.3;
-			};
-		};
 		74290D1B2EDEB4B80069BFB2 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/airbnb/lottie-ios";
@@ -1061,16 +1046,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		740A7B0F2EE4036B00C872C9 /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 740A7B0E2EE4036B00C872C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCat;
-		};
-		740A7B0F2EE4036B00C872CA /* RevenueCatUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 740A7B0E2EE4036B00C872C9 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCatUI;
-		};
 		74290D1C2EDEB4B80069BFB2 /* Lottie */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 74290D1B2EDEB4B80069BFB2 /* XCRemoteSwiftPackageReference "lottie-ios" */;

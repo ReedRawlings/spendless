@@ -1003,7 +1003,7 @@ struct OnboardingWaitlistIntroView: View {
         do {
             try modelContext.save()
             hasAddedItem = true
-            HapticFeedback.heavySuccess()
+            HapticFeedback.mediumSuccess()
         } catch {
             print("❌ Failed to save onboarding waitlist item: \(error.localizedDescription)")
         }

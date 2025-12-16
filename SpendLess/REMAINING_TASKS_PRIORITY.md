@@ -2,32 +2,28 @@
 
 ## 🔴 CRITICAL (Blocks Launch)
 
-### 1. Paywall & Subscription System Dashboard Configuration
-**Status:** Code complete, dashboard config needed  
+### 1. Paywall & Subscription System Configuration
+**Status:** ✅ Code complete, App Store Connect config needed  
 **Priority:** CRITICAL — Required for monetization
 
 **Tasks:**
-- [ ] **RevenueCat Dashboard:**
-  - [ ] Create products in App Store Connect (monthly $6.99, annual $39.99)
-  - [ ] Configure products in RevenueCat dashboard
-  - [ ] Create offerings (default offering with trial)
-  - [ ] Set up entitlements ("Future Selves Pro")
-  - [ ] Test subscription flow end-to-end
+- [x] **StoreKit 2 Integration:**
+  - [x] SubscriptionService using native StoreKit 2
+  - [x] Custom PaywallView matching app design system
+  - [x] Transaction listener for real-time updates
 
 - [ ] **App Store Connect:**
-  - [ ] Set up subscription products (monthly, annual)
+  - [ ] Create subscription products (monthly $6.99, annual $19.99)
+    - Product ID: `monthly_699_4daytrial`
+    - Product ID: `monthly_1999_4daytrial`
   - [ ] Configure subscription groups
+  - [ ] Set 4-day free trial periods
   - [ ] Set pricing and availability
+  - [ ] Test subscription flow end-to-end in sandbox
 
-- [ ] **Paywall Messaging Strategy:**
-  - [ ] Design RevenueCat paywall UI (showing systems/outcomes, not just features)
-  - [ ] Show who they'll become using the app
-  - [ ] Trial messaging: "We want you to trial our tool before committing"
-  - [ ] Finalize pricing and trial duration
+**Note:** Using native StoreKit 2 with custom PaywallView
 
-**Note:** Using RevenueCat PaywallView only (Superwall removed)
-
-**Estimated Time:** 2-3 days (dashboard work)
+**Estimated Time:** 1-2 days (App Store Connect work)
 
 ---
 
@@ -80,7 +76,7 @@
 - [ ] **Privacy Policy:**
   - [ ] Data collection disclosure
   - [ ] Screen Time API usage explanation
-  - [ ] Third-party services (RevenueCat, analytics)
+  - [ ] Third-party services (analytics)
   - [ ] User data rights (GDPR, CCPA if applicable)
   - [ ] Host on website (URL required for App Store)
 

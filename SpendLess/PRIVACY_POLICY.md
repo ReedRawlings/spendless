@@ -73,10 +73,10 @@ This data is stored in your device's secure container and is protected by your d
 
 We use the following third-party services:
 
-#### RevenueCat (Subscription Management)
-- **Purpose:** Process and manage subscriptions
-- **Data Shared:** Anonymous user identifier, subscription status, purchase history
-- **Privacy Policy:** [https://www.revenuecat.com/privacy](https://www.revenuecat.com/privacy)
+#### Apple App Store (Subscription Management)
+- **Purpose:** Process and manage subscriptions via native StoreKit
+- **Data Shared:** Subscription transactions processed through Apple's secure payment system
+- **Privacy Policy:** [https://www.apple.com/legal/privacy](https://www.apple.com/legal/privacy)
 
 #### MailerLite (Email Marketing) - Optional
 - **Purpose:** Send email updates and downloadable resources to users who opt-in
@@ -91,7 +91,7 @@ We do not sell, trade, or rent your personal information to third parties.
 
 We may share your information only in the following circumstances:
 
-- **Service Providers:** With third-party vendors who assist in operating our App (RevenueCat for subscriptions, MailerLite for email)
+- **Service Providers:** With third-party vendors who assist in operating our App (MailerLite for email)
 - **Legal Requirements:** If required by law, court order, or governmental authority
 - **Protection of Rights:** To protect our rights, privacy, safety, or property, or that of our users or others
 - **Business Transfers:** In connection with a merger, acquisition, or sale of assets (you would be notified)
@@ -139,7 +139,7 @@ SpendLess is not intended for children under 13 years of age. We do not knowingl
 ## Data Retention
 
 - **On-Device Data:** Retained until you delete it or uninstall the App
-- **Subscription Data:** Retained by RevenueCat as per their data retention policy
+- **Subscription Data:** Managed by Apple's App Store as per Apple's data retention policy
 - **Email Data:** Retained by MailerLite until you unsubscribe or request deletion
 
 ---
@@ -211,7 +211,7 @@ For transparency, here is what we report to the App Store:
 
 ### Data Linked to You
 - Email Address (if provided for mailing list)
-- Purchase History (via RevenueCat)
+- Purchase History (via Apple App Store)
 
 ### Data Not Linked to You
 - Usage Data

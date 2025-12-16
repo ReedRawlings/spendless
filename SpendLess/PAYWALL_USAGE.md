@@ -1,32 +1,45 @@
 # Paywall Usage Guide
 
-## ✅ What's Been Set Up
+## Overview
 
-1. **PaywallView Created** (`SpendLess/Views/Settings/PaywallView.swift`)
-   - Uses RevenueCat's built-in `PaywallView` from RevenueCatUI
-   - Handles purchase completion, failures, and restore
-   - Automatically updates subscription status after purchase
+SpendLess uses native StoreKit 2 for subscription management. The custom paywall is built with SwiftUI and matches the app's design system.
 
-2. **Settings Integration**
-   - Added "Subscription" section in Settings
+## What's Been Set Up
+
+1. **SubscriptionService** (`SpendLess/Services/SubscriptionService.swift`)
+   - Native StoreKit 2 implementation
+   - Transaction listener for real-time updates
+   - Subscription status checking via `Transaction.currentEntitlements`
+   - Purchase and restore functionality
+
+2. **Custom PaywallView** (`SpendLess/Views/Settings/PaywallView.swift`)
+   - Custom SwiftUI paywall matching app design system
+   - Displays monthly and annual subscription options
+   - Shows trial information (4-day free trial)
+   - Handles purchase flow with loading states
+   - Includes restore purchases button
+
+3. **Settings Integration**
+   - "Subscription" section in Settings
    - Shows "Upgrade to Pro" button if not subscribed
    - Shows "Pro Member" status with expiration date if subscribed
    - "Restore Purchases" button for non-subscribers
    - "Manage Subscription" button for subscribers
 
-## 🚨 Important: Configure Paywall in RevenueCat Dashboard First!
+## Product IDs
 
-Before the paywall will work, you **must** configure it in the RevenueCat dashboard:
+Configured in `SpendLess/App/Constants.swift`:
 
-1. Go to [RevenueCat Dashboard](https://app.revenuecat.com)
-2. Navigate to **Paywalls** section
-3. Click **+ New Paywall**
-4. Configure your paywall design
-5. Attach it to your offering (the one named `default`)
+```swift
+enum ProductIdentifiers {
+    static let monthly = "monthly_699_4daytrial"
+    static let annual = "monthly_1999_4daytrial"
+}
+```
 
-Without this step, the paywall will show an error!
+These must match the products configured in App Store Connect.
 
-## 📱 How to Present the Paywall
+## How to Present the Paywall
 
 ### From Settings (Already Done)
 The paywall is already integrated in Settings. Users can tap "Upgrade to Pro" to see it.
@@ -59,7 +72,7 @@ var body: some View {
 }
 ```
 
-## 🔒 Check Subscription Status
+## Check Subscription Status
 
 ### In Any View
 
@@ -90,21 +103,11 @@ var body: some View {
 }
 ```
 
-## 🎯 Common Use Cases
+## Common Use Cases
 
 ### Show Paywall After Onboarding
 
-In your onboarding completion:
-
-```swift
-func completeOnboarding() {
-    appState.completeOnboarding()
-    // Show paywall after onboarding
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        showPaywall = true
-    }
-}
-```
+The app automatically shows the paywall after onboarding completes (configured in `RootView`).
 
 ### Gate Premium Features
 
@@ -131,27 +134,83 @@ struct PremiumFeatureView: View {
 }
 ```
 
-## 🔄 Restore Purchases
+## Subscription Service API
 
-The restore functionality is already in Settings. Users can tap "Restore Purchases" to restore their subscription on a new device.
+### Properties
 
-## 📝 Next Steps
+| Property | Type | Description |
+|----------|------|-------------|
+| `hasProAccess` | `Bool` | Whether user has active subscription |
+| `isSubscribed` | `Bool` | Whether user is subscribed |
+| `isInTrial` | `Bool` | Whether user is in trial period |
+| `subscriptionStatus` | `SubscriptionStatus` | Current status enum |
+| `expirationDate` | `Date?` | Subscription expiration date |
+| `currentProductIdentifier` | `String?` | Active product ID |
 
-1. ✅ Configure paywall in RevenueCat dashboard
-2. ✅ Test purchase flow in sandbox
-3. ✅ Add subscription checks to premium features
-4. ✅ Add paywall triggers (after onboarding, feature gates)
-5. ✅ Test restore purchases flow
+### Methods
 
-## 🐛 Troubleshooting
+```swift
+// Check subscription status
+await subscriptionService.checkSubscriptionStatus()
 
-### Paywall shows error
-- **Solution:** Make sure you've configured a paywall in RevenueCat dashboard and attached it to your offering
+// Get available products
+let products = try await subscriptionService.getAvailableProducts()
+
+// Purchase a product
+try await subscriptionService.purchase(product)
+
+// Restore purchases
+try await subscriptionService.restorePurchases()
+```
+
+## App Store Connect Setup
+
+1. Create subscription products in App Store Connect:
+   - `monthly_699_4daytrial` - Monthly at $6.99 with 4-day trial
+   - `monthly_1999_4daytrial` - Annual at $19.99 with 4-day trial
+
+2. Configure subscription group "SpendLess Pro"
+
+3. Set up pricing and free trial periods
+
+4. Create sandbox tester accounts for testing
+
+## Testing
+
+### Sandbox Testing
+
+1. Sign out of your Apple ID in Settings → App Store
+2. Run the app on a device
+3. When prompted to purchase, sign in with sandbox tester account
+4. Sandbox purchases complete instantly and renew quickly
+
+### Testing Checklist
+
+- [ ] Subscription status checking works on app launch
+- [ ] Purchase flow completes successfully
+- [ ] Trial period detection works correctly
+- [ ] Restore purchases works on new device
+- [ ] Subscription expiration is detected correctly
+- [ ] Paywall UI displays correctly with products
+- [ ] Error handling works for failed purchases
+
+## Troubleshooting
+
+### Products not loading
+- Verify product IDs match App Store Connect exactly
+- Check that products are approved and available
+- Ensure Paid Applications agreement is signed
 
 ### Purchase doesn't complete
-- **Solution:** Check that products are properly configured in App Store Connect and RevenueCat
-- Verify you're using a sandbox tester account for testing
+- Verify you're using a sandbox tester account
+- Check Xcode console for StoreKit errors
+- Ensure device is connected to internet
 
 ### Subscription status not updating
-- **Solution:** The paywall automatically updates status after purchase. If it doesn't, check RevenueCat logs in dashboard.
+- Call `checkSubscriptionStatus()` after purchase
+- Check that transaction listener is running
+- Verify transaction is being finished
 
+### Trial not detected
+- Check product configuration in App Store Connect
+- Verify introductory offer is set up correctly

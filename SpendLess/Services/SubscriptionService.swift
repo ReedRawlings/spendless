@@ -2,24 +2,16 @@
 //  SubscriptionService.swift
 //  SpendLess
 //
-//  RevenueCat subscription management service
+//  Native StoreKit 2 subscription management service
 //
 
 import Foundation
-import RevenueCat
+import StoreKit
 import SwiftUI
 
 @MainActor
 @Observable
-class SubscriptionService: NSObject {
-    
-    // MARK: - Constants
-    
-    /// Entitlement identifier configured in RevenueCat dashboard
-    static let entitlementIdentifier = "Future Selves Pro"
-    
-    /// Offering identifier for SpendLess subscription
-    static let offeringIdentifier = "ofrngaaa4b9888c"
+class SubscriptionService {
     
     // MARK: - Singleton
     
@@ -39,14 +31,20 @@ class SubscriptionService: NSObject {
     /// Current entitlement status
     var hasProAccess: Bool = false
     
-    /// Current customer info (for debugging)
-    var customerInfo: CustomerInfo?
-    
     /// Error state
     var lastError: Error?
     
-    /// Whether Purchases has been configured
-    private var isConfigured: Bool = false
+    /// Current subscription expiration date
+    var expirationDate: Date?
+    
+    /// Current subscription product identifier
+    var currentProductIdentifier: String?
+    
+    /// Available products fetched from App Store
+    private(set) var availableProducts: [Product] = []
+    
+    /// Transaction listener task
+    private var transactionListenerTask: Task<Void, Never>?
     
     // MARK: - Subscription Status
     
@@ -60,199 +58,98 @@ class SubscriptionService: NSObject {
     
     // MARK: - Initialization
     
-    private override init() {
-        super.init()
-        // Don't access Purchases.shared here - it hasn't been configured yet
-        // Delegate will be set in configure() method after configuration
+    private init() {
+        // Configuration will be done via configure() method
     }
     
     // MARK: - Configuration
-
-    /// Configure RevenueCat with API key
-    /// If a Cloudflare Worker URL is configured, fetches the API key from the worker first
-    /// Otherwise, uses the provided API key directly
+    
+    /// Configure StoreKit and start listening for transactions
     /// Call this in app initialization
-    /// - Note: This method is async to ensure configuration completes before returning
-    func configure(apiKey: String) async {
-        // Check if we should fetch from Cloudflare Worker
-        if let workerURL = AppConstants.revenueCatWorkerURL {
-            print("🔐 Fetching RevenueCat API key from Cloudflare Worker...")
-            do {
-                let fetchedKey = try await fetchAPIKeyFromWorker(workerURL: workerURL)
-                configureWithKey(fetchedKey)
-            } catch {
-                print("⚠️ Failed to fetch API key from worker: \(error)")
-                print("⚠️ Falling back to direct API key...")
-                // Fall back to direct key if worker fetch fails
-                configureWithKey(apiKey)
-            }
-        } else {
-            // Use direct API key
-            configureWithKey(apiKey)
-        }
+    func configure() async {
+        print("🔧 StoreKit 2 Configuration:")
+        print("   Product IDs: \(AppConstants.ProductIdentifiers.all)")
+        
+        // Start listening for transaction updates
+        startTransactionListener()
+        
+        // Fetch available products
+        await fetchProducts()
+        
+        print("✅ StoreKit 2 configured successfully")
     }
     
-    /// Internal method to configure RevenueCat with a specific API key
-    private func configureWithKey(_ apiKey: String) {
-        // Validate API key
-        guard !apiKey.isEmpty && apiKey != "YOUR_REVENUECAT_API_KEY_HERE" else {
-            print("⚠️ RevenueCat API key not configured. Please add your API key to Constants.swift")
-            print("⚠️ Purchases will not be configured. Some features may not work.")
-            return
-        }
-        
-        // Prevent double configuration
-        guard !isConfigured else {
-            print("⚠️ RevenueCat already configured. Skipping.")
-            return
-        }
-        
-        // Detect Test Store vs Production
-        let isTestStore = apiKey.hasPrefix("test_")
-        let environment = isTestStore ? "Test Store" : "Production"
-        
-        print("🔧 RevenueCat Configuration:")
-        print("   Environment: \(environment)")
-        print("   API Key: \(apiKey.prefix(10))...\(apiKey.suffix(4))")
-        print("   Entitlement Identifier: \(Self.entitlementIdentifier)")
-        
-        #if DEBUG
-        Purchases.logLevel = .debug
-        #else
-        Purchases.logLevel = .warn
-        #endif
-        Purchases.configure(withAPIKey: apiKey)
-        isConfigured = true
-        
-        // Set delegate AFTER configuration
-        Purchases.shared.delegate = self
-        
-        // Verify Test Store setup if using Test Store
-        if isTestStore {
-            Task {
-                await verifyTestStoreSetup()
+    /// Start listening for transaction updates
+    private func startTransactionListener() {
+        transactionListenerTask = Task(priority: .background) { [weak self] in
+            for await update in StoreKit.Transaction.updates {
+                await self?.handleTransactionUpdate(update)
             }
         }
-        
-        // NOTE: Subscription status check is deferred to avoid Apple ID prompt during onboarding
-        // Status will be checked lazily when needed (e.g., when Settings view appears)
+        print("   📡 Transaction listener started")
     }
     
-    /// Fetch RevenueCat API key from Cloudflare Worker
-    /// - Parameter workerURL: The Cloudflare Worker endpoint URL
-    /// - Returns: The API key string
-    private func fetchAPIKeyFromWorker(workerURL: String) async throws -> String {
-        guard let url = URL(string: workerURL) else {
-            throw SubscriptionError.invalidWorkerURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw SubscriptionError.serverError
-        }
-        
-        guard httpResponse.statusCode == 200 else {
-            print("❌ RevenueCat Worker error: Status \(httpResponse.statusCode)")
-            throw SubscriptionError.serverError
-        }
-        
-        // Parse response - expect JSON with "api_key" field
-        struct APIKeyResponse: Codable {
-            let api_key: String
-        }
-        
+    /// Stop transaction listener
+    func stopListening() {
+        transactionListenerTask?.cancel()
+        transactionListenerTask = nil
+    }
+    
+    /// Handle transaction updates
+    private func handleTransactionUpdate(_ result: VerificationResult<StoreKit.Transaction>) async {
         do {
-            let result = try JSONDecoder().decode(APIKeyResponse.self, from: data)
-            print("✅ Successfully fetched API key from Cloudflare Worker")
-            return result.api_key
-        } catch {
-            print("❌ Failed to decode API key response: \(error)")
-            throw SubscriptionError.serverError
-        }
-    }
-    
-    /// Check if Purchases is configured before accessing it
-    private func ensureConfigured() throws {
-        guard isConfigured else {
-            throw SubscriptionError.notConfigured
-        }
-    }
-    
-    /// Verify Test Store setup and log configuration status
-    func verifyTestStoreSetup() async {
-        print("🔍 Verifying Test Store Setup...")
-        
-        do {
-            try ensureConfigured()
-            // Attempt to fetch offerings
-            let offerings = try await Purchases.shared.offerings()
+            let transaction = try checkVerified(result)
             
-            if let offering = offerings.offering(identifier: Self.offeringIdentifier) {
-                print("✅ Offering 'SpendLess' Found: \(offering.identifier)")
-                print("   Available Packages: \(offering.availablePackages.count)")
+            // Check if this is one of our subscription products
+            if AppConstants.ProductIdentifiers.all.contains(transaction.productID) {
+                print("📢 Transaction Update: \(transaction.productID)")
                 
-                for (index, package) in offering.availablePackages.enumerated() {
-                    print("   Package \(index + 1):")
-                    print("     Identifier: \(package.identifier)")
-                    print("     Product ID: \(package.storeProduct.productIdentifier)")
-                    print("     Localized Price: \(package.storeProduct.localizedPriceString)")
-                }
-            } else {
-                print("⚠️ Offering '\(Self.offeringIdentifier)' not found. Make sure:")
-                print("   1. The offering ID '\(Self.offeringIdentifier)' exists in RevenueCat dashboard")
-                print("   2. Products are added to the offering")
-                print("   Available offerings: \(offerings.all.keys.joined(separator: ", "))")
+                // Update subscription status
+                await checkSubscriptionStatus()
+                
+                // Finish the transaction
+                await transaction.finish()
             }
-            
-            // Check entitlement identifier
-            let customerInfo = try await Purchases.shared.customerInfo()
-            let entitlementExists = customerInfo.entitlements.all.keys.contains(Self.entitlementIdentifier)
-            
-            if entitlementExists {
-                print("✅ Entitlement '\(Self.entitlementIdentifier)' exists in system")
-                let entitlement = customerInfo.entitlements.all[Self.entitlementIdentifier]
-                if let entitlement = entitlement {
-                    print("   Current Status: \(entitlement.isActive ? "Active" : "Inactive")")
-                } else {
-                    print("   Current Status: Not yet used")
-                }
-            } else {
-                print("⚠️ Entitlement '\(Self.entitlementIdentifier)' not found in customer info")
-                print("   (This is normal if user hasn't purchased yet)")
-                print("   Verify entitlement name matches exactly in RevenueCat dashboard")
-            }
-            
         } catch {
-            print("❌ Error verifying Test Store setup: \(error)")
-            self.lastError = error
+            print("❌ Transaction update verification failed: \(error)")
         }
     }
     
-    /// Log full customer info for debugging
-    func logCustomerInfo(_ customerInfo: CustomerInfo) {
-        print("📋 Customer Info:")
-        print("   Active Entitlements: \(customerInfo.entitlements.active.count)")
-        print("   All Entitlements: \(customerInfo.entitlements.all.keys.joined(separator: ", "))")
+    /// Fetch available products from App Store
+    private func fetchProducts() async {
+        print("📦 Fetching products from App Store...")
         
-        if let entitlement = customerInfo.entitlements.all[Self.entitlementIdentifier] {
-            print("   '\(Self.entitlementIdentifier)' Entitlement:")
-            print("     Active: \(entitlement.isActive)")
-            print("     Will Renew: \(entitlement.willRenew)")
-            print("     Period Type: \(entitlement.periodType)")
-            print("     Product Identifier: \(entitlement.productIdentifier)")
-            if let expirationDate = entitlement.expirationDate {
-                print("     Expiration Date: \(expirationDate)")
+        do {
+            let products = try await Product.products(for: AppConstants.ProductIdentifiers.all)
+            availableProducts = products.sorted { p1, p2 in
+                // Sort by price (monthly first, then annual)
+                p1.price < p2.price
             }
-        } else {
-            print("   '\(Self.entitlementIdentifier)' Entitlement: Not found")
+            
+            print("✅ Products fetched: \(availableProducts.count)")
+            for product in availableProducts {
+                print("   - \(product.id): \(product.displayName) - \(product.displayPrice)")
+            }
+        } catch {
+            print("❌ Failed to fetch products: \(error)")
+            lastError = error
         }
-        
-        print("   Active Subscriptions: \(customerInfo.activeSubscriptions.joined(separator: ", "))")
+    }
+    
+    // MARK: - Transaction Verification
+    
+    /// Verify a transaction result
+    /// - Parameter result: The verification result from StoreKit
+    /// - Returns: The verified transaction
+    /// - Throws: SubscriptionError.failedVerification if verification fails
+    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+        switch result {
+        case .unverified(_, let error):
+            print("❌ Transaction verification failed: \(error)")
+            throw SubscriptionError.failedVerification
+        case .verified(let transaction):
+            return transaction
+        }
     }
     
     // MARK: - Subscription Status Checks
@@ -260,259 +157,261 @@ class SubscriptionService: NSObject {
     /// Check current subscription status
     func checkSubscriptionStatus() async {
         print("🔍 Checking subscription status...")
-        do {
-            try ensureConfigured()
-            print("   📡 Fetching customerInfo from RevenueCat...")
-            // Add timeout to prevent hanging
-            let customerInfo = try await withTimeout(seconds: 10) {
-                try await Purchases.shared.customerInfo()
+        
+        var foundActiveSubscription = false
+        var latestTransaction: StoreKit.Transaction?
+        var foundExpirationDate: Date?
+        var foundIsInTrial = false
+        var foundProductID: String?
+        
+        // Check current entitlements
+        for await result in StoreKit.Transaction.currentEntitlements {
+            do {
+                let transaction = try checkVerified(result)
+                
+                // Check if this is one of our subscription products
+                if AppConstants.ProductIdentifiers.all.contains(transaction.productID) {
+                    // Check if subscription is still active (not expired)
+                    if let expiration = transaction.expirationDate {
+                        if expiration > Date() {
+                            foundActiveSubscription = true
+                            foundExpirationDate = expiration
+                            foundProductID = transaction.productID
+                            
+                            // Check if in trial period using the offer property (iOS 17.2+)
+                            if let offer = transaction.offer {
+                                if offer.type == .introductory {
+                                    foundIsInTrial = true
+                                }
+                            }
+                            
+                            // Keep track of the latest transaction
+                            if latestTransaction == nil ||
+                               (transaction.purchaseDate > latestTransaction!.purchaseDate) {
+                                latestTransaction = transaction
+                            }
+                            
+                            print("   ✅ Found active subscription: \(transaction.productID)")
+                            print("      Expiration: \(expiration)")
+                            if let offer = transaction.offer {
+                                print("      Offer Type: \(offer.type)")
+                            }
+                        } else {
+                            print("   ⏰ Found expired subscription: \(transaction.productID)")
+                        }
+                    }
+                }
+            } catch {
+                print("❌ Transaction verification failed: \(error)")
+                lastError = error
             }
-            print("   ✅ CustomerInfo received")
-            self.customerInfo = customerInfo
-            logCustomerInfo(customerInfo)
-            updateSubscriptionState(from: customerInfo)
-            print("   ✅ Subscription status updated")
-            print("   Result: hasProAccess = \(hasProAccess), status = \(subscriptionStatus)")
-        } catch {
-            print("❌ Error fetching customer info: \(error)")
-            self.lastError = error
-            // Continue anyway - assume user doesn't have access
-            print("   ⚠️ Assuming user does NOT have Pro access due to error")
-            hasProAccess = false
-            subscriptionStatus = .unknown
         }
-        print("🔍 Subscription status check COMPLETE")
-    }
-    
-    /// Helper to add timeout to async operations
-    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask {
-                try await operation()
-            }
-            
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw TimeoutError()
-            }
-            
-            guard let result = try await group.next() else {
-                throw TimeoutError()
-            }
-            group.cancelAll()
-            return result
-        }
-    }
-    
-    /// Update local state from CustomerInfo
-    private func updateSubscriptionState(from customerInfo: CustomerInfo) {
-        // Check for "Future Selves Pro" entitlement configured in RevenueCat dashboard
-        let entitlement = customerInfo.entitlements.all[Self.entitlementIdentifier]
+        
+        // Update state
         let previousAccess = hasProAccess
+        hasProAccess = foundActiveSubscription
+        isSubscribed = foundActiveSubscription
+        isInTrial = foundIsInTrial
+        expirationDate = foundExpirationDate
+        currentProductIdentifier = foundProductID
         
-        hasProAccess = entitlement?.isActive == true
+        // Determine subscription status
+        if foundActiveSubscription {
+            subscriptionStatus = foundIsInTrial ? .trial : .subscribed
+        } else {
+            subscriptionStatus = .notSubscribed
+        }
         
-        // Log entitlement status change
+        // Log status change
         if previousAccess != hasProAccess {
             print("🔄 Entitlement Status Changed:")
             print("   Previous: \(previousAccess ? "Active" : "Inactive")")
             print("   Current: \(hasProAccess ? "Active" : "Inactive")")
         }
         
-        // Determine subscription status
-        if hasProAccess {
-            if let entitlement = entitlement {
-                // Check if user is in trial period (regardless of auto-renew status)
-                isInTrial = entitlement.periodType == .trial
-            } else {
-                isInTrial = false
-            }
-            isSubscribed = true
-            subscriptionStatus = isInTrial ? .trial : .subscribed
-            
-            if let productId = entitlement?.productIdentifier {
-                print("✅ Pro Access Active - Product: \(productId)")
-            }
-        } else {
-            isSubscribed = false
-            isInTrial = false
-            
-            // Check if subscription expired
-            if entitlement?.isActive == false {
-                subscriptionStatus = .expired
-                print("⏰ Subscription Expired")
-            } else {
-                subscriptionStatus = .notSubscribed
-            }
+        print("✅ Subscription status check complete")
+        print("   hasProAccess: \(hasProAccess)")
+        print("   status: \(subscriptionStatus)")
+        print("   isInTrial: \(isInTrial)")
+        if let expiration = expirationDate {
+            print("   expirationDate: \(expiration)")
         }
     }
     
     // MARK: - Purchase Flow
     
-    /// Get available packages (monthly, annual, etc.)
-    func getAvailablePackages() async throws -> [Package] {
-        try ensureConfigured()
-        print("📦 Fetching available packages from Test Store...")
+    /// Get available products (monthly, annual, etc.)
+    func getAvailableProducts() async throws -> [Product] {
+        print("📦 Getting available products...")
         
-        let offerings = try await Purchases.shared.offerings()
-        
-        print("   Total Offerings: \(offerings.all.count)")
-        print("   Offering Keys: \(offerings.all.keys.joined(separator: ", "))")
-        
-        guard let offering = offerings.offering(identifier: Self.offeringIdentifier) else {
-            print("❌ Offering '\(Self.offeringIdentifier)' not found!")
-            print("   Available offerings: \(offerings.all.keys.joined(separator: ", "))")
-            print("   Make sure the offering ID '\(Self.offeringIdentifier)' exists in RevenueCat dashboard")
-            throw SubscriptionError.noOfferingAvailable
+        // Re-fetch if empty
+        if availableProducts.isEmpty {
+            await fetchProducts()
         }
         
-        print("✅ Offering 'SpendLess': \(offering.identifier)")
-        print("   Available Packages: \(offering.availablePackages.count)")
-        
-        for (index, package) in offering.availablePackages.enumerated() {
-            print("   Package \(index + 1):")
-            print("     Identifier: \(package.identifier)")
-            print("     Product ID: \(package.storeProduct.productIdentifier)")
-            print("     Localized Title: \(package.storeProduct.localizedTitle)")
-            print("     Localized Price: \(package.storeProduct.localizedPriceString)")
+        guard !availableProducts.isEmpty else {
+            print("❌ No products available")
+            throw SubscriptionError.noProductsAvailable
         }
         
-        return offering.availablePackages
+        for product in availableProducts {
+            print("   - \(product.id): \(product.displayName) - \(product.displayPrice)")
+            
+            // Log subscription info if available
+            if let subscription = product.subscription {
+                print("      Period: \(subscription.subscriptionPeriod.value) \(subscription.subscriptionPeriod.unit)")
+                if let introOffer = subscription.introductoryOffer {
+                    print("      Intro Offer: \(introOffer.period.value) \(introOffer.period.unit) \(introOffer.paymentMode)")
+                }
+            }
+        }
+        
+        return availableProducts
     }
     
-    /// Purchase a package
-    func purchase(_ package: Package) async throws -> CustomerInfo {
-        try ensureConfigured()
+    /// Purchase a product
+    /// - Parameter product: The StoreKit Product to purchase
+    /// - Returns: The verified transaction
+    @discardableResult
+    func purchase(_ product: Product) async throws -> StoreKit.Transaction {
         print("💳 Starting purchase flow...")
-        print("   Package: \(package.identifier)")
-        print("   Product ID: \(package.storeProduct.productIdentifier)")
-        print("   Price: \(package.storeProduct.localizedPriceString)")
+        print("   Product: \(product.id)")
+        print("   Name: \(product.displayName)")
+        print("   Price: \(product.displayPrice)")
         
-        let (transaction, customerInfo, userCancelled) = try await Purchases.shared.purchase(package: package)
+        // Attempt purchase
+        let result = try await product.purchase()
         
-        // If user cancelled, throw a specific error
-        if userCancelled {
-            print("🚫 Purchase cancelled by user")
-            throw SubscriptionError.purchaseFailed("Purchase was cancelled")
-        }
-        
-        print("✅ Purchase completed!")
-        if let transaction = transaction {
-            print("   Transaction ID: \(transaction.transactionIdentifier)")
-        }
-        
-        // Update state
-        self.customerInfo = customerInfo
-        logCustomerInfo(customerInfo)
-        updateSubscriptionState(from: customerInfo)
-        
-        // Verify entitlement was activated
-        if hasProAccess {
-            print("🎉 Entitlement '\(Self.entitlementIdentifier)' is now ACTIVE")
-            if let productId = currentProductIdentifier {
-                print("   Granting Product: \(productId)")
+        switch result {
+        case .success(let verification):
+            let transaction = try checkVerified(verification)
+            
+            print("✅ Purchase completed!")
+            print("   Transaction ID: \(transaction.id)")
+            
+            // Update subscription status
+            await checkSubscriptionStatus()
+            
+            // Finish the transaction
+            await transaction.finish()
+            
+            // Verify entitlement was activated
+            if hasProAccess {
+                print("🎉 Pro Access is now ACTIVE")
+                if let productId = currentProductIdentifier {
+                    print("   Product: \(productId)")
+                }
+            } else {
+                print("⚠️ Purchase completed but Pro Access is not active")
             }
-        } else {
-            print("⚠️ Purchase completed but entitlement is not active")
-            print("   This may indicate a configuration issue in RevenueCat dashboard")
+            
+            return transaction
+            
+        case .userCancelled:
+            print("🚫 Purchase cancelled by user")
+            throw SubscriptionError.purchaseCancelled
+            
+        case .pending:
+            print("⏳ Purchase is pending (requires approval)")
+            throw SubscriptionError.purchasePending
+            
+        @unknown default:
+            print("❌ Unknown purchase result")
+            throw SubscriptionError.purchaseFailed("Unknown purchase result")
         }
-        
-        return customerInfo
     }
     
     /// Restore purchases
     func restorePurchases() async throws {
-        try ensureConfigured()
         print("🔄 Restoring purchases...")
-        let customerInfo = try await Purchases.shared.restorePurchases()
-        self.customerInfo = customerInfo
-        logCustomerInfo(customerInfo)
-        updateSubscriptionState(from: customerInfo)
         
-        if hasProAccess {
+        // Sync with App Store
+        try await AppStore.sync()
+        
+        // Check all transactions
+        var foundActiveSubscription = false
+        
+        for await result in StoreKit.Transaction.currentEntitlements {
+            do {
+                let transaction = try checkVerified(result)
+                
+                // Check if this is one of our subscription products
+                if AppConstants.ProductIdentifiers.all.contains(transaction.productID) {
+                    // Check if still active
+                    if let expiration = transaction.expirationDate, expiration > Date() {
+                        foundActiveSubscription = true
+                        print("   ✅ Found active subscription: \(transaction.productID)")
+                    }
+                }
+                
+                // Finish the transaction
+                await transaction.finish()
+            } catch {
+                print("❌ Transaction verification failed: \(error)")
+            }
+        }
+        
+        // Update status
+        await checkSubscriptionStatus()
+        
+        if foundActiveSubscription {
             print("✅ Purchases restored - Pro Access Active")
         } else {
             print("ℹ️ No active subscriptions found to restore")
+            throw SubscriptionError.noActiveSubscriptionToRestore
         }
     }
     
-    // MARK: - Subscription Management
+    // MARK: - Helpers
     
     /// Check if user can make purchases
     var canMakePurchases: Bool {
-        guard isConfigured else { return false }
-        return Purchases.canMakePayments()
+        return AppStore.canMakePayments
     }
     
-    /// Get current subscription expiration date
-    var expirationDate: Date? {
-        return customerInfo?.entitlements.all[Self.entitlementIdentifier]?.expirationDate
+    /// Get product by identifier
+    func product(for identifier: String) -> Product? {
+        return availableProducts.first { $0.id == identifier }
     }
     
-    /// Get current subscription product identifier
-    var currentProductIdentifier: String? {
-        return customerInfo?.entitlements.all[Self.entitlementIdentifier]?.productIdentifier
+    /// Get monthly product
+    var monthlyProduct: Product? {
+        return product(for: AppConstants.ProductIdentifiers.monthly)
     }
-}
-
-// MARK: - PurchasesDelegate
-
-extension SubscriptionService: PurchasesDelegate {
-    nonisolated func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
-        Task { @MainActor in
-            print("📢 RevenueCat Delegate: Customer info updated")
-            self.customerInfo = customerInfo
-            
-            // Log entitlement changes
-            let entitlement = customerInfo.entitlements.all[Self.entitlementIdentifier]
-            if let entitlement = entitlement {
-                print("   Entitlement '\(Self.entitlementIdentifier)':")
-                print("     Active: \(entitlement.isActive)")
-                print("     Product ID: \(entitlement.productIdentifier)")
-                if let expirationDate = entitlement.expirationDate {
-                    print("     Expiration: \(expirationDate)")
-                }
-                if entitlement.isActive {
-                    print("     ✅ User now has Pro Access")
-                } else {
-                    print("     ❌ User does not have Pro Access")
-                }
-            }
-            
-            self.updateSubscriptionState(from: customerInfo)
-        }
+    
+    /// Get annual product
+    var annualProduct: Product? {
+        return product(for: AppConstants.ProductIdentifiers.annual)
     }
 }
 
 // MARK: - Errors
 
 enum SubscriptionError: LocalizedError {
-    case noOfferingAvailable
+    case noProductsAvailable
     case purchaseFailed(String)
+    case purchaseCancelled
+    case purchasePending
     case restoreFailed(String)
-    case notConfigured
-    case invalidWorkerURL
-    case serverError
+    case failedVerification
+    case noActiveSubscriptionToRestore
     
     var errorDescription: String? {
         switch self {
-        case .noOfferingAvailable:
-            return "No subscription packages are currently available."
+        case .noProductsAvailable:
+            return "No subscription products are currently available. Please try again later."
         case .purchaseFailed(let message):
             return "Purchase failed: \(message)"
+        case .purchaseCancelled:
+            return "Purchase was cancelled."
+        case .purchasePending:
+            return "Purchase is pending approval."
         case .restoreFailed(let message):
             return "Restore failed: \(message)"
-        case .notConfigured:
-            return "RevenueCat has not been configured. Please configure your API key in Constants.swift"
-        case .invalidWorkerURL:
-            return "Invalid Cloudflare Worker URL"
-        case .serverError:
-            return "Server error while fetching API key"
+        case .failedVerification:
+            return "Transaction verification failed. Please contact support."
+        case .noActiveSubscriptionToRestore:
+            return "No active subscription found to restore."
         }
     }
 }
-
-private struct TimeoutError: Error {
-    let localizedDescription = "Operation timed out"
-}
-
