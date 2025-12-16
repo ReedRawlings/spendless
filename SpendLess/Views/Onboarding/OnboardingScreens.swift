@@ -979,6 +979,7 @@ struct OnboardingWaitlistIntroView: View {
                             .shadow(color: .black.opacity(0.05), radius: 10, y: -5)
                     )
                 }
+                .ignoresSafeArea(.keyboard)
             }
         }
         .sheet(isPresented: $showReasonPicker) {
