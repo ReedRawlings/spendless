@@ -35,31 +35,64 @@ final class ShieldSessionManager {
     }
     
     // MARK: - Session Management
-    
+
     /// Check for active/expired sessions and handle accordingly
     func checkSessions() {
         // Check for pending Live Activity start requests from extensions
         checkPendingLiveActivityStart()
-        
+
         // Check for pending Live Activity end requests
         checkPendingLiveActivityEnd()
-        
+
         // Check if notification was tapped
         checkNotificationTap()
-        
+
+        // Check for fallback restore time (if DeviceActivityMonitor failed to schedule)
+        checkPendingShieldRestore()
+
         // Load and check current session
         loadCurrentSession()
-        
+
         guard let session = currentSession else {
             return
         }
-        
+
         // Check if session has expired
         if session.isExpired {
             restoreShieldForExpiredSession(session)
         } else if session.isActive {
             // Session is still active, ensure Live Activity is running
             ensureLiveActivityRunning(for: session)
+        }
+    }
+
+    /// Check if there's a pending shield restore from failed DeviceActivityMonitor scheduling
+    private func checkPendingShieldRestore() {
+        let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
+        guard let restoreTimestamp = sharedDefaults?.double(forKey: "pendingShieldRestoreTime"),
+              restoreTimestamp > 0 else {
+            return
+        }
+
+        let restoreDate = Date(timeIntervalSince1970: restoreTimestamp)
+
+        // If restore time has passed, restore shields now
+        if Date() >= restoreDate {
+            print("[ShieldSessionManager] Fallback: restoring shields (DeviceActivityMonitor may have failed)")
+
+            // Clear the pending restore
+            sharedDefaults?.removeObject(forKey: "pendingShieldRestoreTime")
+            sharedDefaults?.synchronize()
+
+            // Restore shields
+            screenTimeManager.restoreShields()
+
+            // End any active Live Activity
+            endLiveActivity()
+
+            // Clear current session if exists
+            analytics.clearCurrentSession()
+            currentSession = nil
         }
     }
     

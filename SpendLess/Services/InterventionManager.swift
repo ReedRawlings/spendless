@@ -322,11 +322,13 @@ final class InterventionManager {
         let newAmount = current + amount
         // Store as String to preserve precision
         sharedDefaults?.set("\(newAmount)", forKey: "savedAmount")
+        sharedDefaults?.synchronize()
     }
-    
+
     private func incrementResistCount() {
         let current = sharedDefaults?.integer(forKey: "resistCount") ?? 0
         sharedDefaults?.set(current + 1, forKey: "resistCount")
+        sharedDefaults?.synchronize()
     }
     
     // MARK: - Data Access
@@ -378,6 +380,7 @@ final class InterventionManager {
             if let allData = try? encoder.encode(results),
                let allJsonString = String(data: allData, encoding: .utf8) {
                 sharedDefaults?.set(allJsonString, forKey: "haltCheckResults")
+                sharedDefaults?.synchronize()
             }
         }
     }

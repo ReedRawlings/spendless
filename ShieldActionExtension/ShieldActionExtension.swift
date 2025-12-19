@@ -220,23 +220,35 @@ nonisolated class ShieldActionExtension: ShieldActionDelegate {
     }
     
     private func scheduleRestoration(endTime: Date) {
-        // Create a schedule that ends at the specified time
         let calendar = Calendar.current
-        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: endTime)
-        
+        let now = Date()
+
+        // Use time-of-day components only (hour, minute, second)
+        // DeviceActivitySchedule expects time-of-day, not full dates
+        let startComponents = calendar.dateComponents([.hour, .minute, .second], from: now)
+        let endComponents = calendar.dateComponents([.hour, .minute, .second], from: endTime)
+
+        // Create schedule from now until end time
+        // If end time is before start time (crosses midnight), DeviceActivity handles it as overnight
         let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: 0, minute: 0),
-            intervalEnd: components,
+            intervalStart: startComponents,
+            intervalEnd: endComponents,
             repeats: false
         )
-        
+
         let activityName = DeviceActivityName("temporaryAccess")
-        
+
+        // Stop any existing monitoring first to ensure clean state
+        deviceActivityCenter.stopMonitoring([activityName])
+
         do {
             try deviceActivityCenter.startMonitoring(activityName, during: schedule)
-            print("[ShieldAction] Scheduled DeviceActivityMonitor restoration for \(endTime)")
+            print("[ShieldAction] Scheduled restoration: \(startComponents.hour ?? 0):\(startComponents.minute ?? 0) -> \(endComponents.hour ?? 0):\(endComponents.minute ?? 0)")
         } catch {
             print("[ShieldAction] Failed to schedule DeviceActivityMonitor: \(error)")
+            // Fallback: Store end time so main app can restore on next launch
+            sharedDefaults?.set(endTime.timeIntervalSince1970, forKey: "pendingShieldRestoreTime")
+            sharedDefaults?.synchronize()
         }
     }
     

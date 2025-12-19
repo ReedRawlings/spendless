@@ -79,33 +79,47 @@ nonisolated class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     /// Restore shields when temporary access session ends
     private func restoreShieldsForTemporaryAccess() {
         // Load current session (as JSON string since we can't import main app models)
-        guard let sessionJSONString = sharedDefaults?.string(forKey: "currentAccessSession"),
-              let sessionData = sessionJSONString.data(using: .utf8),
-              var sessionDict = try? JSONSerialization.jsonObject(with: sessionData) as? [String: Any] else {
-            logEvent("No current session found for restoration")
-            // Still restore shields from saved selection
-            applyShieldsFromSavedSelection()
-            return
-        }
-        
-        // Update session to mark restoration via DeviceActivity
-        sessionDict["restoredViaDeviceActivity"] = true
-        sessionDict["actualEndTimestamp"] = ISO8601DateFormatter().string(from: Date())
-        
-        // Save updated session
-        if let updatedData = try? JSONSerialization.data(withJSONObject: sessionDict),
-           let updatedString = String(data: updatedData, encoding: .utf8) {
-            sharedDefaults?.set(updatedString, forKey: "currentAccessSession")
+        let sessionJSONString = sharedDefaults?.string(forKey: "currentAccessSession")
+
+        if let sessionJSONString = sessionJSONString,
+           let sessionData = sessionJSONString.data(using: .utf8),
+           var sessionDict = try? JSONSerialization.jsonObject(with: sessionData) as? [String: Any] {
+
+            // Update session to mark restoration via DeviceActivity
+            sessionDict["restoredViaDeviceActivity"] = true
+            sessionDict["actualEndTimestamp"] = ISO8601DateFormatter().string(from: Date())
+
+            // Save to completed sessions history (append to array)
+            var completedSessions = sharedDefaults?.array(forKey: "completedAccessSessions") as? [String] ?? []
+            if let completedData = try? JSONSerialization.data(withJSONObject: sessionDict),
+               let completedString = String(data: completedData, encoding: .utf8) {
+                completedSessions.append(completedString)
+                // Keep only last 50 sessions
+                if completedSessions.count > 50 {
+                    completedSessions = Array(completedSessions.suffix(50))
+                }
+                sharedDefaults?.set(completedSessions, forKey: "completedAccessSessions")
+            }
+
+            // Clear the current session since it's now complete
+            sharedDefaults?.removeObject(forKey: "currentAccessSession")
             sharedDefaults?.synchronize()
+
+            logEvent("Session marked complete and cleared")
+        } else {
+            logEvent("No current session found for restoration")
         }
-        
+
+        // Clear any pending restore time fallback
+        sharedDefaults?.removeObject(forKey: "pendingShieldRestoreTime")
+
         // Request Live Activity end (main app will handle this)
         sharedDefaults?.set(true, forKey: "pendingLiveActivityEnd")
         sharedDefaults?.synchronize()
-        
+
         // Restore shields from saved selection
         applyShieldsFromSavedSelection()
-        
+
         logEvent("Shields restored via DeviceActivityMonitor for temporary access session")
     }
     
