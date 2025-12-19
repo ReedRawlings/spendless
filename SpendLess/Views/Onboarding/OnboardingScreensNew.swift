@@ -15,78 +15,77 @@ struct AboutYouView: View {
     @Environment(AppState.self) private var appState
     let onContinue: () -> Void
 
-    var body: some View {
-        ScrollView {
-            VStack(spacing: SpendLessSpacing.xl) {
-                // Header
-                VStack(spacing: SpendLessSpacing.xs) {
-                    Text("Let's understand your patterns")
-                        .font(SpendLessFont.title2)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                }
-                .padding(.top, SpendLessSpacing.lg)
-
-                // Section 1: Triggers
-                VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                    Text("What triggers you to shop?")
-                        .font(SpendLessFont.headline)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-
-                    // Compact chips for triggers
-                    FlowLayout(spacing: SpendLessSpacing.xs) {
-                        ForEach(ShoppingTrigger.allCases) { trigger in
-                            TriggerChip(
-                                title: trigger.rawValue,
-                                icon: trigger.icon,
-                                isSelected: appState.onboardingTriggers.contains(trigger)
-                            ) {
-                                toggleTrigger(trigger)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, SpendLessSpacing.md)
-
-                Divider()
-                    .padding(.horizontal, SpendLessSpacing.lg)
-
-                // Section 2: Monthly Spend
-                VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                    Text("How much do you spend on impulse purchases each month?")
-                        .font(SpendLessFont.headline)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-
-                    Text("Be honest - no judgment")
-                        .font(SpendLessFont.caption)
-                        .foregroundStyle(Color.spendLessTextMuted)
-
-                    VStack(spacing: SpendLessSpacing.xs) {
-                        ForEach(SpendRange.allCases) { range in
-                            SelectionCard(
-                                title: range.rawValue,
-                                icon: "💸",
-                                isSelected: appState.onboardingSpendRange == range
-                            ) {
-                                appState.onboardingSpendRange = range
-                                HapticFeedback.lightSuccess()
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, SpendLessSpacing.md)
-
-                Spacer(minLength: SpendLessSpacing.xxl)
-            }
+    // Filter out socialMediaAds and lateNight triggers
+    private var visibleTriggers: [ShoppingTrigger] {
+        ShoppingTrigger.allCases.filter { trigger in
+            trigger != .socialMediaAds && trigger != .lateNight
         }
-        .safeAreaInset(edge: .bottom) {
-            VStack {
-                PrimaryButton("Continue") {
-                    onContinue()
+    }
+
+    var body: some View {
+        VStack(spacing: SpendLessSpacing.md) {
+            // Header
+            Text("Let's understand your patterns")
+                .font(SpendLessFont.title2)
+                .foregroundStyle(Color.spendLessTextPrimary)
+                .padding(.top, SpendLessSpacing.md)
+
+            // Section 1: Triggers
+            VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
+                Text("What triggers you to shop?")
+                    .font(SpendLessFont.headline)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+
+                // Compact chips for triggers
+                FlowLayout(spacing: SpendLessSpacing.xs) {
+                    ForEach(visibleTriggers) { trigger in
+                        TriggerChip(
+                            title: trigger.rawValue,
+                            icon: trigger.icon,
+                            isSelected: appState.onboardingTriggers.contains(trigger)
+                        ) {
+                            toggleTrigger(trigger)
+                        }
+                    }
                 }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                .padding(.bottom, SpendLessSpacing.xl)
             }
-            .background(Color.spendLessBackground)
+            .padding(.horizontal, SpendLessSpacing.md)
+
+            Divider()
+                .padding(.horizontal, SpendLessSpacing.lg)
+
+            // Section 2: Monthly Spend
+            VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                Text("Monthly impulse spending?")
+                    .font(SpendLessFont.headline)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+
+                Text("Be honest - no judgment")
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextMuted)
+
+                VStack(spacing: SpendLessSpacing.xs) {
+                    ForEach(SpendRange.allCases) { range in
+                        SelectionCard(
+                            title: range.rawValue,
+                            icon: "💸",
+                            isSelected: appState.onboardingSpendRange == range
+                        ) {
+                            appState.onboardingSpendRange = range
+                            HapticFeedback.lightSuccess()
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, SpendLessSpacing.md)
+
+            Spacer(minLength: 0)
+
+            PrimaryButton("Continue") {
+                onContinue()
+            }
+            .padding(.horizontal, SpendLessSpacing.lg)
+            .padding(.bottom, SpendLessSpacing.lg)
         }
     }
 
@@ -487,27 +486,45 @@ struct YourGoalView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if showDetails {
-                VStack {
-                    PrimaryButton("Continue") {
-                        onContinue()
-                    }
-                    .disabled(appState.onboardingGoalType.requiresDetails &&
-                              (appState.onboardingGoalName.isEmpty || appState.onboardingGoalAmount <= 0))
-                    .padding(.horizontal, SpendLessSpacing.lg)
-                    .padding(.bottom, SpendLessSpacing.xl)
+            VStack {
+                PrimaryButton("Continue") {
+                    onContinue()
                 }
-                .background(Color.spendLessBackground)
+                .disabled(showDetails && appState.onboardingGoalType.requiresDetails &&
+                          (appState.onboardingGoalName.isEmpty || appState.onboardingGoalAmount <= 0))
+                .padding(.horizontal, SpendLessSpacing.lg)
+                .padding(.bottom, SpendLessSpacing.xl)
             }
+            .background(Color.spendLessBackground)
         }
         .hideKeyboardOnTap()
     }
 
     private var goalDetailsSection: some View {
         VStack(alignment: .leading, spacing: SpendLessSpacing.md) {
+            // Amount field - first and prominent
+            VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                Text(goalContent.amountLabel)
+                    .font(SpendLessFont.headline)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+
+                CurrencyTextField(
+                    title: "",
+                    amount: Binding(
+                        get: { appState.onboardingGoalAmount },
+                        set: { appState.onboardingGoalAmount = $0 }
+                    )
+                )
+            }
+            .padding(.horizontal, SpendLessSpacing.md)
+
+            Divider()
+                .padding(.horizontal, SpendLessSpacing.lg)
+
+            // Intro text
             Text(goalContent.introText)
-                .font(SpendLessFont.headline)
-                .foregroundStyle(Color.spendLessTextPrimary)
+                .font(SpendLessFont.subheadline)
+                .foregroundStyle(Color.spendLessTextSecondary)
                 .padding(.horizontal, SpendLessSpacing.md)
 
             // Meaning phrases
@@ -527,8 +544,8 @@ struct YourGoalView: View {
             // Custom text field
             VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
                 Text("Or in your words...")
-                    .font(SpendLessFont.subheadline)
-                    .foregroundStyle(Color.spendLessTextPrimary)
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextMuted)
 
                 SpendLessTextField(
                     "What does it mean to you?",
@@ -539,16 +556,6 @@ struct YourGoalView: View {
                     placeholder: goalContent.placeholder
                 )
             }
-            .padding(.horizontal, SpendLessSpacing.md)
-
-            // Amount field
-            CurrencyTextField(
-                title: goalContent.amountLabel,
-                amount: Binding(
-                    get: { appState.onboardingGoalAmount },
-                    set: { appState.onboardingGoalAmount = $0 }
-                )
-            )
             .padding(.horizontal, SpendLessSpacing.md)
         }
     }
@@ -593,37 +600,44 @@ struct HowItWorksSimpleView: View {
     let onContinue: () -> Void
 
     var body: some View {
-        VStack(spacing: SpendLessSpacing.xl) {
+        VStack(spacing: SpendLessSpacing.lg) {
             Text("How SpendLess works")
                 .font(SpendLessFont.title2)
                 .foregroundStyle(Color.spendLessTextPrimary)
-                .padding(.top, SpendLessSpacing.xl)
+                .padding(.top, SpendLessSpacing.lg)
 
-            VStack(spacing: SpendLessSpacing.md) {
+            VStack(spacing: SpendLessSpacing.sm) {
                 HowItWorksCard(
-                    emoji: "🛑",
-                    title: "PAUSE",
-                    description: "When you want to buy something, add it to your waiting list"
+                    emoji: "🛡️",
+                    title: "BLOCK",
+                    description: "Shield yourself from shopping apps when urges hit"
+                )
+
+                HowItWorksCard(
+                    emoji: "🧘",
+                    title: "INTERVENE",
+                    description: "Breathing exercises and prompts to help you pause"
                 )
 
                 HowItWorksCard(
                     emoji: "⏳",
                     title: "WAIT",
-                    description: "Give it 7 days. Most urges don't survive."
+                    description: "Add impulse buys to a 7-day list. Most urges fade."
                 )
 
                 HowItWorksCard(
-                    emoji: "✅",
-                    title: "DECIDE",
-                    description: "Still want it? Buy guilt-free. Don't? Bury it and celebrate."
+                    emoji: "🧠",
+                    title: "LEARN",
+                    description: "Tools to understand your triggers and habits"
+                )
+
+                HowItWorksCard(
+                    emoji: "🎯",
+                    title: "GROW",
+                    description: "Track savings and progress toward your goals"
                 )
             }
             .padding(.horizontal, SpendLessSpacing.md)
-
-            Text("Let's try it now.")
-                .font(SpendLessFont.body)
-                .foregroundStyle(Color.spendLessTextSecondary)
-                .padding(.top, SpendLessSpacing.md)
 
             Spacer()
 
@@ -677,7 +691,7 @@ struct FirstResistView: View {
     @State private var otherReasonNote = ""
     @State private var numberOfWears: String = ""
     @State private var showReasonPicker = false
-    @State private var hasAddedItem = false
+    @State private var showSuccessMessage = false
 
     var body: some View {
         ZStack {
@@ -695,11 +709,7 @@ struct FirstResistView: View {
                     }
                     .padding(.top, SpendLessSpacing.lg)
 
-                    if hasAddedItem {
-                        successView
-                    } else {
-                        inputForm
-                    }
+                    inputForm
 
                     Spacer(minLength: 140)
                 }
@@ -712,27 +722,21 @@ struct FirstResistView: View {
                 Spacer()
 
                 VStack(spacing: SpendLessSpacing.sm) {
-                    if !hasAddedItem {
-                        Text("If you still want it in 7 days, you can buy it guilt-free.")
-                            .font(SpendLessFont.caption)
-                            .foregroundStyle(Color.spendLessTextMuted)
-                            .multilineTextAlignment(.center)
-
-                        PrimaryButton("Add to Waiting List", icon: "clock") {
-                            addItemToWaitlist()
-                        }
-                        .disabled(itemName.isEmpty || itemAmount <= 0)
-
-                        Button("Skip for now") {
-                            onContinue()
-                        }
-                        .font(SpendLessFont.body)
+                    Text("If you still want it in 7 days, you can buy it guilt-free.")
+                        .font(SpendLessFont.caption)
                         .foregroundStyle(Color.spendLessTextMuted)
-                    } else {
-                        PrimaryButton("Continue") {
-                            onContinue()
-                        }
+                        .multilineTextAlignment(.center)
+
+                    PrimaryButton("Add to Waiting List", icon: "clock") {
+                        addItemToWaitlist()
                     }
+                    .disabled(itemName.isEmpty || itemAmount <= 0)
+
+                    Button("Skip for now") {
+                        onContinue()
+                    }
+                    .font(SpendLessFont.body)
+                    .foregroundStyle(Color.spendLessTextMuted)
                 }
                 .padding(.horizontal, SpendLessSpacing.lg)
                 .padding(.bottom, SpendLessSpacing.xl)
@@ -741,6 +745,29 @@ struct FirstResistView: View {
                     Color.spendLessBackground
                         .shadow(color: .black.opacity(0.05), radius: 10, y: -5)
                 )
+            }
+
+            // Success toast overlay
+            if showSuccessMessage {
+                VStack {
+                    Spacer()
+
+                    HStack(spacing: SpendLessSpacing.sm) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.white)
+                        Text("Added to your waitlist!")
+                            .font(SpendLessFont.bodyBold)
+                            .foregroundStyle(Color.white)
+                    }
+                    .padding(.horizontal, SpendLessSpacing.lg)
+                    .padding(.vertical, SpendLessSpacing.md)
+                    .background(Color.spendLessSecondary)
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
+
+                    Spacer()
+                }
+                .transition(.opacity.combined(with: .scale))
             }
         }
         .sheet(isPresented: $showReasonPicker) {
@@ -824,26 +851,6 @@ struct FirstResistView: View {
         }
     }
 
-    private var successView: some View {
-        VStack(spacing: SpendLessSpacing.md) {
-            Text("✅")
-                .font(.system(size: 40))
-
-            Text("Added to your waitlist!")
-                .font(SpendLessFont.headline)
-                .foregroundStyle(Color.spendLessTextPrimary)
-
-            Text("You'll see it on your dashboard.")
-                .font(SpendLessFont.body)
-                .foregroundStyle(Color.spendLessTextSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(SpendLessSpacing.lg)
-        .frame(maxWidth: .infinity)
-        .background(Color.spendLessSuccess.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
-    }
-
     private func addItemToWaitlist() {
         let item = WaitingListItem(
             name: itemName,
@@ -860,8 +867,16 @@ struct FirstResistView: View {
 
         do {
             try modelContext.save()
-            hasAddedItem = true
             HapticFeedback.mediumSuccess()
+
+            // Show success toast and auto-continue
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                showSuccessMessage = true
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                onContinue()
+            }
         } catch {
             print("Failed to save onboarding waitlist item: \(error.localizedDescription)")
         }
@@ -897,6 +912,8 @@ struct ReadyView: View {
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var isRequestingNotifications = false
+    @State private var showShortcutsSetup = false
+    @State private var shortcutsSetupComplete = false
     @Query private var waitingListItems: [WaitingListItem]
 
     private var firstItem: WaitingListItem? {
@@ -991,12 +1008,21 @@ struct ReadyView: View {
                         .font(SpendLessFont.body)
                         .foregroundStyle(Color.spendLessTextSecondary)
 
-                    SecondaryButton("Set Up Shortcuts") {
-                        if let url = URL(string: "shortcuts://") {
-                            UIApplication.shared.open(url)
+                    if shortcutsSetupComplete {
+                        HStack(spacing: SpendLessSpacing.sm) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.spendLessSecondary)
+                            Text("Shortcuts configured")
+                                .font(SpendLessFont.body)
+                                .foregroundStyle(Color.spendLessTextMuted)
                         }
+                        .padding(.top, SpendLessSpacing.xs)
+                    } else {
+                        SecondaryButton("Set Up Shortcuts") {
+                            showShortcutsSetup = true
+                        }
+                        .padding(.top, SpendLessSpacing.xs)
                     }
-                    .padding(.top, SpendLessSpacing.xs)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, SpendLessSpacing.md)
@@ -1016,6 +1042,11 @@ struct ReadyView: View {
         }
         .onAppear {
             checkNotificationStatus()
+        }
+        .sheet(isPresented: $showShortcutsSetup) {
+            ShortcutsSetupView {
+                shortcutsSetupComplete = true
+            }
         }
     }
 

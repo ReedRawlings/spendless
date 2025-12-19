@@ -35,7 +35,7 @@ final class AppState {
     // MARK: - Temporary Onboarding State
     var onboardingTriggers: Set<ShoppingTrigger> = []
     var onboardingSpendRange: SpendRange = .medium
-    var onboardingGoalType: GoalType = .justStop
+    var onboardingGoalType: GoalType = .emergency
     var onboardingGoalName: String = ""
     var onboardingGoalAmount: Decimal = 0
     var onboardingGoalImageData: Data?
@@ -95,7 +95,7 @@ final class AppState {
     func clearOnboardingState() {
         onboardingTriggers = []
         onboardingSpendRange = .medium
-        onboardingGoalType = .justStop
+        onboardingGoalType = .emergency
         onboardingGoalName = ""
         onboardingGoalAmount = 0
         onboardingGoalImageData = nil

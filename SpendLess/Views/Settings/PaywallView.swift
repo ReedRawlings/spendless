@@ -55,21 +55,21 @@ struct SpendLessPaywallView: View {
                     .scaleEffect(1.2)
             } else {
                 ScrollView {
-                    VStack(spacing: SpendLessSpacing.xl) {
+                    VStack(spacing: SpendLessSpacing.lg) {
                         // Header (no close button - paywall is mandatory)
-                        VStack(spacing: SpendLessSpacing.md) {
+                        VStack(spacing: SpendLessSpacing.sm) {
                             Image(systemName: "sparkles")
-                                .font(.system(size: 48))
+                                .font(.system(size: 40))
                                 .foregroundStyle(Color.spendLessGold)
-                                .padding(.top, SpendLessSpacing.xl)
-                            
+                                .padding(.top, SpendLessSpacing.md)
+
                             Text("You're ready to take control")
-                                .font(SpendLessFont.title)
+                                .font(SpendLessFont.title2)
                                 .foregroundStyle(Color.spendLessTextPrimary)
                                 .multilineTextAlignment(.center)
-                            
+
                             Text("Unlock all the tools to break the cycle and start saving for what matters.")
-                                .font(SpendLessFont.body)
+                                .font(SpendLessFont.callout)
                                 .foregroundStyle(Color.spendLessTextSecondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, SpendLessSpacing.md)
