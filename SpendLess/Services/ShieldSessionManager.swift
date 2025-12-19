@@ -78,8 +78,6 @@ final class ShieldSessionManager {
 
         // If restore time has passed, restore shields now
         if Date() >= restoreDate {
-            print("[ShieldSessionManager] Fallback: restoring shields (DeviceActivityMonitor may have failed)")
-
             // Clear the pending restore
             sharedDefaults?.removeObject(forKey: "pendingShieldRestoreTime")
             sharedDefaults?.synchronize()
@@ -139,27 +137,24 @@ final class ShieldSessionManager {
         // Clear current session
         analytics.clearCurrentSession()
         currentSession = nil
-        
-        print("[ShieldSessionManager] Shield restored early by user")
     }
-    
+
     /// Detect and handle orphaned sessions (apps unlocked but no session record)
     func detectOrphanedSessions() {
         let store = ManagedSettingsStore()
-        
+
         // Check if shields are removed but we have no active session
-        let hasNoShields = store.shield.applications == nil && 
+        let hasNoShields = store.shield.applications == nil &&
                           store.shield.applicationCategories == nil &&
                           store.shield.webDomains == nil
-        
+
         if hasNoShields && currentSession == nil {
             // Check if there's a session in history that might be orphaned
             let sessions = analytics.getAllSessions()
             if let recentSession = sessions.first(where: { $0.isActive || $0.isExpired }) {
                 // Found orphaned session, restore shields
-                print("[ShieldSessionManager] Detected orphaned session, restoring shields")
                 screenTimeManager.restoreShields()
-                
+
                 // Mark session as ended
                 var updatedSession = recentSession
                 updatedSession.end()
@@ -193,8 +188,6 @@ final class ShieldSessionManager {
         // Clear current session
         analytics.clearCurrentSession()
         currentSession = nil
-        
-        print("[ShieldSessionManager] Shield restored for expired session")
     }
     
     private func ensureLiveActivityRunning(for session: TemporaryAccessSession) {

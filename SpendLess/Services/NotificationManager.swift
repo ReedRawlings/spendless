@@ -29,7 +29,6 @@ final class NotificationManager: NSObject {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
             return granted
         } catch {
-            print("[NotificationManager] Failed to request permission: \(error)")
             return false
         }
     }
@@ -133,13 +132,7 @@ final class NotificationManager: NSObject {
             trigger: trigger
         )
         
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("[NotificationManager] Failed to schedule notification: \(error)")
-            } else {
-                print("[NotificationManager] Scheduled restoration notification for \(minutes) minutes")
-            }
-        }
+        UNUserNotificationCenter.current().add(request)
     }
     
     /// Cancel the restoration notification
@@ -158,7 +151,6 @@ final class NotificationManager: NSObject {
     func scheduleWaitingListNotifications(itemID: UUID, itemName: String, addedAt: Date) {
         // Check if notifications are enabled
         guard isWaitingListRemindersEnabled else {
-            print("[NotificationManager] Waiting list reminders disabled, skipping scheduling")
             return
         }
         
@@ -203,15 +195,9 @@ final class NotificationManager: NSObject {
             trigger: trigger
         )
         
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("[NotificationManager] Failed to schedule Day 3 notification: \(error)")
-            } else {
-                print("[NotificationManager] Scheduled Day 3 notification for '\(itemName)' at \(triggerDate)")
-            }
-        }
+        UNUserNotificationCenter.current().add(request)
     }
-    
+
     /// Schedule Day 6 informational notification
     private func scheduleDay6Notification(itemID: UUID, itemName: String, triggerDate: Date) {
         let content = UNMutableNotificationContent()
@@ -240,36 +226,26 @@ final class NotificationManager: NSObject {
             trigger: trigger
         )
         
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("[NotificationManager] Failed to schedule Day 6 notification: \(error)")
-            } else {
-                print("[NotificationManager] Scheduled Day 6 notification for '\(itemName)' at \(triggerDate)")
-            }
-        }
+        UNUserNotificationCenter.current().add(request)
     }
-    
+
     /// Cancel all notifications for a waiting list item (when buried or bought)
     func cancelWaitingListNotifications(for itemID: UUID) {
         let day3ID = "\(AppConstants.waitingListNotificationPrefix)-day3-\(itemID.uuidString)"
         let day6ID = "\(AppConstants.waitingListNotificationPrefix)-day6-\(itemID.uuidString)"
-        
+
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: [day3ID, day6ID]
         )
-        
-        print("[NotificationManager] Cancelled notifications for item \(itemID.uuidString)")
     }
-    
+
     /// Cancel just the Day 6 notification (when user takes action on Day 3)
     func cancelDay6Notification(for itemID: UUID) {
         let day6ID = "\(AppConstants.waitingListNotificationPrefix)-day6-\(itemID.uuidString)"
-        
+
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: [day6ID]
         )
-        
-        print("[NotificationManager] Cancelled Day 6 notification for item \(itemID.uuidString)")
     }
     
     // MARK: - Pending Actions Storage
@@ -282,8 +258,6 @@ final class NotificationManager: NSObject {
         let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         sharedDefaults?.set(action, forKey: key)
         sharedDefaults?.synchronize()
-        
-        print("[NotificationManager] Stored pending action '\(action)' for item \(itemID)")
     }
     
     /// Get and clear a pending waiting list action
@@ -388,8 +362,7 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
                 if let uuid = UUID(uuidString: itemID) {
                     cancelDay6Notification(for: uuid)
                 }
-                print("[NotificationManager] User chose 'Keep on List' for item \(itemID)")
-                
+
             case AppConstants.WaitingListNotificationActions.buryIt:
                 // Store pending action for processing on app launch
                 storePendingWaitingListAction(itemID: itemID, action: "buryIt")
@@ -397,16 +370,14 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
                 if let uuid = UUID(uuidString: itemID) {
                     cancelDay6Notification(for: uuid)
                 }
-                print("[NotificationManager] User chose 'Bury It' for item \(itemID)")
-                
+
             case UNNotificationDefaultActionIdentifier:
                 // User tapped the notification itself - store deep link for navigation
                 let deepLink = "spendless://waitinglist/\(itemID)"
                 let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
                 sharedDefaults?.set(deepLink, forKey: "pendingNotificationDeepLink")
                 sharedDefaults?.synchronize()
-                print("[NotificationManager] User tapped waiting list notification for item \(itemID)")
-                
+
             default:
                 break
             }

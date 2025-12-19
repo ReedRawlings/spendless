@@ -173,31 +173,3 @@ final class WaitingListItem {
     }
 }
 
-// MARK: - Sample Data
-
-extension WaitingListItem {
-    static var sampleItems: [WaitingListItem] {
-        let item1 = WaitingListItem(
-            name: "Wireless earbuds",
-            amount: 79,
-            reason: "My old ones broke",
-            addedAt: Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date()
-        )
-        
-        let item2 = WaitingListItem(
-            name: "Running shoes",
-            amount: 120,
-            reason: "Training for a 5K",
-            addedAt: Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date()
-        )
-        
-        let item3 = WaitingListItem(
-            name: "Decorative throw pillows",
-            amount: 45,
-            addedAt: Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        )
-        
-        return [item1, item2, item3]
-    }
-}
-

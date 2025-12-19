@@ -76,27 +76,14 @@ final class ScreenTimeManager: ScreenTimeManaging {
     
     /// Handle selection from the picker
     func handleSelection(_ selection: FamilyActivitySelection) {
-        print("[ScreenTimeManager] 📱 handleSelection called")
-        print("  - Application tokens: \(selection.applicationTokens.count)")
-        print("  - Category tokens: \(selection.categoryTokens.count)")
-        print("  - Web domain tokens: \(selection.webDomainTokens.count)")
-
         self.selection = selection
         updateBlockedAppCount()
-
-        print("[ScreenTimeManager] 📊 Updated blockedAppCount: \(blockedAppCount)")
 
         saveSelection()
         saveState()
 
         // Apply shields immediately so changes take effect
         applyShields()
-
-        // Force UI update on main thread
-        Task { @MainActor in
-            // This ensures @Observable updates propagate
-            print("[ScreenTimeManager] ✅ Selection processed and saved")
-        }
     }
     
     private func updateBlockedAppCount() {
@@ -110,43 +97,34 @@ final class ScreenTimeManager: ScreenTimeManaging {
     /// Apply shields to selected apps
     func applyShields() {
         guard isAuthorized else { return }
-        
+
         let store = ManagedSettingsStore()
         store.shield.applications = selection.applicationTokens
         store.shield.applicationCategories = .specific(selection.categoryTokens)
         store.shield.webDomains = selection.webDomainTokens
-        
+
         // Start monitoring schedule
         startMonitoring()
-        
-        print("[ScreenTimeManager] Shields applied to \(blockedAppCount) apps")
     }
-    
+
     /// Remove all shields
     func removeShields() {
         let store = ManagedSettingsStore()
         store.clearAllSettings()
-        
+
         // Stop monitoring
         stopMonitoring()
-        
-        print("[ScreenTimeManager] Shields removed")
     }
-    
+
     /// Restore shields from saved selection (for temporary access restoration)
     func restoreShields() {
-        guard isAuthorized else {
-            print("[ScreenTimeManager] Cannot restore shields: not authorized")
-            return
-        }
-        
+        guard isAuthorized else { return }
+
         // Reload selection from App Groups to ensure we have the latest
         loadSelection()
-        
+
         // Apply shields
         applyShields()
-        
-        print("[ScreenTimeManager] Shields restored from saved selection")
     }
     
     // MARK: - DeviceActivity Schedule
@@ -158,20 +136,18 @@ final class ScreenTimeManager: ScreenTimeManaging {
             intervalEnd: DateComponents(hour: 23, minute: 59),
             repeats: true
         )
-        
+
         do {
             let activityName = DeviceActivityName("mainSchedule")
             try deviceActivityCenter.startMonitoring(activityName, during: schedule)
-            print("[ScreenTimeManager] Started monitoring schedule")
         } catch {
-            print("[ScreenTimeManager] Failed to start monitoring: \(error)")
+            // Failed to start monitoring
         }
     }
-    
+
     private func stopMonitoring() {
         let activityName = DeviceActivityName("mainSchedule")
         deviceActivityCenter.stopMonitoring([activityName])
-        print("[ScreenTimeManager] Stopped monitoring schedule")
     }
     
     // MARK: - Persistence
@@ -194,55 +170,43 @@ final class ScreenTimeManager: ScreenTimeManaging {
     /// Save selection to App Groups for extensions
     func saveSelection() {
         let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
-        
+
         // Use PropertyListEncoder for UserDefaults compatibility
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
-        
+
         do {
             let encoded = try encoder.encode(selection)
             sharedDefaults?.set(encoded, forKey: "blockedApps")
-            print("[ScreenTimeManager] ✅ Successfully saved selection: \(blockedAppCount) items")
         } catch {
-            print("[ScreenTimeManager] ❌ Failed to encode selection with PropertyListEncoder: \(error)")
             // Fallback: Try JSONEncoder as backup
-            do {
-                let jsonData = try JSONEncoder().encode(selection)
+            if let jsonData = try? JSONEncoder().encode(selection) {
                 sharedDefaults?.set(jsonData, forKey: "blockedApps")
-                print("[ScreenTimeManager] ⚠️ Saved using JSONEncoder fallback")
-            } catch {
-                print("[ScreenTimeManager] ❌ Failed to encode selection with JSONEncoder: \(error)")
             }
         }
     }
-    
+
     /// Load selection from App Groups
     private func loadSelection() {
         let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
         guard let data = sharedDefaults?.data(forKey: "blockedApps") else {
-            print("[ScreenTimeManager] No saved selection found")
             return
         }
-        
+
         // Try PropertyListDecoder first
         let plistDecoder = PropertyListDecoder()
         if let decoded = try? plistDecoder.decode(FamilyActivitySelection.self, from: data) {
             selection = decoded
             updateBlockedAppCount()
-            print("[ScreenTimeManager] ✅ Loaded selection: \(blockedAppCount) items")
             return
         }
-        
+
         // Fallback: Try JSONDecoder
         let jsonDecoder = JSONDecoder()
         if let decoded = try? jsonDecoder.decode(FamilyActivitySelection.self, from: data) {
             selection = decoded
             updateBlockedAppCount()
-            print("[ScreenTimeManager] ✅ Loaded selection using JSONDecoder: \(blockedAppCount) items")
-            return
         }
-        
-        print("[ScreenTimeManager] ❌ Failed to decode selection from both encoders")
     }
     
     // MARK: - Reset (for testing)

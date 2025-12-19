@@ -91,24 +91,3 @@ final class UserGoal {
     }
 }
 
-// MARK: - Sample Data
-
-extension UserGoal {
-    static var sampleGoal: UserGoal {
-        UserGoal(
-            name: "Trip to Paris",
-            targetAmount: 4500,
-            savedAmount: 1247,
-            goalType: .vacation
-        )
-    }
-    
-    static var emptyGoal: UserGoal {
-        UserGoal(
-            name: "",
-            targetAmount: 0,
-            goalType: .justStop
-        )
-    }
-}
-

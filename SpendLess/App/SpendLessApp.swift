@@ -14,8 +14,16 @@ import UserNotifications
 struct SpendLessApp: App {
     
     // MARK: - SwiftData Container
-    
+
     var sharedModelContainer: ModelContainer = {
+        // Ensure Application Support directory exists before SwiftData tries to create the store
+        let fileManager = FileManager.default
+        if let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            if !fileManager.fileExists(atPath: appSupportURL.path) {
+                try? fileManager.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
+            }
+        }
+
         let schema = Schema([
             UserGoal.self,
             WaitingListItem.self,
@@ -23,47 +31,17 @@ struct SpendLessApp: App {
             Streak.self,
             UserProfile.self,
         ])
-        
+
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
             groupContainer: .automatic // Will use App Groups when configured
         )
-        
+
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            #if DEBUG
-            // During development, if migration fails, reset the store
-            // This is safe since we don't have active users yet
-            // TODO: Remove this before shipping - implement proper schema versioning instead
-            print("⚠️ ModelContainer creation failed: \(error)")
-            print("Resetting store for development...")
-
-            // Get the store URL from the App Group container
-            let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID)
-            let storeURL = containerURL?.appendingPathComponent("Library/Application Support/default.store")
-
-            if let storeURL = storeURL, FileManager.default.fileExists(atPath: storeURL.path) {
-                do {
-                    // Delete the store and its related files
-                    try FileManager.default.removeItem(at: storeURL)
-                    let walURL = storeURL.appendingPathExtension("wal")
-                    let shmURL = storeURL.appendingPathExtension("shm")
-                    try? FileManager.default.removeItem(at: walURL)
-                    try? FileManager.default.removeItem(at: shmURL)
-
-                    print("✅ Store reset. Recreating ModelContainer...")
-                    return try ModelContainer(for: schema, configurations: [modelConfiguration])
-                } catch {
-                    fatalError("Could not reset store: \(error)")
-                }
-            } else {
-                fatalError("Could not create ModelContainer: \(error)")
-            }
-            #else
             fatalError("Could not create ModelContainer: \(error)")
-            #endif
         }
     }()
     
@@ -211,21 +189,18 @@ struct RootView: View {
         }
         .onChange(of: appState.shouldShowPaywallAfterOnboarding) { oldValue, newValue in
             if newValue && !oldValue {
-                print("🎯 Onboarding Complete - Showing Paywall")
-                
                 Task { @MainActor in
                     // Wait for onboarding transition to complete
                     try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                    
+
                     // Show paywall
                     showPaywall = true
-                    
-                    // Check subscription status in background (for logging only)
+
+                    // Check subscription status in background
                     Task {
                         await subscriptionService.checkSubscriptionStatus()
-                        print("📊 Subscription check: hasProAccess = \(subscriptionService.hasProAccess)")
                     }
-                    
+
                     appState.markPaywallShownAfterOnboarding()
                     appState.shouldShowPaywallAfterOnboarding = false
                 }
@@ -388,53 +363,47 @@ struct RootView: View {
                     }
                 } catch {
                     // Will retry next time app becomes active
-                    print("⚠️ Failed to process pending email submission: \(error)")
                 }
             }
         }
     }
-    
+
     // MARK: - Pending Waiting List Actions
-    
+
     /// Process any pending waiting list actions from notification background actions
     private func processPendingWaitingListActions() {
         let pendingActions = NotificationManager.shared.getAllPendingWaitingListActions()
-        
+
         guard !pendingActions.isEmpty else { return }
-        
-        print("[RootView] Processing \(pendingActions.count) pending waiting list actions")
-        
+
         // Fetch all waiting list items
         let descriptor = FetchDescriptor<WaitingListItem>()
         guard let items = try? modelContext.fetch(descriptor) else {
-            print("[RootView] Failed to fetch waiting list items")
             return
         }
-        
+
         // Fetch active goal for adding savings
         let goalDescriptor = FetchDescriptor<UserGoal>(predicate: #Predicate { $0.isActive })
         let goals = try? modelContext.fetch(goalDescriptor)
         let currentGoal = goals?.first
-        
+
         for (itemIDString, action) in pendingActions {
             guard let itemID = UUID(uuidString: itemIDString),
                   let item = items.first(where: { $0.id == itemID }) else {
                 // Item not found, clear the action
                 NotificationManager.shared.clearPendingWaitingListAction(for: itemIDString)
-                print("[RootView] Item \(itemIDString) not found, clearing action")
                 continue
             }
-            
+
             switch action {
             case "keepOnList":
                 // Record a check-in
                 item.recordCheckin()
-                print("[RootView] Recorded check-in for '\(item.name)'")
-                
+
             case "buryIt":
                 // Cancel notifications
                 NotificationManager.shared.cancelWaitingListNotifications(for: item.id)
-                
+
                 // Create graveyard item
                 let graveyardItem = GraveyardItem(
                     from: item,
@@ -443,24 +412,23 @@ struct RootView: View {
                     removalReasonNote: "Buried via notification"
                 )
                 modelContext.insert(graveyardItem)
-                
+
                 // Update goal
                 if let goal = currentGoal {
                     goal.addSavings(item.amount)
                 }
-                
+
                 // Delete waiting list item
                 modelContext.delete(item)
-                print("[RootView] Buried '\(item.name)' from notification action")
-                
+
             default:
-                print("[RootView] Unknown action '\(action)' for item \(itemIDString)")
+                break
             }
-            
+
             // Clear the processed action
             NotificationManager.shared.clearPendingWaitingListAction(for: itemIDString)
         }
-        
+
         // Save all changes
         try? modelContext.save()
     }

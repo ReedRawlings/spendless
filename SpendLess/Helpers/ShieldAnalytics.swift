@@ -82,7 +82,6 @@ final class ShieldAnalytics {
         guard isAnalyticsEnabled else { return }
         
         guard let partialEvent = loadPartialEvent() else {
-            print("[ShieldAnalytics] No partial event found to complete")
             return
         }
         
@@ -171,13 +170,12 @@ final class ShieldAnalytics {
     /// Save current access session
     func saveCurrentSession(_ session: TemporaryAccessSession) {
         guard let data = try? JSONEncoder().encode(session) else {
-            print("[ShieldAnalytics] Failed to encode session")
             return
         }
-        
+
         sharedDefaults?.set(data, forKey: Keys.currentAccessSession)
         sharedDefaults?.synchronize()
-        
+
         // Also add to history
         var sessions = getAllSessions()
         sessions.append(session)
@@ -262,7 +260,6 @@ final class ShieldAnalytics {
         events = events.filter { $0.timestamp >= cutoffDate }
         
         guard let data = try? JSONEncoder().encode(events) else {
-            print("[ShieldAnalytics] Failed to encode events")
             return
         }
         
@@ -272,10 +269,9 @@ final class ShieldAnalytics {
     
     private func savePartialEvent(_ event: ShieldInteractionEvent) {
         guard let data = try? JSONEncoder().encode(event) else {
-            print("[ShieldAnalytics] Failed to encode partial event")
             return
         }
-        
+
         sharedDefaults?.set(data, forKey: "partialShieldEvent")
         sharedDefaults?.synchronize()
     }
@@ -299,7 +295,6 @@ final class ShieldAnalytics {
         let filteredSessions = sessions.filter { $0.startTimestamp >= cutoffDate }
         
         guard let data = try? JSONEncoder().encode(filteredSessions) else {
-            print("[ShieldAnalytics] Failed to encode sessions")
             return
         }
         

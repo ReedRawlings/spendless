@@ -90,20 +90,17 @@ final class MailerLiteService {
             
             // Check HTTP status code
             guard httpResponse.statusCode == 200 else {
-                print("❌ MailerLite Worker error: Status \(httpResponse.statusCode)")
                 throw EmailSubmissionError.serverError
             }
-            
+
             // Decode and check response
             let result = try JSONDecoder().decode(EmailResponse.self, from: data)
             if !result.success {
-                print("❌ MailerLite Worker returned error: \(result.error ?? "Unknown error")")
                 throw EmailSubmissionError.serverError
             }
         } catch let error as EmailSubmissionError {
             throw error
-        } catch let decodingError as DecodingError {
-            print("❌ Failed to decode response: \(decodingError)")
+        } catch _ as DecodingError {
             throw EmailSubmissionError.serverError
         } catch {
             // Network errors
@@ -111,7 +108,6 @@ final class MailerLiteService {
                (error as NSError).code == NSURLErrorNetworkConnectionLost {
                 throw EmailSubmissionError.networkError
             }
-            print("❌ Email submission error: \(error)")
             throw EmailSubmissionError.networkError
         }
     }

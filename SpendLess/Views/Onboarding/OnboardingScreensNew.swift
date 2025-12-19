@@ -886,7 +886,7 @@ struct FirstResistView: View {
                 onContinue()
             }
         } catch {
-            print("Failed to save onboarding waitlist item: \(error.localizedDescription)")
+            // Silently handle save errors - user can re-add item later
         }
     }
 }

@@ -141,26 +141,3 @@ final class Streak {
     }
 }
 
-// MARK: - Sample Data
-
-extension Streak {
-    static var sampleStreak: Streak {
-        Streak(
-            currentDays: 18,
-            longestDays: 23,
-            startDate: Calendar.current.date(byAdding: .day, value: -18, to: Date()) ?? Date()
-        )
-    }
-    
-    static var newStreak: Streak {
-        Streak()
-    }
-    
-    static var milestoneStreak: Streak {
-        Streak(
-            currentDays: 14,
-            longestDays: 14
-        )
-    }
-}
-

@@ -227,27 +227,6 @@ final class UserProfile {
     }
 }
 
-// MARK: - Sample Data
-
-extension UserProfile {
-    static var sampleProfile: UserProfile {
-        let profile = UserProfile(
-            triggers: [.bored, .sales, .afterStress],
-            timings: [.lateNight, .workBreaks],
-            estimatedSpend: .high,
-            goalType: .vacation
-        )
-        profile.onboardingCompletedAt = Calendar.current.date(byAdding: .day, value: -30, to: Date())
-        profile.blockedAppCount = 8
-        profile.hasScreenTimeAuth = true
-        return profile
-    }
-    
-    static var newProfile: UserProfile {
-        UserProfile()
-    }
-}
-
 // MARK: - Pay Frequency Enum
 
 enum PayFrequency: String, CaseIterable, Codable, Identifiable {

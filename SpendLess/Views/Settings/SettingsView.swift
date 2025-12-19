@@ -22,7 +22,6 @@ struct SettingsView: View {
     @State private var selection = FamilyActivitySelection()
     @State private var showAppPicker = false
     @State private var showResetConfirmation = false
-    @State private var showResetOnboardingConfirmation = false
     @State private var showDeleteAnalyticsConfirmation = false
     @State private var showEditGoal = false
     @State private var showPaywall = false
@@ -372,32 +371,12 @@ struct SettingsView: View {
                             .font(SpendLessFont.headline)
                             .foregroundStyle(Color.spendLessTextPrimary)
                     }
-                    
-                    // Debug Section (for development)
-                    #if DEBUG
-                    Section {
-                        Button {
-                            showResetOnboardingConfirmation = true
-                        } label: {
-                            Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
-                                .foregroundStyle(Color.spendLessError)
-                        }
-                        
-                        Button {
-                            addSampleData()
-                        } label: {
-                            Label("Add Sample Data", systemImage: "plus.circle")
-                        }
-                    } header: {
-                        Text("Debug")
-                    }
-                    #endif
-                    
+
                     // Version
                     Section {
                         HStack {
                             Spacer()
-                            Text("Version 1.0.0")
+                            Text("Version \(Bundle.main.appVersion)")
                                 .font(SpendLessFont.caption)
                                 .foregroundStyle(Color.spendLessTextMuted)
                             Spacer()
@@ -434,14 +413,6 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("This will reset your saved amount to $0. Your graveyard items will not be deleted.")
-            }
-            .alert("Reset Onboarding?", isPresented: $showResetOnboardingConfirmation) {
-                Button("Cancel", role: .cancel) {}
-                Button("Reset", role: .destructive) {
-                    resetOnboarding()
-                }
-            } message: {
-                Text("This will reset the app as if you just installed it.")
             }
             .alert("Delete All Analytics Data?", isPresented: $showDeleteAnalyticsConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -510,37 +481,7 @@ struct SettingsView: View {
             try? modelContext.save()
         }
     }
-    
-    private func resetOnboarding() {
-        appState.resetOnboarding()
-        ScreenTimeManager.shared.reset()
-    }
-    
-    private func addSampleData() {
-        // Add sample goal
-        let goal = UserGoal.sampleGoal
-        modelContext.insert(goal)
-        
-        // Add sample graveyard items
-        for item in GraveyardItem.sampleItems {
-            modelContext.insert(item)
-        }
-        
-        // Add sample waiting list items
-        for item in WaitingListItem.sampleItems {
-            modelContext.insert(item)
-        }
-        
-        // Add sample streak
-        let streak = Streak.sampleStreak
-        modelContext.insert(streak)
-        
-        try? modelContext.save()
-        
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-    }
-    
+
     private func formatCommitmentDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .long
@@ -969,5 +910,15 @@ extension InterventionManager.InterventionTypeValue {
             Streak.self,
             UserProfile.self
         ], inMemory: true)
+}
+
+// MARK: - Bundle Extension
+
+extension Bundle {
+    var appVersion: String {
+        let version = infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
+    }
 }
 

@@ -174,9 +174,10 @@ private struct ReasonOptionCard: View {
 
 #Preview {
     PurchaseReflectionSheet(
-        item: WaitingListItem.sampleItems[1]
-    ) { reason in
-        print("Selected: \(reason?.displayName ?? "skipped")")
-    }
+        item: WaitingListItem(
+            name: "Wireless Headphones",
+            amount: 299
+        )
+    ) { _ in }
 }
 

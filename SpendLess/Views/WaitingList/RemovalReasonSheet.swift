@@ -190,9 +190,10 @@ private struct ReasonOptionCard: View {
 
 #Preview {
     RemovalReasonSheet(
-        item: WaitingListItem.sampleItems[0]
-    ) { reason, note in
-        print("Selected: \(reason.displayName), note: \(note ?? "none")")
-    }
+        item: WaitingListItem(
+            name: "New Sneakers",
+            amount: 150
+        )
+    ) { _, _ in }
 }
 

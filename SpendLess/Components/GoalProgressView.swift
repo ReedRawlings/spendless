@@ -227,8 +227,23 @@ struct GoalIconView: View {
 
 #Preview("With Goal") {
     VStack(spacing: 20) {
-        GoalProgressView(goal: .sampleGoal)
-        GoalProgressView(goal: .sampleGoal, showFullView: false)
+        GoalProgressView(
+            goal: UserGoal(
+                name: "Trip to Japan",
+                targetAmount: 5000,
+                savedAmount: 2500,
+                goalType: .vacation
+            )
+        )
+        GoalProgressView(
+            goal: UserGoal(
+                name: "Trip to Japan",
+                targetAmount: 5000,
+                savedAmount: 2500,
+                goalType: .vacation
+            ),
+            showFullView: false
+        )
     }
     .padding()
     .background(Color.spendLessBackground)

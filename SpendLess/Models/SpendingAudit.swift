@@ -425,23 +425,3 @@ struct AuditCategoryPresets {
     ]
 }
 
-// MARK: - Sample Data
-
-extension SpendingAudit {
-    static var sampleAudit: SpendingAudit {
-        let audit = SpendingAudit(category: .makeup)
-        audit.regularlyUsedRange = .someItems
-        audit.lastFinishedProduct = .aWhileAgo
-        
-        // Add sample items
-        let foundation = AuditItem(subcategory: "Face", name: "Foundation", quantity: 3, averagePrice: 42)
-        let concealer = AuditItem(subcategory: "Face", name: "Concealer", quantity: 2, averagePrice: 28)
-        let mascara = AuditItem(subcategory: "Eyes", name: "Mascara", quantity: 5, averagePrice: 15)
-        let lipstick = AuditItem(subcategory: "Lips", name: "Lipstick", quantity: 8, averagePrice: 22)
-        
-        audit.items = [foundation, concealer, mascara, lipstick]
-        
-        return audit
-    }
-}
-

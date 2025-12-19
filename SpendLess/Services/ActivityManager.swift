@@ -38,7 +38,6 @@ final class ActivityManager {
         endActivity()
         
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("[ActivityManager] Live Activities are not enabled")
             return
         }
         
@@ -59,10 +58,8 @@ final class ActivityManager {
             
             currentActivity = activity
             startUpdateTimer(endTime: endTime)
-            
-            print("[ActivityManager] Started Live Activity for \(appName)")
         } catch {
-            print("[ActivityManager] Failed to start Live Activity: \(error)")
+            // Failed to start Live Activity
         }
     }
     
@@ -103,8 +100,6 @@ final class ActivityManager {
             let content = ActivityContent(state: finalContentState, staleDate: nil)
             await activity.end(content, dismissalPolicy: .immediate)
             currentActivity = nil
-            
-            print("[ActivityManager] Ended Live Activity")
         }
     }
     
@@ -147,7 +142,7 @@ final class ActivityManagerFallback {
     private init() {}
     
     func startActivity(appName: String, startTime: Date, endTime: Date) {
-        print("[ActivityManager] Live Activities not available on this iOS version")
+        // No-op on older iOS versions
     }
     
     func endActivity() {
