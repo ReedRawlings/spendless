@@ -434,13 +434,13 @@ struct YourGoalView: View {
                 .padding(.top, SpendLessSpacing.lg)
 
                 if !showDetails {
-                    // Goal type selection
+                    // Goal type selection - nothing pre-selected visually
                     VStack(spacing: SpendLessSpacing.sm) {
                         ForEach(GoalType.allCases) { goalType in
                             SelectionCard(
                                 title: goalType.rawValue,
                                 icon: goalType.icon,
-                                isSelected: appState.onboardingGoalType == goalType
+                                isSelected: false
                             ) {
                                 appState.onboardingGoalType = goalType
                                 HapticFeedback.lightSuccess()
@@ -487,11 +487,19 @@ struct YourGoalView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack {
+                if !showDetails {
+                    // Prompt user to tap a goal
+                    Text("Tap a goal to continue")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextMuted)
+                        .padding(.bottom, SpendLessSpacing.sm)
+                }
+
                 PrimaryButton("Continue") {
                     onContinue()
                 }
-                .disabled(showDetails && appState.onboardingGoalType.requiresDetails &&
-                          (appState.onboardingGoalName.isEmpty || appState.onboardingGoalAmount <= 0))
+                .disabled(!showDetails || (appState.onboardingGoalType.requiresDetails &&
+                          appState.onboardingGoalAmount <= 0))
                 .padding(.horizontal, SpendLessSpacing.lg)
                 .padding(.bottom, SpendLessSpacing.xl)
             }
