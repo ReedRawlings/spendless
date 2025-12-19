@@ -12,12 +12,13 @@ struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
     @Environment(InterventionManager.self) private var interventionManager
-    
+
     // Query only active goals to avoid loading all goals into memory
     @Query(filter: #Predicate<UserGoal> { $0.isActive }) private var activeGoals: [UserGoal]
     @Query private var graveyardItems: [GraveyardItem]
     @Query private var streaks: [Streak]
     @Query private var profiles: [UserProfile]
+    @Query private var spendingAudits: [SpendingAudit]
 
     @State private var showFeelingTempted = false
     @State private var showCelebration = false
@@ -26,6 +27,12 @@ struct DashboardView: View {
     @State private var showAnniversary: Bool = false
     @State private var anniversaryMilestone: Int = 0
     @State private var showEditGoal = false
+    @State private var selectedTool: ToolType?
+
+    // Dismissed prompts tracking
+    @AppStorage("dismissedLifeEnergyPrompt") private var dismissedLifeEnergyPrompt = false
+    @AppStorage("dismissedSpendingAuditPrompt") private var dismissedSpendingAuditPrompt = false
+    @AppStorage("dismissedDopamineMenuPrompt") private var dismissedDopamineMenuPrompt = false
 
     private var currentGoal: UserGoal? {
         activeGoals.first
@@ -80,7 +87,43 @@ struct DashboardView: View {
         )
         return goal
     }
-    
+
+    // MARK: - Tool Completion Status
+
+    private var hasCompletedLifeEnergy: Bool {
+        profile?.hasConfiguredLifeEnergy ?? false
+    }
+
+    private var hasCompletedSpendingAudit: Bool {
+        !spendingAudits.isEmpty
+    }
+
+    private var hasCompletedDopamineMenu: Bool {
+        profile?.hasDopamineMenuSetup ?? false
+    }
+
+    /// Tools that need to be set up (not completed and not dismissed)
+    private var pendingToolPrompts: [ToolType] {
+        var prompts: [ToolType] = []
+
+        if !hasCompletedLifeEnergy && !dismissedLifeEnergyPrompt {
+            prompts.append(.lifeEnergyCalculator)
+        }
+        if !hasCompletedSpendingAudit && !dismissedSpendingAuditPrompt {
+            prompts.append(.spendingAudit)
+        }
+        if !hasCompletedDopamineMenu && !dismissedDopamineMenuPrompt {
+            prompts.append(.dopamineMenu)
+        }
+
+        return prompts
+    }
+
+    /// Whether to show compact goal view (when prompts are showing)
+    private var showCompactGoal: Bool {
+        !pendingToolPrompts.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -93,12 +136,38 @@ struct DashboardView: View {
                         GoalProgressView(
                             goal: screenshotGoal ?? currentGoal,
                             totalSaved: totalSaved,
+                            showFullView: !showCompactGoal,
                             onSetGoal: {
                                 showEditGoal = true
                             }
                         )
                         .padding(.horizontal, SpendLessSpacing.md)
-                        
+
+                        // Onboarding Tool Prompts
+                        if !pendingToolPrompts.isEmpty {
+                            VStack(spacing: SpendLessSpacing.sm) {
+                                ForEach(pendingToolPrompts) { tool in
+                                    OnboardingPromptCard(
+                                        tool: tool,
+                                        onTap: {
+                                            HapticFeedback.buttonTap()
+                                            selectedTool = tool
+                                        },
+                                        onDismiss: {
+                                            withAnimation(.easeOut(duration: 0.2)) {
+                                                dismissPrompt(for: tool)
+                                            }
+                                        }
+                                    )
+                                    .transition(.asymmetric(
+                                        insertion: .opacity,
+                                        removal: .opacity.combined(with: .move(edge: .trailing))
+                                    ))
+                                }
+                            }
+                            .padding(.horizontal, SpendLessSpacing.md)
+                        }
+
                         // Stats Row
                         HStack(spacing: SpendLessSpacing.md) {
                             StatsCard(
@@ -187,9 +256,34 @@ struct DashboardView: View {
             .sheet(isPresented: $showEditGoal) {
                 EditGoalSheet(goal: currentGoal)
             }
+            .navigationDestination(item: $selectedTool) { tool in
+                switch tool {
+                case .dopamineMenu:
+                    DopamineMenuView()
+                case .lifeEnergyCalculator:
+                    LifeEnergyCalculatorView()
+                case .spendingAudit:
+                    SpendingAuditView()
+                default:
+                    EmptyView()
+                }
+            }
         }
     }
-    
+
+    private func dismissPrompt(for tool: ToolType) {
+        switch tool {
+        case .lifeEnergyCalculator:
+            dismissedLifeEnergyPrompt = true
+        case .spendingAudit:
+            dismissedSpendingAuditPrompt = true
+        case .dopamineMenu:
+            dismissedDopamineMenuPrompt = true
+        default:
+            break
+        }
+    }
+
     private func generateCelebrationMessage(for amount: Decimal) -> String {
         if let goal = currentGoal {
             if let translation = goal.savingsTranslation(for: amount) {
@@ -704,12 +798,15 @@ struct DopamineActivityButton: View {
 #Preview {
     DashboardView()
         .environment(AppState.shared)
+        .environment(InterventionManager.shared)
         .modelContainer(for: [
             UserGoal.self,
             WaitingListItem.self,
             GraveyardItem.self,
             Streak.self,
-            UserProfile.self
+            UserProfile.self,
+            SpendingAudit.self,
+            AuditItem.self
         ], inMemory: true)
 }
 
