@@ -212,6 +212,93 @@ struct StatsCard: View {
     }
 }
 
+// MARK: - Onboarding Prompt Card
+
+/// A card that prompts users to complete onboarding tools
+struct OnboardingPromptCard: View {
+    let tool: ToolType
+    let onTap: () -> Void
+    let onDismiss: () -> Void
+
+    @State private var isPressed = false
+
+    private var promptText: String {
+        switch tool {
+        case .lifeEnergyCalculator:
+            return "Know your true hourly worth"
+        case .spendingAudit:
+            return "Discover what you already own"
+        case .dopamineMenu:
+            return "Prepare alternatives for urges"
+        default:
+            return tool.description
+        }
+    }
+
+    private var ctaText: String {
+        switch tool {
+        case .lifeEnergyCalculator:
+            return "Calculate"
+        case .spendingAudit:
+            return "Take audit"
+        case .dopamineMenu:
+            return "Set up"
+        default:
+            return "Open"
+        }
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: SpendLessSpacing.md) {
+                // Tool icon
+                Text(tool.icon)
+                    .font(.system(size: 32))
+
+                // Text content
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tool.name)
+                        .font(SpendLessFont.bodyBold)
+                        .foregroundStyle(Color.spendLessTextPrimary)
+
+                    Text(promptText)
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                // CTA
+                Text(ctaText)
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessPrimary)
+                    .fontWeight(.semibold)
+
+                // Dismiss button
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.caption)
+                        .foregroundStyle(Color.spendLessTextMuted)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(SpendLessSpacing.md)
+            .background(Color.spendLessCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+            .overlay(
+                RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                    .strokeBorder(Color.spendLessPrimary.opacity(0.2), lineWidth: 1)
+            )
+            .spendLessShadow(SpendLessShadow.subtleShadow)
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+        }
+        .buttonStyle(PressableButtonStyle(isPressed: $isPressed))
+    }
+}
+
 // MARK: - Checkmark Shape
 
 struct CheckmarkShape: Shape {
@@ -256,6 +343,25 @@ struct CheckmarkShape: Shape {
                 StatsCard(icon: "flame.fill", value: "18", label: "Day Streak", iconColor: .spendLessStreak)
                 StatsCard(icon: "dollarsign.circle.fill", value: "$89", label: "This Week")
             }
+
+            // Onboarding Prompt Cards
+            OnboardingPromptCard(
+                tool: .lifeEnergyCalculator,
+                onTap: {},
+                onDismiss: {}
+            )
+
+            OnboardingPromptCard(
+                tool: .dopamineMenu,
+                onTap: {},
+                onDismiss: {}
+            )
+
+            OnboardingPromptCard(
+                tool: .spendingAudit,
+                onTap: {},
+                onDismiss: {}
+            )
         }
         .padding()
     }
