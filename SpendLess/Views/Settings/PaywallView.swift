@@ -27,7 +27,24 @@ struct SpendLessPaywallView: View {
     @State private var benefitsVisible = false
     @State private var plansVisible = false
     @State private var buttonVisible = false
-    
+
+    // Computed properties for dynamic text
+    private var isAnnualSelected: Bool {
+        selectedProduct?.id == AppConstants.ProductIdentifiers.annual
+    }
+
+    private var ctaButtonText: String {
+        isAnnualSelected ? "Start Free Trial" : "Subscribe Now"
+    }
+
+    private var trialReminderText: String {
+        if isAnnualSelected {
+            return "Try free for 7 days, then \(selectedProduct?.displayPrice ?? "$34.99")/year"
+        } else {
+            return "\(selectedProduct?.displayPrice ?? "$6.99")/month, billed monthly"
+        }
+    }
+
     var body: some View {
         ZStack {
             // Warm background
@@ -39,28 +56,12 @@ struct SpendLessPaywallView: View {
             } else {
                 ScrollView {
                     VStack(spacing: SpendLessSpacing.xl) {
-                        // Close button
-                        HStack {
-                            Spacer()
-                            Button {
-                                handleCompletion()
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundStyle(Color.spendLessTextMuted)
-                                    .padding(SpendLessSpacing.sm)
-                                    .background(Color.spendLessBackgroundSecondary)
-                                    .clipShape(Circle())
-                            }
-                        }
-                        .padding(.horizontal, SpendLessSpacing.lg)
-                        .padding(.top, SpendLessSpacing.sm)
-                        
-                        // Header
+                        // Header (no close button - paywall is mandatory)
                         VStack(spacing: SpendLessSpacing.md) {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 48))
                                 .foregroundStyle(Color.spendLessGold)
+                                .padding(.top, SpendLessSpacing.xl)
                             
                             Text("You're ready to take control")
                                 .font(SpendLessFont.title)
@@ -121,7 +122,7 @@ struct SpendLessPaywallView: View {
                         // CTA Button
                         VStack(spacing: SpendLessSpacing.md) {
                             PrimaryButton(
-                                isPurchasing ? "Processing..." : "Start Free Trial",
+                                isPurchasing ? "Processing..." : ctaButtonText,
                                 icon: isPurchasing ? nil : "arrow.right",
                                 isLoading: isPurchasing,
                                 isDisabled: selectedProduct == nil
@@ -131,9 +132,9 @@ struct SpendLessPaywallView: View {
                                 }
                             }
                             .padding(.horizontal, SpendLessSpacing.lg)
-                            
-                            // Trial reminder
-                            Text("Try free for 3 days, then \(selectedProduct?.displayPrice ?? "$6.99")/\(selectedProduct?.id == AppConstants.ProductIdentifiers.annual ? "year" : "month")")
+
+                            // Trial reminder (only for annual)
+                            Text(trialReminderText)
                                 .font(SpendLessFont.caption)
                                 .foregroundStyle(Color.spendLessTextMuted)
                         }
@@ -302,7 +303,7 @@ private struct SubscriptionOption: View {
                         Text(isAnnual ? "Annual" : "Monthly")
                             .font(SpendLessFont.headline)
                             .foregroundStyle(Color.spendLessTextPrimary)
-                        
+
                         if isAnnual {
                             Text("Save 50%")
                                 .font(SpendLessFont.caption)
@@ -314,8 +315,8 @@ private struct SubscriptionOption: View {
                                 .clipShape(Capsule())
                         }
                     }
-                    
-                    Text("3-day free trial")
+
+                    Text(isAnnual ? "7-day free trial" : "No trial")
                         .font(SpendLessFont.caption)
                         .foregroundStyle(Color.spendLessTextMuted)
                 }

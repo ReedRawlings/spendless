@@ -119,36 +119,40 @@ struct OnboardingCoordinatorView: View {
 // MARK: - Progress Indicator
 
 struct OnboardingProgressView: View {
-    let progress: Double
-    
+    let currentStep: Int
+    let totalSteps: Int
+
+    private var progress: Double {
+        Double(currentStep) / Double(totalSteps)
+    }
+
     var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                // Background track
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.spendLessBackgroundSecondary)
-                    .frame(height: 4)
-                
-                // Gradient fill that warms as progress increases
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(progressGradient)
-                    .frame(width: geometry.size.width * progress, height: 4)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progress)
-                
-                // Optional: glowing leading edge
-                if progress > 0 && progress < 1 {
-                    Circle()
-                        .fill(Color.spendLessPrimary)
-                        .frame(width: 6, height: 6)
-                        .blur(radius: 2)
-                        .offset(x: geometry.size.width * progress - 3)
+        HStack(spacing: SpendLessSpacing.sm) {
+            // Progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background track
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.spendLessBackgroundSecondary)
+                        .frame(height: 4)
+
+                    // Gradient fill
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(progressGradient)
+                        .frame(width: geometry.size.width * progress, height: 4)
                         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progress)
                 }
             }
+            .frame(height: 4)
+
+            // Step count
+            Text("\(currentStep)/\(totalSteps)")
+                .font(SpendLessFont.caption)
+                .foregroundStyle(Color.spendLessTextMuted)
+                .monospacedDigit()
         }
-        .frame(height: 4)
     }
-    
+
     private var progressGradient: LinearGradient {
         LinearGradient(
             colors: [
@@ -164,14 +168,17 @@ struct OnboardingProgressView: View {
 // MARK: - Onboarding Container
 
 struct OnboardingContainer<Content: View>: View {
+    @Environment(\.dismiss) private var dismiss
     let step: OnboardingCoordinatorView.OnboardingStep
     let content: Content
-    
+
+    private let totalSteps = OnboardingCoordinatorView.OnboardingStep.allCases.count
+
     init(step: OnboardingCoordinatorView.OnboardingStep, @ViewBuilder content: () -> Content) {
         self.step = step
         self.content = content()
     }
-    
+
     var body: some View {
         ZStack {
             // Layered warm gradient background
@@ -185,16 +192,33 @@ struct OnboardingContainer<Content: View>: View {
                 endPoint: .bottom
             )
             .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
-                OnboardingProgressView(progress: step.progress)
-                    .padding(.horizontal, SpendLessSpacing.lg)
-                    .padding(.top, SpendLessSpacing.sm)
-                
+                // Navigation row: back button + progress bar
+                HStack(spacing: SpendLessSpacing.md) {
+                    // Back button - simple chevron
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color.spendLessTextSecondary)
+                    }
+
+                    // Progress bar with step count
+                    OnboardingProgressView(
+                        currentStep: step.rawValue + 1,
+                        totalSteps: totalSteps
+                    )
+                }
+                .padding(.horizontal, SpendLessSpacing.lg)
+                .padding(.top, SpendLessSpacing.sm)
+                .padding(.bottom, SpendLessSpacing.sm)
+
                 content
             }
         }
-        .navigationBarBackButtonHidden(false)
+        .navigationBarBackButtonHidden(true)
         .hideKeyboardOnTap()
     }
 }

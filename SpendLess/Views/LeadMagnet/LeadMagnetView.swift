@@ -50,122 +50,125 @@ struct LeadMagnetView: View {
     }
     
     private var mainContent: some View {
-        ScrollView {
-            VStack(spacing: SpendLessSpacing.xl) {
-                // Add top padding since OnboardingContainer handles the background
-                Spacer()
-                    .frame(height: SpendLessSpacing.md)
-                // Lottie animation placeholder (can be added later)
-                // For now, using a simple icon
-                Image(systemName: "gift.fill")
-                    .font(.system(size: 60))
-                    .foregroundStyle(Color.spendLessPrimary)
-                    .padding(.top, SpendLessSpacing.xxl)
-                
-                // Headline
-                VStack(spacing: SpendLessSpacing.sm) {
-                    Text("A Gift For Your Journey")
-                        .font(SpendLessFont.title)
-                        .foregroundStyle(Color.spendLessTextPrimary)
-                        .multilineTextAlignment(.center)
-                    
-                    Text("Get our free Self-Compassion Guide—your reset button when slip-ups happen.")
+        VStack(spacing: SpendLessSpacing.md) {
+            // Headline - compact
+            VStack(spacing: SpendLessSpacing.xs) {
+                Text("A Gift For Your Journey")
+                    .font(SpendLessFont.title2)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text("Get our free Self-Compassion Guide—your reset button when slip-ups happen.")
+                    .font(SpendLessFont.callout)
+                    .foregroundStyle(Color.spendLessTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, SpendLessSpacing.lg)
+            .padding(.top, SpendLessSpacing.lg)
+
+            // Three content cards
+            VStack(spacing: SpendLessSpacing.sm) {
+                guideContentCard(
+                    icon: "arrow.triangle.branch",
+                    title: "The Two Pathways",
+                    description: "Understand the choice you're making",
+                    color: .spendLessSecondary
+                )
+
+                guideContentCard(
+                    icon: "timer",
+                    title: "3-Minute Reset",
+                    description: "A quick exercise to regain control",
+                    color: .spendLessGold
+                )
+
+                guideContentCard(
+                    icon: "checkmark.circle.fill",
+                    title: "Your Action Plan",
+                    description: "Steps to get back on track",
+                    color: .spendLessPrimary
+                )
+            }
+            .padding(.horizontal, SpendLessSpacing.lg)
+
+            // Email input
+            VStack(alignment: .leading, spacing: SpendLessSpacing.xs) {
+                HStack(spacing: SpendLessSpacing.sm) {
+                    Image(systemName: "envelope")
+                        .foregroundStyle(Color.spendLessTextMuted)
+
+                    TextField("Enter your email", text: $email)
                         .font(SpendLessFont.body)
+                        .foregroundStyle(Color.spendLessTextPrimary)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                        .autocorrectionDisabled()
+                        .textContentType(.emailAddress)
+                }
+                .padding(SpendLessSpacing.md)
+                .background(Color.spendLessBackgroundSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+
+                if !email.isEmpty && !isValidEmail {
+                    Text("Please enter a valid email address")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessError)
+                }
+            }
+            .padding(.horizontal, SpendLessSpacing.lg)
+
+            // Marketing opt-in checkbox
+            Button {
+                optedIntoMarketing.toggle()
+            } label: {
+                HStack(alignment: .center, spacing: SpendLessSpacing.sm) {
+                    Image(systemName: optedIntoMarketing ? "checkmark.square.fill" : "square")
+                        .foregroundStyle(optedIntoMarketing ? Color.spendLessPrimary : Color.spendLessTextMuted)
+                        .font(.system(size: 18))
+
+                    Text("Send me tips on mindful spending")
+                        .font(SpendLessFont.caption)
                         .foregroundStyle(Color.spendLessTextSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, SpendLessSpacing.lg)
                 }
-                
-                // Stacked card preview
-                StackedCardPreview()
-                    .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Email input
-                VStack(alignment: .leading, spacing: SpendLessSpacing.sm) {
-                    HStack(spacing: SpendLessSpacing.sm) {
-                        Image(systemName: "envelope")
-                            .foregroundStyle(Color.spendLessTextMuted)
-                        
-                        TextField("Enter your email", text: $email)
-                            .font(SpendLessFont.body)
-                            .foregroundStyle(Color.spendLessTextPrimary)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .autocorrectionDisabled()
-                            .textContentType(.emailAddress)
-                    }
-                    .padding(SpendLessSpacing.md)
-                    .background(Color.spendLessBackgroundSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
-                    
-                    if !email.isEmpty && !isValidEmail {
-                        Text("Please enter a valid email address")
-                            .font(SpendLessFont.caption)
-                            .foregroundStyle(Color.spendLessError)
-                    }
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Marketing opt-in checkbox
-                Button {
-                    optedIntoMarketing.toggle()
-                } label: {
-                    HStack(alignment: .top, spacing: SpendLessSpacing.sm) {
-                        Image(systemName: optedIntoMarketing ? "checkmark.square.fill" : "square")
-                            .foregroundStyle(optedIntoMarketing ? Color.spendLessPrimary : Color.spendLessTextMuted)
-                            .font(.system(size: 20))
-                        
-                        Text("Send me occasional tips on mindful spending (optional)")
-                            .font(SpendLessFont.caption)
-                            .foregroundStyle(Color.spendLessTextSecondary)
-                            .multilineTextAlignment(.leading)
-                    }
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Submit button
-                PrimaryButton(
-                    "Send My Free Guide",
-                    isLoading: isSubmitting,
-                    isDisabled: !isValidEmail || email.isEmpty
-                ) {
-                    submitEmail()
-                }
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Legal text
-                VStack(spacing: SpendLessSpacing.xs) {
-                    Text("By continuing, you agree to our")
-                        .font(SpendLessFont.caption)
-                        .foregroundStyle(Color.spendLessTextMuted)
-                    +
-                    Text(" Privacy Policy")
-                        .font(SpendLessFont.caption)
-                        .foregroundStyle(Color.spendLessPrimary)
-                    +
-                    Text(". Unsubscribe anytime.")
-                        .font(SpendLessFont.caption)
-                        .foregroundStyle(Color.spendLessTextMuted)
-                }
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, SpendLessSpacing.lg)
-                
-                // Skip link (only show if onSkip is provided)
+            }
+            .padding(.horizontal, SpendLessSpacing.lg)
+
+            // Submit button
+            PrimaryButton(
+                "Send My Free Guide",
+                isLoading: isSubmitting,
+                isDisabled: !isValidEmail || email.isEmpty
+            ) {
+                submitEmail()
+            }
+            .padding(.horizontal, SpendLessSpacing.lg)
+
+            // Legal text + Skip in same row
+            HStack {
+                (Text("By continuing, you agree to our ")
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextMuted)
+                +
+                Text("Privacy Policy")
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessPrimary))
+
+                Spacer()
+
                 if let onSkip {
                     Button {
                         onSkip()
                     } label: {
-                        Text("Skip for now")
+                        Text("Skip")
                             .font(SpendLessFont.caption)
                             .foregroundStyle(Color.spendLessTextMuted)
                     }
-                    .padding(.bottom, SpendLessSpacing.xl)
-                } else {
-                    // Add bottom padding if no skip button
-                    Spacer()
-                        .frame(height: SpendLessSpacing.xl)
                 }
             }
+            .padding(.horizontal, SpendLessSpacing.lg)
+            .padding(.bottom, SpendLessSpacing.lg)
+
+            Spacer(minLength: 0)
         }
         .background(source == .settings ? Color.spendLessBackground : Color.clear)
         .alert("Error", isPresented: $showError) {
@@ -175,6 +178,30 @@ struct LeadMagnetView: View {
                 Text(errorMessage)
             }
         }
+    }
+
+    private func guideContentCard(icon: String, title: String, description: String, color: Color) -> some View {
+        HStack(spacing: SpendLessSpacing.md) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundStyle(color)
+                .frame(width: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(SpendLessFont.bodyBold)
+                    .foregroundStyle(Color.spendLessTextPrimary)
+
+                Text(description)
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextMuted)
+            }
+
+            Spacer()
+        }
+        .padding(SpendLessSpacing.md)
+        .background(Color.spendLessCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
     }
     
     private func submitEmail() {
