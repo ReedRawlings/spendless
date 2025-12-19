@@ -2,7 +2,7 @@
 //  OnboardingCoordinatorView.swift
 //  SpendLess
 //
-//  Onboarding flow coordinator - 25 screens (includes 5 Why Change screens)
+//  Onboarding flow coordinator - 13 screens (streamlined flow)
 //
 
 import SwiftUI
@@ -11,130 +11,106 @@ import SwiftData
 struct OnboardingCoordinatorView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
-    
+
     @State private var currentStep: OnboardingStep = .welcome
     @State private var navigationPath = NavigationPath()
-    
+
     enum OnboardingStep: Int, CaseIterable {
         case welcome = 0
-        case behaviors
-        case timing
-        case problemApps
-        // Psychology intro
-        case psychologyIntro
-        // Why Change screens (emotional journey: pain → hope)
-        case whyChange1
-        case whyChange2
-        case whyChange3
-        case whyChange4
-        case whyChange5
-        // Continue flow
-        case monthlySpend
-        case impactVisualization
-        case goalSelection
-        case goalDetails
-        case desiredOutcomes
-        case waitlistExplanation
-        case waitlistIntro
-        case commitment
-        case leadMagnet
-        case permissionExplanation
-        case appSelection
-        case websiteBlocking
-        case selectionConfirmation
-        case notificationPermission
+        case aboutYou
+        case theCost
+        case psychology
+        case futureYou
+        case yourGoal
         case howItWorks
-        case shortcutsSetup
-        
+        case firstResist
+        case stayCommitted
+        case screenTimeAccess
+        case blockApps
+        case ready
+        case paywall
+
         var progress: Double {
             Double(rawValue + 1) / Double(Self.allCases.count)
         }
     }
-    
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
             OnboardingWelcomeView {
-                navigateTo(.behaviors)
+                navigateTo(.aboutYou)
             }
             .navigationDestination(for: OnboardingStep.self) { step in
                 destinationView(for: step)
             }
         }
     }
-    
+
     @ViewBuilder
     private func destinationView(for step: OnboardingStep) -> some View {
         switch step {
         case .welcome:
-            OnboardingWelcomeView { navigateTo(.behaviors) }
-        case .behaviors:
-            OnboardingBehaviorsView { navigateTo(.timing) }
-        case .timing:
-            OnboardingTimingView { navigateTo(.psychologyIntro) }
-        case .problemApps:
-            OnboardingProblemAppsView { navigateTo(.psychologyIntro) } // Disabled but kept for future use
-        case .psychologyIntro:
-            PsychologyIntroView { navigateTo(.whyChange1) }
-        // Why Change screens
-        case .whyChange1:
-            WhyChange1View { navigateTo(.whyChange2) }
-        case .whyChange2:
-            WhyChange2View { navigateTo(.whyChange3) }
-        case .whyChange3:
-            WhyChange3View { navigateTo(.whyChange4) }
-        case .whyChange4:
-            WhyChange4View { navigateTo(.whyChange5) }
-        case .whyChange5:
-            WhyChange5View { navigateTo(.monthlySpend) }
-        case .monthlySpend:
-            OnboardingMonthlySpendView { navigateTo(.impactVisualization) }
-        case .impactVisualization:
-            OnboardingImpactView { navigateTo(.goalSelection) }
-        case .goalSelection:
-            OnboardingGoalSelectionView { navigateTo(.goalDetails) }
-        case .goalDetails:
-            OnboardingGoalDetailsView { navigateTo(.desiredOutcomes) }
-        case .desiredOutcomes:
-            OnboardingDesiredOutcomesView { navigateTo(.waitlistExplanation) }
-        case .waitlistExplanation:
-            WaitlistExplanationView { navigateTo(.waitlistIntro) }
-        case .waitlistIntro:
-            OnboardingWaitlistIntroView { navigateTo(.commitment) }
-        case .commitment:
-            OnboardingCommitmentView { navigateTo(.leadMagnet) }
-        case .leadMagnet:
-            OnboardingContainer(step: .leadMagnet) {
-                LeadMagnetView(
-                    source: .onboarding,
-                    onComplete: { navigateTo(.permissionExplanation) },
-                    onSkip: { navigateTo(.permissionExplanation) }
-                )
+            OnboardingWelcomeView { navigateTo(.aboutYou) }
+
+        case .aboutYou:
+            OnboardingContainer(step: .aboutYou) {
+                AboutYouView { navigateTo(.theCost) }
             }
-        case .permissionExplanation:
-            OnboardingPermissionView { navigateTo(.appSelection) }
-        case .appSelection:
-            OnboardingAppSelectionView { navigateTo(.websiteBlocking) }
-        case .websiteBlocking:
-            OnboardingWebsiteBlockingView { navigateTo(.selectionConfirmation) }
-        case .selectionConfirmation:
-            OnboardingConfirmationView { navigateTo(.notificationPermission) }
-        case .notificationPermission:
-            OnboardingNotificationPermissionView { navigateTo(.howItWorks) }
+
+        case .theCost:
+            OnboardingContainer(step: .theCost) {
+                TheCostView { navigateTo(.psychology) }
+            }
+
+        case .psychology:
+            PsychologyView { navigateTo(.futureYou) }
+
+        case .futureYou:
+            FutureYouView { navigateTo(.yourGoal) }
+
+        case .yourGoal:
+            OnboardingContainer(step: .yourGoal) {
+                YourGoalView { navigateTo(.howItWorks) }
+            }
+
         case .howItWorks:
-            OnboardingHowItWorksView { navigateTo(.shortcutsSetup) }
-        case .shortcutsSetup:
-            ShortcutsSetupView(
-                onComplete: { completeOnboarding() },
-                onSkip: { completeOnboarding() }
-            )
+            OnboardingContainer(step: .howItWorks) {
+                HowItWorksSimpleView { navigateTo(.firstResist) }
+            }
+
+        case .firstResist:
+            OnboardingContainer(step: .firstResist) {
+                FirstResistView { navigateTo(.stayCommitted) }
+            }
+
+        case .stayCommitted:
+            OnboardingContainer(step: .stayCommitted) {
+                StayCommittedView { navigateTo(.screenTimeAccess) }
+            }
+
+        case .screenTimeAccess:
+            OnboardingPermissionView { navigateTo(.blockApps) }
+
+        case .blockApps:
+            OnboardingAppSelectionView { navigateTo(.ready) }
+
+        case .ready:
+            OnboardingContainer(step: .ready) {
+                ReadyView { navigateTo(.paywall) }
+            }
+
+        case .paywall:
+            SpendLessPaywallView(onComplete: {
+                completeOnboarding()
+            })
         }
     }
-    
+
     private func navigateTo(_ step: OnboardingStep) {
         currentStep = step
         navigationPath.append(step)
     }
-    
+
     private func completeOnboarding() {
         appState.finalizeOnboarding(context: modelContext)
     }

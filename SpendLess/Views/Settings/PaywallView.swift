@@ -12,13 +12,16 @@ import StoreKit
 struct SpendLessPaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(SubscriptionService.self) private var subscriptionService
-    
+
+    /// Optional callback for onboarding context. When nil, uses standard dismiss().
+    var onComplete: (() -> Void)?
+
     @State private var products: [Product] = []
     @State private var selectedProduct: Product?
     @State private var isLoading = true
     @State private var isPurchasing = false
     @State private var errorMessage: String?
-    
+
     // Animation states
     @State private var headerVisible = false
     @State private var benefitsVisible = false
@@ -40,7 +43,7 @@ struct SpendLessPaywallView: View {
                         HStack {
                             Spacer()
                             Button {
-                                dismiss()
+                                handleCompletion()
                             } label: {
                                 Image(systemName: "xmark")
                                     .font(.system(size: 16, weight: .medium))
@@ -204,40 +207,49 @@ struct SpendLessPaywallView: View {
     
     private func handlePurchase() async {
         guard let product = selectedProduct else { return }
-        
+
         isPurchasing = true
         errorMessage = nil
-        
+
         do {
             _ = try await subscriptionService.purchase(product)
             HapticFeedback.celebration()
-            dismiss()
+            handleCompletion()
         } catch SubscriptionError.purchaseCancelled {
             // User cancelled - no error message needed
         } catch {
             errorMessage = "Something went wrong. Please try again."
         }
-        
+
         isPurchasing = false
     }
-    
+
     private func handleRestore() async {
         isPurchasing = true
         errorMessage = nil
-        
+
         do {
             try await subscriptionService.restorePurchases()
             if subscriptionService.hasProAccess {
                 HapticFeedback.celebration()
-                dismiss()
+                handleCompletion()
             } else {
                 errorMessage = "No active subscription found"
             }
         } catch {
             errorMessage = "Unable to restore purchases"
         }
-        
+
         isPurchasing = false
+    }
+
+    /// Handle completion - uses onComplete callback for onboarding, dismiss() for settings
+    private func handleCompletion() {
+        if let onComplete {
+            onComplete()
+        } else {
+            dismiss()
+        }
     }
 }
 

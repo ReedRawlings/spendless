@@ -224,3 +224,137 @@ struct RenewCommitmentView: View {
     }
 }
 
+// MARK: - Signature Sheet View
+
+struct SignatureSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let onSave: (Data, Date) -> Void
+
+    @State private var canvasView = PKCanvasView()
+    @State private var drawing = PKDrawing()
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.white.ignoresSafeArea()
+
+                VStack(spacing: SpendLessSpacing.lg) {
+                    Text("Sign with your finger")
+                        .font(SpendLessFont.headline)
+                        .foregroundStyle(Color.spendLessTextPrimary)
+                        .padding(.top, SpendLessSpacing.lg)
+
+                    // Signature canvas
+                    SignatureCanvasRepresentable(
+                        canvasView: $canvasView,
+                        drawing: $drawing
+                    )
+                    .frame(height: 300)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.md))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: SpendLessRadius.md)
+                            .strokeBorder(Color.spendLessTextMuted, lineWidth: 1)
+                    )
+                    .padding(.horizontal, SpendLessSpacing.md)
+
+                    Button("Clear") {
+                        drawing = PKDrawing()
+                        canvasView.drawing = PKDrawing()
+                    }
+                    .foregroundStyle(Color.spendLessError)
+
+                    Spacer()
+                }
+            }
+            .navigationTitle("Sign Your Commitment")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        saveSignature()
+                    }
+                    .disabled(drawing.strokes.isEmpty)
+                }
+            }
+        }
+    }
+
+    private func saveSignature() {
+        let bounds = drawing.bounds
+
+        guard !bounds.isEmpty else {
+            return
+        }
+
+        // Add padding around signature
+        let padding: CGFloat = 20
+        let imageSize = CGSize(
+            width: bounds.width + padding * 2,
+            height: bounds.height + padding * 2
+        )
+
+        let renderer = UIGraphicsImageRenderer(size: imageSize)
+        let image = renderer.image { context in
+            // Transparent background
+            UIColor.clear.setFill()
+            context.fill(CGRect(origin: .zero, size: imageSize))
+
+            // Center the drawing
+            context.cgContext.translateBy(x: padding - bounds.minX, y: padding - bounds.minY)
+
+            // Draw signature
+            drawing.image(from: bounds, scale: UIScreen.main.scale).draw(at: .zero)
+        }
+
+        if let imageData = image.pngData() {
+            onSave(imageData, Date())
+        }
+    }
+}
+
+// MARK: - Signature Canvas Representable
+
+struct SignatureCanvasRepresentable: UIViewRepresentable {
+    @Binding var canvasView: PKCanvasView
+    @Binding var drawing: PKDrawing
+
+    func makeUIView(context: Context) -> PKCanvasView {
+        canvasView.drawingPolicy = .anyInput
+        canvasView.tool = PKInkingTool(.pen, color: .black, width: 3)
+        canvasView.backgroundColor = .clear
+        canvasView.isOpaque = false
+        canvasView.drawing = drawing
+        canvasView.delegate = context.coordinator
+
+        return canvasView
+    }
+
+    func updateUIView(_ uiView: PKCanvasView, context: Context) {
+        uiView.drawing = drawing
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, PKCanvasViewDelegate {
+        var parent: SignatureCanvasRepresentable
+
+        init(_ parent: SignatureCanvasRepresentable) {
+            self.parent = parent
+        }
+
+        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            parent.drawing = canvasView.drawing
+        }
+    }
+}
+

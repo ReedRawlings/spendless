@@ -34,16 +34,11 @@ final class AppState {
     
     // MARK: - Temporary Onboarding State
     var onboardingTriggers: Set<ShoppingTrigger> = []
-    var onboardingTimings: Set<ShoppingTiming> = []
     var onboardingSpendRange: SpendRange = .medium
     var onboardingGoalType: GoalType = .justStop
     var onboardingGoalName: String = ""
     var onboardingGoalAmount: Decimal = 0
     var onboardingGoalImageData: Data?
-    var onboardingDesiredOutcomes: Set<DesiredOutcome> = []
-    var onboardingSignatureData: Data?
-    var onboardingFutureLetterText: String?
-    var onboardingCommitmentDate: Date?
     
     // MARK: - Initialization
     private init() {
@@ -99,16 +94,11 @@ final class AppState {
     
     func clearOnboardingState() {
         onboardingTriggers = []
-        onboardingTimings = []
         onboardingSpendRange = .medium
         onboardingGoalType = .justStop
         onboardingGoalName = ""
         onboardingGoalAmount = 0
         onboardingGoalImageData = nil
-        onboardingDesiredOutcomes = []
-        onboardingSignatureData = nil
-        onboardingFutureLetterText = nil
-        onboardingCommitmentDate = nil
     }
     
     // MARK: - Celebrations
@@ -185,15 +175,11 @@ extension AppState {
         // Create or update profile
         let profile = getOrCreateProfile(from: context)
         profile.triggers = Array(onboardingTriggers)
-        profile.timings = Array(onboardingTimings)
         profile.estimatedSpend = onboardingSpendRange
         profile.goalType = onboardingGoalType
-        profile.desiredOutcomes = onboardingDesiredOutcomes
-        profile.signatureImageData = onboardingSignatureData
-        profile.futureLetterText = onboardingFutureLetterText
-        profile.commitmentDate = onboardingCommitmentDate ?? Date()
+        profile.commitmentDate = Date()
         profile.completeOnboarding()
-        
+
         // Create goal if needed
         if onboardingGoalType.requiresDetails && !onboardingGoalName.isEmpty {
             let goal = UserGoal(
@@ -204,36 +190,26 @@ extension AppState {
             )
             context.insert(goal)
         }
-        
+
         // Create streak
         let _ = getOrCreateStreak(from: context)
-        
-        // Sync futureLetterText to App Groups for Shield extension
+
+        // Sync default commitment text to App Groups for Shield extension
         let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
-        if let letterText = onboardingFutureLetterText, !letterText.isEmpty {
-            sharedDefaults?.set(letterText, forKey: "futureLetterText")
-        } else {
-            // Generate default if empty
-            let defaultText = generatePlaceholderText(triggers: onboardingTriggers)
-            sharedDefaults?.set(defaultText, forKey: "futureLetterText")
-        }
-        
+        let defaultText = generatePlaceholderText(triggers: onboardingTriggers)
+        sharedDefaults?.set(defaultText, forKey: "futureLetterText")
+
         // Sync blocked apps selection (already saved by ScreenTimeManager)
         // The selection is saved when user picks apps in onboarding
-        
+
         // Save and complete
         try? context.save()
-        
+
         // Sync widget data
         syncWidgetData(context: context)
-        
+
         completeOnboarding()
         clearOnboardingState()
-        
-        // Trigger paywall after onboarding (only if not already shown)
-        if !hasShownPaywallAfterOnboarding() {
-            shouldShowPaywallAfterOnboarding = true
-        }
     }
     
     /// Sync streak and savings data to App Groups for shield display

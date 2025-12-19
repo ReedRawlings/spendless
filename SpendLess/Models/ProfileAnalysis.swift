@@ -101,16 +101,6 @@ struct ProfileAnalysisEngine {
             ))
         }
         
-        // Emotional Intelligence: desiredOutcomes contains emotional outcomes
-        let emotionalOutcomes: Set<DesiredOutcome> = [.guiltFree, .lessStress, .breakCycle]
-        if !appState.onboardingDesiredOutcomes.isDisjoint(with: emotionalOutcomes) {
-            strengths.append(ProfileStrengthResult(
-                type: .emotionalIntelligence,
-                title: "Emotional Intelligence",
-                description: "You understand this isn't just about money—it's about how you feel."
-            ))
-        }
-        
         // Honesty: spendRange >= .high ($250-500 or higher)
         let highSpendRanges: Set<SpendRange> = [.high, .veryHigh]
         if highSpendRanges.contains(appState.onboardingSpendRange) {
@@ -118,15 +108,6 @@ struct ProfileAnalysisEngine {
                 type: .honesty,
                 title: "Honesty",
                 description: "You were honest about your spending. That takes courage, and it's the first step."
-            ))
-        }
-        
-        // Readiness to Change: desiredOutcomes.count >= 2
-        if appState.onboardingDesiredOutcomes.count >= 2 {
-            strengths.append(ProfileStrengthResult(
-                type: .readinessToChange,
-                title: "Readiness to Change",
-                description: "You want real change, not a quick fix. That mindset predicts success."
             ))
         }
         
@@ -168,17 +149,7 @@ struct ProfileAnalysisEngine {
     
     private static func generateFocusAreas(appState: AppState) -> [ProfileFocusAreaResult] {
         var focusAreas: [ProfileFocusAreaResult] = []
-        
-        // Late Night Vulnerability: timings.contains(.lateNight)
-        // Note: PRD mentions .beforeBed but it doesn't exist in enum, so using .lateNight only
-        if appState.onboardingTimings.contains(.lateNight) {
-            focusAreas.append(ProfileFocusAreaResult(
-                type: .lateNightVulnerability,
-                title: "Late Night Danger Zone",
-                description: "Your patterns suggest evenings are when you're most vulnerable. We'll add extra support after 9pm."
-            ))
-        }
-        
+
         // Emotional Spending: triggers contain emotional triggers
         let emotionalTriggers: Set<ShoppingTrigger> = [.afterStress, .sad, .lonely]
         if !appState.onboardingTriggers.isDisjoint(with: emotionalTriggers) {
@@ -215,16 +186,7 @@ struct ProfileAnalysisEngine {
                 description: "You have several triggers—that's normal. We'll tackle them one at a time."
             ))
         }
-        
-        // High Frequency: timings.count >= 3
-        if appState.onboardingTimings.count >= 3 {
-            focusAreas.append(ProfileFocusAreaResult(
-                type: .highFrequency,
-                title: "Always-On Temptation",
-                description: "Shopping temptation hits you at multiple times. We'll build walls that stay up."
-            ))
-        }
-        
+
         // Select top 2 by priority (order already set above)
         focusAreas = Array(focusAreas.prefix(2))
         
