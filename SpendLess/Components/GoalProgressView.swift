@@ -11,21 +11,128 @@ struct GoalProgressView: View {
     let goal: UserGoal?
     let totalSaved: Decimal
     let showFullView: Bool
+    let isMinimized: Bool
     let onSetGoal: (() -> Void)?
-    
-    init(goal: UserGoal?, totalSaved: Decimal = 0, showFullView: Bool = true, onSetGoal: (() -> Void)? = nil) {
+
+    init(goal: UserGoal?, totalSaved: Decimal = 0, showFullView: Bool = true, isMinimized: Bool = false, onSetGoal: (() -> Void)? = nil) {
         self.goal = goal
         self.totalSaved = totalSaved
         self.showFullView = showFullView
+        self.isMinimized = isMinimized
         self.onSetGoal = onSetGoal
     }
-    
+
     var body: some View {
         if let goal {
-            GoalWithTargetView(goal: goal, showFullView: showFullView)
+            if isMinimized {
+                MinimizedGoalView(goal: goal)
+            } else {
+                GoalWithTargetView(goal: goal, showFullView: showFullView)
+            }
         } else {
-            CashPileView(totalSaved: totalSaved, showFullView: showFullView, onSetGoal: onSetGoal)
+            if isMinimized {
+                MinimizedCashView(totalSaved: totalSaved)
+            } else {
+                CashPileView(totalSaved: totalSaved, showFullView: showFullView, onSetGoal: onSetGoal)
+            }
         }
+    }
+}
+
+// MARK: - Minimized Goal View (for NoBuy Challenge mode)
+
+private struct MinimizedGoalView: View {
+    let goal: UserGoal
+
+    var body: some View {
+        HStack(spacing: SpendLessSpacing.sm) {
+            // Small icon
+            GoalIconView(goalType: goal.type, size: 36)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(goal.name.isEmpty ? goal.type.rawValue : goal.name)
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextSecondary)
+                    .lineLimit(1)
+
+                HStack(spacing: SpendLessSpacing.xs) {
+                    Text(formatCurrency(goal.savedAmount))
+                        .font(SpendLessFont.bodyBold)
+                        .foregroundStyle(Color.spendLessPrimary)
+
+                    Text("of \(formatCurrency(goal.targetAmount))")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextMuted)
+                }
+            }
+
+            Spacer()
+
+            // Mini progress indicator
+            ZStack {
+                Circle()
+                    .stroke(Color.spendLessTextMuted.opacity(0.2), lineWidth: 3)
+
+                Circle()
+                    .trim(from: 0, to: CGFloat(goal.progress))
+                    .stroke(Color.spendLessSecondary, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+
+                Text("\(goal.progressPercentage)%")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.spendLessTextSecondary)
+            }
+            .frame(width: 40, height: 40)
+        }
+        .padding(SpendLessSpacing.md)
+        .background(Color.spendLessCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
+        .spendLessShadow(SpendLessShadow.subtleShadow)
+    }
+
+    private func formatCurrency(_ amount: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: amount as NSDecimalNumber) ?? "$0"
+    }
+}
+
+// MARK: - Minimized Cash View (for NoBuy Challenge mode, no goal)
+
+private struct MinimizedCashView: View {
+    let totalSaved: Decimal
+
+    var body: some View {
+        HStack(spacing: SpendLessSpacing.sm) {
+            Text("💰")
+                .font(.system(size: 28))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Total Saved")
+                    .font(SpendLessFont.caption)
+                    .foregroundStyle(Color.spendLessTextSecondary)
+
+                Text(formatCurrency(totalSaved))
+                    .font(SpendLessFont.bodyBold)
+                    .foregroundStyle(Color.spendLessPrimary)
+            }
+
+            Spacer()
+        }
+        .padding(SpendLessSpacing.md)
+        .background(Color.spendLessCardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
+        .spendLessShadow(SpendLessShadow.subtleShadow)
+    }
+
+    private func formatCurrency(_ amount: Decimal) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: amount as NSDecimalNumber) ?? "$0"
     }
 }
 
@@ -253,6 +360,23 @@ struct GoalIconView: View {
     VStack(spacing: 20) {
         GoalProgressView(goal: nil, totalSaved: 2847)
         GoalProgressView(goal: nil, totalSaved: 500, showFullView: false)
+    }
+    .padding()
+    .background(Color.spendLessBackground)
+}
+
+#Preview("Minimized") {
+    VStack(spacing: 20) {
+        GoalProgressView(
+            goal: UserGoal(
+                name: "Trip to Japan",
+                targetAmount: 5000,
+                savedAmount: 2500,
+                goalType: .vacation
+            ),
+            isMinimized: true
+        )
+        GoalProgressView(goal: nil, totalSaved: 2847, isMinimized: true)
     }
     .padding()
     .background(Color.spendLessBackground)

@@ -87,14 +87,54 @@ enum HapticFeedback {
     /// Streak milestone - celebratory pattern
     static func streakMilestone() {
         let generator = UINotificationFeedbackGenerator()
-        
+
         generator.notificationOccurred(.success)
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             let impact = UIImpactFeedbackGenerator(style: .medium)
             impact.impactOccurred()
         }
-        
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            generator.notificationOccurred(.success)
+        }
+    }
+
+    // MARK: - NoBuy Challenge Patterns
+
+    /// NoBuy check-in - light confirmation when user checks in
+    static func noBuyCheckin() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+    }
+
+    /// NoBuy success - celebratory pattern for successful no-spend day
+    static func noBuySuccess() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+
+        // Add a satisfying secondary tap
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            let impact = UIImpactFeedbackGenerator(style: .medium)
+            impact.impactOccurred()
+        }
+    }
+
+    /// NoBuy milestone - extra celebration for streak milestones (7, 14, 30+ days)
+    static func noBuyMilestone() {
+        let generator = UINotificationFeedbackGenerator()
+        let impact = UIImpactFeedbackGenerator(style: .heavy)
+
+        generator.notificationOccurred(.success)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            impact.impactOccurred()
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            impact.impactOccurred()
+        }
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             generator.notificationOccurred(.success)
         }

@@ -81,10 +81,31 @@ final class NotificationManager: NSObject {
             intentIdentifiers: [],
             options: []
         )
-        
+
+        // NoBuy challenge check-in category
+        let checkInAction = UNNotificationAction(
+            identifier: AppConstants.NoBuyChallengeNotificationActions.checkIn,
+            title: "Check In Now",
+            options: [.foreground]
+        )
+
+        let remindLaterAction = UNNotificationAction(
+            identifier: AppConstants.NoBuyChallengeNotificationActions.remindLater,
+            title: "Remind Me Later",
+            options: []
+        )
+
+        let noBuyCheckinCategory = UNNotificationCategory(
+            identifier: AppConstants.noBuyCheckinNotificationCategory,
+            actions: [checkInAction, remindLaterAction],
+            intentIdentifiers: [],
+            options: []
+        )
+
         UNUserNotificationCenter.current().setNotificationCategories([
             shieldRestoreCategory,
-            waitingListCheckinCategory
+            waitingListCheckinCategory,
+            noBuyCheckinCategory
         ])
     }
     
@@ -247,7 +268,100 @@ final class NotificationManager: NSObject {
             withIdentifiers: [day6ID]
         )
     }
-    
+
+    // MARK: - NoBuy Challenge Notifications
+
+    /// Check if NoBuy daily reminders are enabled (default: true)
+    var isNoBuyRemindersEnabled: Bool {
+        get {
+            let defaults = UserDefaults.standard
+            // If key doesn't exist, default to true
+            if defaults.object(forKey: AppConstants.NoBuyChallengePreferenceKeys.dailyReminderEnabled) == nil {
+                return true
+            }
+            return defaults.bool(forKey: AppConstants.NoBuyChallengePreferenceKeys.dailyReminderEnabled)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: AppConstants.NoBuyChallengePreferenceKeys.dailyReminderEnabled)
+        }
+    }
+
+    /// Get the reminder hour (default: 9 AM)
+    var noBuyReminderHour: Int {
+        get {
+            let defaults = UserDefaults.standard
+            if defaults.object(forKey: AppConstants.NoBuyChallengePreferenceKeys.reminderHour) == nil {
+                return 9 // Default to 9 AM
+            }
+            return defaults.integer(forKey: AppConstants.NoBuyChallengePreferenceKeys.reminderHour)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: AppConstants.NoBuyChallengePreferenceKeys.reminderHour)
+        }
+    }
+
+    /// Schedule daily morning check-in notification for NoBuy challenge
+    /// - Parameter challengeID: The UUID of the NoBuy challenge
+    /// - Parameter endDate: When the challenge ends (notifications will stop being delivered after this)
+    func scheduleNoBuyDailyNotification(challengeID: UUID, endDate: Date) {
+        guard isNoBuyRemindersEnabled else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Good morning! Time to check in"
+        content.body = "How did yesterday go? Tap to log your NoBuy day."
+        content.sound = .default
+        content.categoryIdentifier = AppConstants.noBuyCheckinNotificationCategory
+        content.userInfo = [
+            "type": "noBuyCheckin",
+            "challengeID": challengeID.uuidString,
+            "deepLink": "spendless://nobuy/checkin"
+        ]
+
+        // Schedule at the configured hour daily
+        var dateComponents = DateComponents()
+        dateComponents.hour = noBuyReminderHour
+        dateComponents.minute = 0
+
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: dateComponents,
+            repeats: true
+        )
+
+        let identifier = "\(AppConstants.noBuyNotificationPrefix)-daily-\(challengeID.uuidString)"
+        let request = UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: trigger
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule NoBuy notification: \(error)")
+            }
+        }
+    }
+
+    /// Cancel NoBuy notifications for a challenge
+    /// - Parameter challengeID: The UUID of the challenge
+    func cancelNoBuyNotifications(for challengeID: UUID) {
+        let dailyID = "\(AppConstants.noBuyNotificationPrefix)-daily-\(challengeID.uuidString)"
+
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [dailyID]
+        )
+    }
+
+    /// Cancel all NoBuy notifications (when user disables reminders)
+    func cancelAllNoBuyNotifications() {
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            let noBuyIDs = requests
+                .filter { $0.identifier.hasPrefix(AppConstants.noBuyNotificationPrefix) }
+                .map { $0.identifier }
+
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: noBuyIDs)
+        }
+    }
+
     // MARK: - Pending Actions Storage
     
     /// Store a pending waiting list action to be processed on next app launch

@@ -30,6 +30,8 @@ struct SpendLessApp: App {
             GraveyardItem.self,
             Streak.self,
             UserProfile.self,
+            NoBuyChallenge.self,
+            NoBuyDayEntry.self,
         ])
 
         let modelConfiguration = ModelConfiguration(
@@ -442,7 +444,9 @@ struct RootView: View {
             WaitingListItem.self,
             GraveyardItem.self,
             Streak.self,
-            UserProfile.self
+            UserProfile.self,
+            NoBuyChallenge.self,
+            NoBuyDayEntry.self
         ], inMemory: true)
 }
 

@@ -103,6 +103,37 @@ Models use `@Model` macro. The schema includes:
 - `GraveyardItem` - Items user resisted buying (celebration/analytics)
 - `Streak` - Current days streak
 - `UserProfile` - Triggers, timings, commitment letter
+- `NoBuyChallenge` - NoBuy challenge tracking with rules and stats
+- `NoBuyDayEntry` - Daily check-in entries for NoBuy challenges
+
+### SwiftData Migration Rules (CRITICAL)
+
+**When adding new properties to existing @Model classes, you MUST follow these rules to avoid data loss:**
+
+```swift
+// ✅ SAFE - Always provide default values
+var newProperty: Bool = false
+var newCount: Int = 0
+var newName: String = ""
+var newDate: Date = Date()
+
+// ✅ SAFE - Or make properties optional
+var newProperty: Bool?
+var newDate: Date?
+
+// ❌ UNSAFE - Will crash if existing data exists
+var newProperty: Bool
+var newCount: Int
+```
+
+**Why:** SwiftData performs lightweight migrations automatically, but it cannot infer values for new non-optional properties without defaults. If existing records exist, the app will crash with `SwiftDataError.loadIssueModelContainer`.
+
+**Checklist before adding model properties:**
+1. Does it have a default value? → Safe
+2. Is it optional (`Type?`)? → Safe
+3. Neither? → **Will crash and cause data loss**
+
+For complex migrations (renaming, transforming data), use `VersionedSchema` and `SchemaMigrationPlan`.
 
 ## Dependencies
 

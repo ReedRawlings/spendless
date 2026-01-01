@@ -34,23 +34,23 @@ nonisolated class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     /// Called when a monitored schedule interval begins
     nonisolated override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        
-        // Load saved app selection and apply shields
-        applyShieldsFromSavedSelection()
-        
-        // Log event
-        logEvent("Schedule started: \(activity.rawValue)")
+
+        // Only handle temporaryAccess - this is when the 10-minute window starts
+        // Shields are already removed at this point by ShieldActionExtension
+        if activity.rawValue == "temporaryAccess" {
+            logEvent("Temporary access started")
+        }
     }
-    
+
     /// Called when a monitored schedule interval ends
     nonisolated override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        
-        // Remove shields when schedule ends
-        store.clearAllSettings()
-        
-        // Log event
-        logEvent("Schedule ended: \(activity.rawValue)")
+
+        // Only handle temporaryAccess - restore shields when 10-minute window ends
+        if activity.rawValue == "temporaryAccess" {
+            applyShieldsFromSavedSelection()
+            logEvent("Temporary access ended, shields restored")
+        }
     }
     
     /// Called when device activity changes during a schedule
@@ -129,11 +129,8 @@ nonisolated class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 // MARK: - Activity Names
 
 extension DeviceActivityName {
-    /// Main activity schedule for app blocking
-    static let mainSchedule = DeviceActivityName("mainSchedule")
-    
-    /// Temporary unlock activity
-    static let temporaryUnlock = DeviceActivityName("temporaryUnlock")
+    /// Temporary access activity (10-minute window)
+    static let temporaryAccess = DeviceActivityName("temporaryAccess")
 }
 
 // MARK: - Event Names

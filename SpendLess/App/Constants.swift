@@ -100,4 +100,24 @@ enum AppConstants {
         /// Prefix for pending action keys: pendingWaitingListAction-{itemID}
         static let prefix = "pendingWaitingListAction"
     }
+
+    // MARK: - NoBuy Challenge Notifications
+
+    /// Notification category identifier for NoBuy daily check-in
+    static let noBuyCheckinNotificationCategory = "NOBUY_CHECKIN"
+
+    /// Notification identifier prefix for NoBuy challenge
+    static let noBuyNotificationPrefix = "nobuyChallenge"
+
+    /// Notification action identifiers for NoBuy challenge
+    enum NoBuyChallengeNotificationActions {
+        static let checkIn = "CHECK_IN_NOW"
+        static let remindLater = "REMIND_LATER"
+    }
+
+    /// UserDefaults keys for NoBuy notification preferences
+    enum NoBuyChallengePreferenceKeys {
+        static let dailyReminderEnabled = "noBuyDailyReminderEnabled"
+        static let reminderHour = "noBuyReminderHour"
+    }
 }

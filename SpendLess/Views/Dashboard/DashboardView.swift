@@ -20,6 +20,10 @@ struct DashboardView: View {
     @Query private var profiles: [UserProfile]
     @Query private var spendingAudits: [SpendingAudit]
 
+    // NoBuy Challenge queries
+    @Query(filter: #Predicate<NoBuyChallenge> { $0.isActive }) private var activeChallenges: [NoBuyChallenge]
+    @Query private var noBuyEntries: [NoBuyDayEntry]
+
     @State private var showFeelingTempted = false
     @State private var showCelebration = false
     @State private var celebrationAmount: Decimal = 0
@@ -29,6 +33,15 @@ struct DashboardView: View {
     @State private var showEditGoal = false
     @State private var selectedTool: ToolType?
 
+    // NoBuy Challenge state
+    @State private var showChallengeSetup = false
+    @State private var showCheckinSheet = false
+    @State private var checkinDate: Date = Date()
+    @State private var showRulesSheet = false
+    @State private var celebratingDate: Date? = nil
+    @State private var showSupportSheet = false
+    @State private var showLearningLibrary = false
+
     // Dismissed prompts tracking
     @AppStorage("dismissedLifeEnergyPrompt") private var dismissedLifeEnergyPrompt = false
     @AppStorage("dismissedSpendingAuditPrompt") private var dismissedSpendingAuditPrompt = false
@@ -37,13 +50,32 @@ struct DashboardView: View {
     private var currentGoal: UserGoal? {
         activeGoals.first
     }
-    
+
     private var currentStreak: Streak? {
         streaks.first
     }
-    
+
     private var profile: UserProfile? {
         profiles.first
+    }
+
+    // MARK: - NoBuy Challenge Properties
+
+    private var activeChallenge: NoBuyChallenge? {
+        activeChallenges.first
+    }
+
+    private var challengeEntries: [NoBuyDayEntry] {
+        guard let challenge = activeChallenge else { return [] }
+        return noBuyEntries.filter { $0.challengeID == challenge.id }
+    }
+
+    private var consecutiveNoBuyDays: Int {
+        challengeEntries.currentStreak
+    }
+
+    private var hasActiveChallenge: Bool {
+        activeChallenge != nil
     }
     
     private var totalSaved: Decimal {
@@ -132,95 +164,202 @@ struct DashboardView: View {
                 
                 ScrollView {
                     VStack(spacing: SpendLessSpacing.lg) {
-                        // Goal Progress Section
-                        GoalProgressView(
-                            goal: screenshotGoal ?? currentGoal,
-                            totalSaved: totalSaved,
-                            showFullView: !showCompactGoal,
-                            onSetGoal: {
-                                showEditGoal = true
-                            }
-                        )
-                        .padding(.horizontal, SpendLessSpacing.md)
+                        // NoBuy Challenge Layout OR Regular Layout
+                        if let challenge = activeChallenge {
+                            // MARK: - NoBuy Challenge Active Layout
 
-                        // Onboarding Tool Prompts
-                        if !pendingToolPrompts.isEmpty {
-                            VStack(spacing: SpendLessSpacing.sm) {
-                                ForEach(pendingToolPrompts) { tool in
-                                    OnboardingPromptCard(
-                                        tool: tool,
-                                        onTap: {
-                                            HapticFeedback.buttonTap()
-                                            selectedTool = tool
-                                        },
-                                        onDismiss: {
-                                            withAnimation(.easeOut(duration: 0.2)) {
-                                                dismissPrompt(for: tool)
-                                            }
-                                        }
-                                    )
-                                    .transition(.asymmetric(
-                                        insertion: .opacity,
-                                        removal: .opacity.combined(with: .move(edge: .trailing))
-                                    ))
+                            // Minimized Goal Progress
+                            GoalProgressView(
+                                goal: screenshotGoal ?? currentGoal,
+                                totalSaved: totalSaved,
+                                isMinimized: true,
+                                onSetGoal: {
+                                    showEditGoal = true
                                 }
-                            }
+                            )
                             .padding(.horizontal, SpendLessSpacing.md)
-                        }
 
-                        // Stats Row
-                        HStack(spacing: SpendLessSpacing.md) {
-                            StatsCard(
-                                icon: "flame.fill",
-                                value: "\(screenshotStreak)",
-                                label: AppConstants.isScreenshotMode ? ScreenshotDataHelper.dashboardStreakLabel : "Day Streak",
-                                iconColor: .spendLessStreak
-                            )
-                            
-                            StatsCard(
-                                icon: "dollarsign.circle.fill",
-                                value: formatCurrency(thisWeekSaved),
-                                label: "This Week"
-                            )
-                            
-                            StatsCard(
-                                icon: "cart.badge.minus",
-                                value: "\(impulsesResisted)",
-                                label: "Resisted"
-                            )
-                        }
-                        .padding(.horizontal, SpendLessSpacing.md)
-                        
-                        // Streak milestone message
-                        if let streak = currentStreak, let message = streak.celebrationMessage {
-                            Card {
-                                HStack {
-                                    Text("🔥")
-                                        .font(.title)
-                                    Text(message)
-                                        .font(SpendLessFont.body)
+                            // Challenge Header with Rules Button
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("NoBuy Challenge")
+                                        .font(SpendLessFont.headline)
                                         .foregroundStyle(Color.spendLessTextPrimary)
+
+                                    Text("\(challenge.daysRemaining) days remaining")
+                                        .font(SpendLessFont.caption)
+                                        .foregroundStyle(Color.spendLessTextSecondary)
+                                }
+
+                                Spacer()
+
+                                Button {
+                                    showRulesSheet = true
+                                } label: {
+                                    Image(systemName: "info.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(Color.spendLessPrimary)
                                 }
                             }
                             .padding(.horizontal, SpendLessSpacing.md)
+
+                            // Calendar View
+                            NoBuyCalendarView(
+                                challenge: challenge,
+                                entries: challengeEntries,
+                                celebratingDate: $celebratingDate,
+                                onDayTap: { date in
+                                    checkinDate = date
+                                    showCheckinSheet = true
+                                }
+                            )
+                            .padding(.horizontal, SpendLessSpacing.md)
+
+                            // Challenge Stats Row
+                            HStack(spacing: SpendLessSpacing.md) {
+                                StatsCard(
+                                    icon: "checkmark.circle.fill",
+                                    value: "\(challenge.successfulDays)",
+                                    label: "No-Buy Days",
+                                    iconColor: .spendLessSecondary
+                                )
+
+                                StatsCard(
+                                    icon: "flame.fill",
+                                    value: "\(consecutiveNoBuyDays)",
+                                    label: "Streak",
+                                    iconColor: .spendLessGold
+                                )
+
+                                StatsCard(
+                                    icon: "percent",
+                                    value: "\(Int(challenge.successRate * 100))%",
+                                    label: "Success Rate",
+                                    iconColor: .spendLessPrimary
+                                )
+                            }
+                            .padding(.horizontal, SpendLessSpacing.md)
+
+                            // Onboarding Tool Prompts (also show during NoBuy challenge)
+                            if !pendingToolPrompts.isEmpty {
+                                VStack(spacing: SpendLessSpacing.sm) {
+                                    ForEach(pendingToolPrompts) { tool in
+                                        OnboardingPromptCard(
+                                            tool: tool,
+                                            onTap: {
+                                                HapticFeedback.buttonTap()
+                                                selectedTool = tool
+                                            },
+                                            onDismiss: {
+                                                withAnimation(.easeOut(duration: 0.2)) {
+                                                    dismissPrompt(for: tool)
+                                                }
+                                            }
+                                        )
+                                        .transition(.asymmetric(
+                                            insertion: .opacity,
+                                            removal: .opacity.combined(with: .move(edge: .trailing))
+                                        ))
+                                    }
+                                }
+                                .padding(.horizontal, SpendLessSpacing.md)
+                            }
+
+                        } else {
+                            // MARK: - Regular Layout (No Active Challenge)
+
+                            // Goal Progress Section (full)
+                            GoalProgressView(
+                                goal: screenshotGoal ?? currentGoal,
+                                totalSaved: totalSaved,
+                                showFullView: !showCompactGoal,
+                                onSetGoal: {
+                                    showEditGoal = true
+                                }
+                            )
+                            .padding(.horizontal, SpendLessSpacing.md)
+
+                            // Start NoBuy Challenge Prompt
+                            StartNoBuyChallengeCard {
+                                showChallengeSetup = true
+                            }
+                            .padding(.horizontal, SpendLessSpacing.md)
+
+                            // Onboarding Tool Prompts
+                            if !pendingToolPrompts.isEmpty {
+                                VStack(spacing: SpendLessSpacing.sm) {
+                                    ForEach(pendingToolPrompts) { tool in
+                                        OnboardingPromptCard(
+                                            tool: tool,
+                                            onTap: {
+                                                HapticFeedback.buttonTap()
+                                                selectedTool = tool
+                                            },
+                                            onDismiss: {
+                                                withAnimation(.easeOut(duration: 0.2)) {
+                                                    dismissPrompt(for: tool)
+                                                }
+                                            }
+                                        )
+                                        .transition(.asymmetric(
+                                            insertion: .opacity,
+                                            removal: .opacity.combined(with: .move(edge: .trailing))
+                                        ))
+                                    }
+                                }
+                                .padding(.horizontal, SpendLessSpacing.md)
+                            }
+
+                            // Stats Row
+                            HStack(spacing: SpendLessSpacing.md) {
+                                StatsCard(
+                                    icon: "flame.fill",
+                                    value: "\(screenshotStreak)",
+                                    label: AppConstants.isScreenshotMode ? ScreenshotDataHelper.dashboardStreakLabel : "Day Streak",
+                                    iconColor: .spendLessStreak
+                                )
+
+                                StatsCard(
+                                    icon: "dollarsign.circle.fill",
+                                    value: formatCurrency(thisWeekSaved),
+                                    label: "This Week"
+                                )
+
+                                StatsCard(
+                                    icon: "cart.badge.minus",
+                                    value: "\(impulsesResisted)",
+                                    label: "Resisted"
+                                )
+                            }
+                            .padding(.horizontal, SpendLessSpacing.md)
+
+                            // Streak milestone message
+                            if let streak = currentStreak, let message = streak.celebrationMessage {
+                                Card {
+                                    HStack {
+                                        Text("🔥")
+                                            .font(.title)
+                                        Text(message)
+                                            .font(SpendLessFont.body)
+                                            .foregroundStyle(Color.spendLessTextPrimary)
+                                    }
+                                }
+                                .padding(.horizontal, SpendLessSpacing.md)
+                            }
                         }
-                        
-                        Spacer(minLength: SpendLessSpacing.xxxl)
+
+                        // Feeling Tempted Button (at bottom of scroll view)
+                        FeelingTemptedView(
+                            subheadText: AppConstants.isScreenshotMode ? ScreenshotDataHelper.feelingTemptedSubhead : nil
+                        ) {
+                            showFeelingTempted = true
+                        }
+                        .padding(.horizontal, SpendLessSpacing.md)
+                        .padding(.top, SpendLessSpacing.lg)
+
+                        Spacer(minLength: SpendLessSpacing.xl)
                     }
                     .padding(.top, SpendLessSpacing.md)
-                }
-                
-                // Feeling Tempted Button (floating at bottom)
-                VStack {
-                    Spacer()
-                    
-                    FeelingTemptedView(
-                        subheadText: AppConstants.isScreenshotMode ? ScreenshotDataHelper.feelingTemptedSubhead : nil
-                    ) {
-                        showFeelingTempted = true
-                    }
-                    .padding(.horizontal, SpendLessSpacing.lg)
-                    .padding(.bottom, SpendLessSpacing.md)
                 }
                 
                 // Celebration Overlay
@@ -256,6 +395,59 @@ struct DashboardView: View {
             .sheet(isPresented: $showEditGoal) {
                 EditGoalSheet(goal: currentGoal)
             }
+            .sheet(isPresented: $showChallengeSetup) {
+                NoBuyChallengeSetupView()
+            }
+            .sheet(isPresented: $showRulesSheet) {
+                if let challenge = activeChallenge {
+                    NoBuyChallengeRulesView(challenge: challenge)
+                        .presentationDetents([.medium, .large])
+                }
+            }
+            .sheet(isPresented: $showCheckinSheet) {
+                if let challenge = activeChallenge {
+                    NoBuyCheckinSheet(
+                        date: checkinDate,
+                        onComplete: { didMakePurchase, triggerNote in
+                            handleCheckin(
+                                challenge: challenge,
+                                date: checkinDate,
+                                didMakePurchase: didMakePurchase,
+                                triggerNote: triggerNote
+                            )
+                        }
+                    )
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.hidden)
+                }
+            }
+            .sheet(isPresented: $showSupportSheet) {
+                if let challenge = activeChallenge {
+                    NoBuySupportSheet(
+                        challenge: challenge,
+                        onPause: {
+                            handlePauseChallenge(challenge)
+                        },
+                        onReviewResources: {
+                            challenge.markSupportShown()
+                            saveContext()
+                            showLearningLibrary = true
+                        },
+                        onReset: {
+                            handleResetChallenge(challenge)
+                        },
+                        onContinue: {
+                            challenge.markSupportShown()
+                            saveContext()
+                        }
+                    )
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.hidden)
+                }
+            }
+            .navigationDestination(isPresented: $showLearningLibrary) {
+                LearningLibraryView()
+            }
             .navigationDestination(item: $selectedTool) { tool in
                 switch tool {
                 case .dopamineMenu:
@@ -268,6 +460,70 @@ struct DashboardView: View {
                     EmptyView()
                 }
             }
+        }
+    }
+
+    // MARK: - NoBuy Challenge Actions
+
+    private func handleCheckin(challenge: NoBuyChallenge, date: Date, didMakePurchase: Bool, triggerNote: String?) {
+        // Create the entry
+        let entry = NoBuyDayEntry(
+            challengeID: challenge.id,
+            date: date,
+            didMakePurchase: didMakePurchase,
+            triggerNote: triggerNote
+        )
+        modelContext.insert(entry)
+
+        // Update challenge stats
+        if didMakePurchase {
+            challenge.recordMiss()
+
+            // Check if we should show support after this miss
+            if challenge.shouldShowSupport {
+                // Delay slightly so check-in sheet can dismiss first
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showSupportSheet = true
+                }
+            }
+        } else {
+            challenge.recordSuccess()
+            // Trigger celebration animation on the calendar
+            celebratingDate = date
+            // Clear celebration after animation completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                celebratingDate = nil
+            }
+        }
+
+        // Save changes
+        saveContext()
+    }
+
+    private func handlePauseChallenge(_ challenge: NoBuyChallenge) {
+        challenge.pause()
+        challenge.markSupportShown()
+        saveContext()
+        // Cancel notifications
+        NotificationManager.shared.cancelNoBuyNotifications(for: challenge.id)
+    }
+
+    private func handleResetChallenge(_ challenge: NoBuyChallenge) {
+        challenge.reset()
+        saveContext()
+        // Reschedule notifications for new end date
+        NotificationManager.shared.cancelNoBuyNotifications(for: challenge.id)
+        NotificationManager.shared.scheduleNoBuyDailyNotification(
+            challengeID: challenge.id,
+            endDate: challenge.endDate
+        )
+    }
+
+    private func saveContext() {
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save: \(error)")
         }
     }
 
@@ -760,6 +1016,57 @@ struct FeelingTemptedFlowView: View {
     }
 }
 
+// MARK: - Start NoBuy Challenge Card
+
+struct StartNoBuyChallengeCard: View {
+    let onStart: () -> Void
+
+    @State private var isPressed = false
+
+    var body: some View {
+        Button(action: onStart) {
+            HStack(spacing: SpendLessSpacing.md) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(Color.spendLessSecondary.opacity(0.15))
+                        .frame(width: 50, height: 50)
+
+                    Image(systemName: "calendar.badge.checkmark")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color.spendLessSecondary)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Start a NoBuy Challenge")
+                        .font(SpendLessFont.headline)
+                        .foregroundStyle(Color.spendLessTextPrimary)
+
+                    Text("Track your no-spend days with a calendar")
+                        .font(SpendLessFont.caption)
+                        .foregroundStyle(Color.spendLessTextSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.spendLessTextMuted)
+            }
+            .padding(SpendLessSpacing.md)
+            .background(Color.spendLessCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: SpendLessRadius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: SpendLessRadius.lg)
+                    .strokeBorder(Color.spendLessSecondary.opacity(0.3), lineWidth: 1)
+            )
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+        }
+        .buttonStyle(PressableButtonStyle(isPressed: $isPressed))
+    }
+}
+
 // MARK: - Dopamine Activity Button
 
 struct DopamineActivityButton: View {
@@ -806,7 +1113,9 @@ struct DopamineActivityButton: View {
             Streak.self,
             UserProfile.self,
             SpendingAudit.self,
-            AuditItem.self
+            AuditItem.self,
+            NoBuyChallenge.self,
+            NoBuyDayEntry.self
         ], inMemory: true)
 }
 

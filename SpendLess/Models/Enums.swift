@@ -493,3 +493,138 @@ enum ShieldUserAction: String, Codable {
     case dismissed = "dismissed"
 }
 
+// MARK: - NoBuy Challenge Duration
+
+enum ChallengeDuration: String, CaseIterable, Codable, Identifiable {
+    case oneWeek = "oneWeek"
+    case oneMonth = "oneMonth"
+    case threeMonths = "threeMonths"
+    case sixMonths = "sixMonths"
+    case oneYear = "oneYear"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .oneWeek: return "1 Week"
+        case .oneMonth: return "1 Month"
+        case .threeMonths: return "3 Months"
+        case .sixMonths: return "6 Months"
+        case .oneYear: return "1 Year"
+        }
+    }
+
+    var days: Int {
+        switch self {
+        case .oneWeek: return 7
+        case .oneMonth: return 30
+        case .threeMonths: return 90
+        case .sixMonths: return 180
+        case .oneYear: return 365
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .oneWeek: return "calendar.badge.clock"
+        case .oneMonth: return "calendar"
+        case .threeMonths: return "calendar.circle"
+        case .sixMonths: return "calendar.badge.checkmark"
+        case .oneYear: return "crown.fill"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .oneWeek: return "7️⃣"
+        case .oneMonth: return "📅"
+        case .threeMonths: return "🗓️"
+        case .sixMonths: return "📆"
+        case .oneYear: return "👑"
+        }
+    }
+
+    var encouragement: String {
+        switch self {
+        case .oneWeek: return "A great way to start!"
+        case .oneMonth: return "Build a lasting habit"
+        case .threeMonths: return "Real transformation begins"
+        case .sixMonths: return "A serious commitment"
+        case .oneYear: return "Life-changing journey"
+        }
+    }
+
+    /// Number of missed days that triggers a support check-in
+    var missThreshold: Int {
+        switch self {
+        case .oneWeek: return 2
+        case .oneMonth: return 4
+        case .threeMonths: return 8
+        case .sixMonths: return 15
+        case .oneYear: return 25
+        }
+    }
+}
+
+// MARK: - NoBuy Category
+
+enum NoBuyCategory: String, CaseIterable, Codable, Identifiable {
+    case clothing = "clothing"
+    case electronics = "electronics"
+    case homeDecor = "homeDecor"
+    case beauty = "beauty"
+    case entertainment = "entertainment"
+    case subscriptions = "subscriptions"
+    case eatingOut = "eatingOut"
+    case coffee = "coffee"
+    case alcohol = "alcohol"
+    case shopping = "shopping"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .clothing: return "Clothing"
+        case .electronics: return "Electronics"
+        case .homeDecor: return "Home & Decor"
+        case .beauty: return "Beauty"
+        case .entertainment: return "Entertainment"
+        case .subscriptions: return "Subscriptions"
+        case .eatingOut: return "Eating Out"
+        case .coffee: return "Coffee Shops"
+        case .alcohol: return "Alcohol"
+        case .shopping: return "Online Shopping"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .clothing: return "tshirt.fill"
+        case .electronics: return "laptopcomputer"
+        case .homeDecor: return "house.fill"
+        case .beauty: return "sparkles"
+        case .entertainment: return "gamecontroller.fill"
+        case .subscriptions: return "repeat"
+        case .eatingOut: return "fork.knife"
+        case .coffee: return "cup.and.saucer.fill"
+        case .alcohol: return "wineglass.fill"
+        case .shopping: return "cart.fill"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .clothing: return "👗"
+        case .electronics: return "💻"
+        case .homeDecor: return "🏠"
+        case .beauty: return "💄"
+        case .entertainment: return "🎮"
+        case .subscriptions: return "📺"
+        case .eatingOut: return "🍽️"
+        case .coffee: return "☕"
+        case .alcohol: return "🍷"
+        case .shopping: return "🛒"
+        }
+    }
+}
+

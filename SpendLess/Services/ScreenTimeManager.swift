@@ -9,7 +9,6 @@ import Foundation
 import SwiftUI
 import FamilyControls
 import ManagedSettings
-import DeviceActivity
 
 // MARK: - Protocol for Screen Time Management
 
@@ -38,10 +37,7 @@ final class ScreenTimeManager: ScreenTimeManaging {
     
     // Real FamilyActivitySelection
     var selection = FamilyActivitySelection()
-    
-    // DeviceActivityCenter for schedule management
-    private let deviceActivityCenter = DeviceActivityCenter()
-    
+
     // MARK: - Initialization
     private init() {
         // Load saved state
@@ -103,17 +99,13 @@ final class ScreenTimeManager: ScreenTimeManaging {
         store.shield.applicationCategories = .specific(selection.categoryTokens)
         store.shield.webDomains = selection.webDomainTokens
 
-        // Start monitoring schedule
-        startMonitoring()
+        // Note: No schedule needed - ManagedSettingsStore shields persist until explicitly cleared
     }
 
     /// Remove all shields
     func removeShields() {
         let store = ManagedSettingsStore()
         store.clearAllSettings()
-
-        // Stop monitoring
-        stopMonitoring()
     }
 
     /// Restore shields from saved selection (for temporary access restoration)
@@ -126,30 +118,7 @@ final class ScreenTimeManager: ScreenTimeManaging {
         // Apply shields
         applyShields()
     }
-    
-    // MARK: - DeviceActivity Schedule
-    
-    private func startMonitoring() {
-        // Create a 24/7 schedule
-        let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: 0, minute: 0),
-            intervalEnd: DateComponents(hour: 23, minute: 59),
-            repeats: true
-        )
 
-        do {
-            let activityName = DeviceActivityName("mainSchedule")
-            try deviceActivityCenter.startMonitoring(activityName, during: schedule)
-        } catch {
-            // Failed to start monitoring
-        }
-    }
-
-    private func stopMonitoring() {
-        let activityName = DeviceActivityName("mainSchedule")
-        deviceActivityCenter.stopMonitoring([activityName])
-    }
-    
     // MARK: - Persistence
     
     private func saveState() {
